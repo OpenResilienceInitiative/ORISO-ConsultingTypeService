@@ -1,0 +1,29 @@
+{
+  "id": 3,
+  "tenantId": null,
+  "slug": "consultingtype3",
+  "excludeNonMainConsultantsFromTeamSessions": false,
+  "consultantBoundedToConsultingType": false,
+  "sendSaveSessionDataMessage": true,
+  "isVideoCallAllowed": false,
+  "languageFormal": true,
+  "roles": {
+    "consultant": {
+      "defaultRole": [
+        "consultant"
+      ]
+    }
+  },
+  "registration": {
+    "mandatoryFields": {
+      "age": false,
+      "state": false
+    },
+    "notes": {
+
+    }
+  },
+  "urls": {
+  } ,
+  "isSubsequentRegistrationAllowed": false
+}

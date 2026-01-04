@@ -1,0 +1,62 @@
+{
+  "id": 1000,
+  "tenantId": null,
+  "slug": "null-values",
+  "excludeNonMainConsultantsFromTeamSessions": false,
+  "consultantBoundedToConsultingType": false,
+  "welcomeMessage": {
+    "sendWelcomeMessage": false,
+    "welcomeMessageText": null
+  },
+  "sendFurtherStepsMessage": true,
+  "showAskerProfile": true,
+  "isVideoCallAllowed": true,
+  "isSubsequentRegistrationAllowed": true,
+  "isAnonymousConversationAllowed": true,
+  "sessionDataInitializing": {
+    "addictiveDrugs": true,
+    "age": true,
+    "gender": true,
+    "relation": true,
+    "state": false
+  },
+  "whiteSpot": {
+    "whiteSpotAgencyAssigned": false,
+    "whiteSpotAgencyId": null
+  },
+  "groupChat": {
+    "isGroupChat": false,
+    "groupChatRules": null
+  },
+  "languageFormal": true,
+  "roles": {
+    "consultant": {
+      "default": ["consultant"]
+    }
+  },
+  "notifications": {
+    "teamSessions": {
+      "newMessage": {
+        "allTeamConsultants": true
+      }
+    }
+  },
+  "registration": {
+    "minPostcodeSize": 5,
+    "autoSelectAgency": false,
+    "autoSelectPostcode": false,
+    "mandatoryFields": {
+      "age": false,
+      "state": false
+    },
+    "notes": {
+      "agencySelection": null,
+      "password": null
+    }
+  },
+  "urls": {
+    "requiredAidMissingRedirectUrl": null,
+    "registrationPostcodeFallbackUrl": null
+  },
+  "requiredComponents": null
+}

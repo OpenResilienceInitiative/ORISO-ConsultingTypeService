@@ -1,0 +1,35 @@
+{
+  "id": 2,
+  "tenantId": null,
+  "groups": [
+    "group2"
+  ],
+  "furtherInformation": {
+    "label": "Lorem Impsum",
+    "url": "https://www.domain.com"
+  },
+  "slug": "consultingtype2",
+  "excludeNonMainConsultantsFromTeamSessions": false,
+  "consultantBoundedToConsultingType": false,
+  "sendSaveSessionDataMessage": true,
+  "isVideoCallAllowed": false,
+  "languageFormal": true,
+  "roles": {
+    "consultant": {
+      "defaultRole": [
+        "consultant"
+      ]
+    }
+  },
+  "registration": {
+    "mandatoryFields": {
+      "age": false,
+      "state": false
+    },
+    "notes": {
+    }
+  },
+  "urls": {
+  },
+  "isSubsequentRegistrationAllowed": false
+}

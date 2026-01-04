@@ -1,0 +1,33 @@
+{
+  "id": 12,
+  "tenantId": 3,
+  "groups": [
+    "group3"
+  ],
+  "description": "Lorem ipsum",
+  "slug": "consultingtype12",
+  "excludeNonMainConsultantsFromTeamSessions": false,
+  "consultantBoundedToConsultingType": false,
+  "sendSaveSessionDataMessage": true,
+  "isVideoCallAllowed": false,
+  "languageFormal": true,
+  "roles": {
+    "consultant": {
+      "defaultRole": [
+        "consultant"
+      ]
+    }
+  },
+  "registration": {
+    "mandatoryFields": {
+      "age": false,
+      "state": false
+    },
+    "notes": {
+
+    }
+  },
+  "urls": {
+  } ,
+  "isSubsequentRegistrationAllowed": false
+}

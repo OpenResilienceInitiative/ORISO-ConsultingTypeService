@@ -1,0 +1,896 @@
+openapi: 3.0.1
+info:
+  description: This information will be replaced by the SpringFox config information
+  title: Definition for Tenant API
+  version: 0.0.1
+servers:
+- url: /
+paths:
+  /tenantadmin:
+    get:
+      operationId: getAllTenantsWithAdminData
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/AdminTenantDTO'
+                type: array
+          description: OK - successful operation
+        "204":
+          description: NO CONTENT - no content found
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "401":
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Get all tenants with admin data [Authorization: Role: tenant-admin]"
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+    post:
+      operationId: createTenant
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultilingualTenantDTO'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultilingualTenantDTO'
+          description: OK - successful operation
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "401":
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Creates a new tenant [Authorization: Role: tenant-admin]"
+      tags:
+      - tenant-controller
+      x-content-type: application/json
+      x-accepts: application/json
+  /tenantadmin/search:
+    get:
+      operationId: searchTenants
+      parameters:
+      - description: URL-encoded infix to search for name or id. A non-encoded star
+          symbol searches for all.
+        explode: true
+        in: query
+        name: query
+        required: true
+        schema:
+          minLength: 1
+          type: string
+        style: form
+      - description: Page number (first page = 1)
+        explode: true
+        in: query
+        name: page
+        required: false
+        schema:
+          default: 1
+          minimum: 1
+          type: integer
+        style: form
+      - description: Number of items returned per page
+        explode: true
+        in: query
+        name: perPage
+        required: false
+        schema:
+          default: 10
+          minimum: 1
+          type: integer
+        style: form
+      - description: field to sort by
+        explode: true
+        in: query
+        name: field
+        required: false
+        schema:
+          default: NAME
+          enum:
+          - NAME
+          - ID
+          pattern: ^(NAME|ID)$
+          type: string
+        style: form
+      - description: sort order
+        explode: true
+        in: query
+        name: order
+        required: false
+        schema:
+          default: ASC
+          enum:
+          - ASC
+          - DESC
+          pattern: ^(ASC|DESC)$
+          type: string
+        style: form
+      responses:
+        "200":
+          content:
+            application/hal+json:
+              schema:
+                $ref: '#/components/schemas/TenantsSearchResultDTO'
+          description: OK - successful operation
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "401":
+          description: UNAUTHORIZED - no/invalid role/authorization
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      security:
+      - Bearer: []
+      summary: "Get tenants matching the given query [Auth: tenant-admin]"
+      tags:
+      - tenant-controller
+      x-accepts: application/hal+json
+  /tenantadmin/{id}:
+    get:
+      operationId: getMultilingualTenantById
+      parameters:
+      - description: Tenant ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultilingualTenantDTO'
+          description: Successful operation
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "401":
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        "404":
+          description: Not found
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Gets a tenant by its id [Authorization: Role: tenant-admin or single-tenant-admin]"
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+    put:
+      operationId: updateTenant
+      parameters:
+      - description: Tenant ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MultilingualTenantDTO'
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MultilingualTenantDTO'
+          description: Successful operation
+        "401":
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        "409":
+          description: CONFLICT - unique constraint validation fails
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Updates a tenant [Authorization: Role: tenant-admin or single-tenant-admin]"
+      tags:
+      - tenant-controller
+      x-content-type: application/json
+      x-accepts: application/json
+  /tenant:
+    get:
+      operationId: getAllTenants
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                items:
+                  $ref: '#/components/schemas/BasicTenantLicensingDTO'
+                type: array
+          description: OK - successful operation
+        "204":
+          description: NO CONTENT - no content found
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "401":
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: Get all tenants
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+  /tenant/{id}:
+    description: This resource represents an individual tenant in a system.
+    get:
+      operationId: getTenantById
+      parameters:
+      - description: Tenant ID
+        explode: false
+        in: path
+        name: id
+        required: true
+        schema:
+          format: int64
+          type: integer
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantDTO'
+          description: Successful operation
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "401":
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        "404":
+          description: Not found
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Gets a tenant by its id [Authorization: Role: tenant-admin or single-tenant-admin]"
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+    summary: Represents a tenant
+  /tenant/public/{subdomain}:
+    description: This resource represents an individual tenant in a system.
+    get:
+      operationId: getRestrictedTenantDataBySubdomain
+      parameters:
+      - description: Subdomain
+        explode: false
+        in: path
+        name: subdomain
+        required: true
+        schema:
+          type: string
+        style: simple
+      - description: Tenant Id
+        explode: true
+        in: query
+        name: tenantId
+        required: false
+        schema:
+          type: long
+        style: form
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestrictedTenantDTO'
+          description: Successful operation
+        "404":
+          description: Not found
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Gets a tenant public information [Authorization: no-auth]"
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+    summary: Represents a publicly allowed tenant data
+  /tenant/public/id/{tenantId}:
+    description: This resource represents an individual tenant in a system.
+    get:
+      operationId: getRestrictedTenantDataByTenantId
+      parameters:
+      - description: Tenant ID
+        explode: false
+        in: path
+        name: tenantId
+        required: true
+        schema:
+          type: long
+        style: simple
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestrictedTenantDTO'
+          description: Successful operation
+        "404":
+          description: Not found
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Gets a tenant public information [Authorization: no-auth]"
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+    summary: Represents a publicly allowed tenant data
+  /tenant/public/single:
+    description: This resource represents the tenant in a single-tenant system.
+    get:
+      operationId: getRestrictedSingleTenantData
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RestrictedTenantDTO'
+          description: Successful operation
+        "404":
+          description: Not found
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Gets a tenant public information [Authorization: no-auth]"
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+    summary: Represents a publicly allowed tenant data
+  /tenant/access:
+    description: This resource represents the access status for the given user to
+      current tenant.
+    get:
+      operationId: canAccessTenant
+      responses:
+        "204":
+          description: Successful operation
+        "401":
+          description: UNAUTHORIZED - no/invalid permission for current tenant
+        "404":
+          description: Not found
+        "400":
+          description: BAD REQUEST - invalid/incomplete request or body object
+        "500":
+          description: INTERNAL SERVER ERROR - server encountered unexpected condition
+      summary: "Validate if user can access tenant [Authorization: no-auth]"
+      tags:
+      - tenant-controller
+      x-accepts: application/json
+    summary: Validate if user can access tenant
+components:
+  schemas:
+    TenantDTO:
+      example:
+        settings:
+          featureToolsEnabled: false
+          featureAttachmentUploadDisabled: false
+          featureGroupChatV2Enabled: false
+          featureStatisticsEnabled: false
+          featureDemographicsEnabled: false
+          extendedSettings:
+            languageFormal: true
+            welcomeMessage: null
+            isVideoCallAllowed: true
+            sendFurtherStepsMessage: true
+            notifications: null
+          featureTopicsEnabled: false
+          featureToolsOICDToken: 1234-1234-1234-1234
+          activeLanguages: "[en, de, fr]"
+          topicsInRegistrationEnabled: false
+          featureAppointmentsEnabled: false
+        updateDate: updateDate
+        name: Company name AG
+        subdomain: companyname
+        id: 12132
+        theming:
+          favicon: base64 encoded image
+          primaryColor: '#FFFFFF'
+          logo: base64 encoded image
+          secondaryColor: '#FFFFFF'
+        licensing:
+          allowedNumberOfUsers: 1
+        content:
+          termsAndConditionsConfirmation: 2000-01-23T04:56:07.000+00:00
+          claim: Llorem ipsum...
+          privacy: Llorem ipsum...
+          dataPrivacyConfirmation: 2000-01-23T04:56:07.000+00:00
+          impressum: Llorem ipsum...
+          termsAndConditions: Llorem ipsum...
+        createDate: createDate
+      properties:
+        id:
+          example: 12132
+          type: long
+        name:
+          example: Company name AG
+          maxLength: 40
+          type: string
+        subdomain:
+          example: companyname
+          maxLength: 100
+          type: string
+        createDate:
+          type: string
+        updateDate:
+          type: string
+        licensing:
+          $ref: '#/components/schemas/Licensing'
+        theming:
+          $ref: '#/components/schemas/Theming'
+        content:
+          $ref: '#/components/schemas/Content'
+        settings:
+          $ref: '#/components/schemas/Settings'
+      required:
+      - id
+      - name
+      - subdomain
+      type: object
+    MultilingualTenantDTO:
+      example:
+        settings:
+          featureToolsEnabled: false
+          featureAttachmentUploadDisabled: false
+          featureGroupChatV2Enabled: false
+          featureStatisticsEnabled: false
+          featureDemographicsEnabled: false
+          extendedSettings:
+            languageFormal: true
+            welcomeMessage: null
+            isVideoCallAllowed: true
+            sendFurtherStepsMessage: true
+            notifications: null
+          featureTopicsEnabled: false
+          featureToolsOICDToken: 1234-1234-1234-1234
+          activeLanguages: "[en, de, fr]"
+          topicsInRegistrationEnabled: false
+          featureAppointmentsEnabled: false
+        updateDate: updateDate
+        adminEmails: "[admin1@ob.de, admin2@ob.de]"
+        name: Company name AG
+        subdomain: companyname
+        id: 12132
+        theming:
+          favicon: base64 encoded image
+          primaryColor: '#FFFFFF'
+          logo: base64 encoded image
+          secondaryColor: '#FFFFFF'
+        licensing:
+          allowedNumberOfUsers: 1
+        content:
+          confirmPrivacy: true
+          claim:
+            key: claim
+          privacy:
+            key: privacy
+          impressum:
+            key: impressum
+          termsAndConditions:
+            key: termsAndConditions
+          confirmTermsAndConditions: true
+        createDate: createDate
+      properties:
+        id:
+          example: 12132
+          type: long
+        name:
+          example: Company name AG
+          maxLength: 40
+          type: string
+        subdomain:
+          example: companyname
+          maxLength: 100
+          type: string
+        adminEmails:
+          example: "[admin1@ob.de, admin2@ob.de]"
+          items:
+            type: string
+          type: array
+        createDate:
+          type: string
+        updateDate:
+          type: string
+        licensing:
+          $ref: '#/components/schemas/Licensing'
+        theming:
+          $ref: '#/components/schemas/Theming'
+        content:
+          $ref: '#/components/schemas/MultilingualContent'
+        settings:
+          $ref: '#/components/schemas/Settings'
+      required:
+      - id
+      - name
+      type: object
+    BasicTenantLicensingDTO:
+      example:
+        updateDate: updateDate
+        name: Company name AG
+        subdomain: companyname
+        id: 12132
+        licensing:
+          allowedNumberOfUsers: 1
+        createDate: createDate
+      properties:
+        id:
+          example: 12132
+          type: long
+        name:
+          example: Company name AG
+          maxLength: 40
+          type: string
+        subdomain:
+          example: companyname
+          maxLength: 100
+          type: string
+        createDate:
+          type: string
+        updateDate:
+          type: string
+        licensing:
+          $ref: '#/components/schemas/Licensing'
+      required:
+      - id
+      - name
+      - subdomain
+      type: object
+    RestrictedTenantDTO:
+      example:
+        settings:
+          featureToolsEnabled: false
+          featureAttachmentUploadDisabled: false
+          featureGroupChatV2Enabled: false
+          featureStatisticsEnabled: false
+          featureDemographicsEnabled: false
+          extendedSettings:
+            languageFormal: true
+            welcomeMessage: null
+            isVideoCallAllowed: true
+            sendFurtherStepsMessage: true
+            notifications: null
+          featureTopicsEnabled: false
+          featureToolsOICDToken: 1234-1234-1234-1234
+          activeLanguages: "[en, de, fr]"
+          topicsInRegistrationEnabled: false
+          featureAppointmentsEnabled: false
+        name: Company name AG
+        subdomain: subdomain
+        id: 12132
+        theming:
+          favicon: base64 encoded image
+          primaryColor: '#FFFFFF'
+          logo: base64 encoded image
+          secondaryColor: '#FFFFFF'
+        content:
+          termsAndConditionsConfirmation: 2000-01-23T04:56:07.000+00:00
+          claim: Llorem ipsum...
+          privacy: Llorem ipsum...
+          dataPrivacyConfirmation: 2000-01-23T04:56:07.000+00:00
+          impressum: Llorem ipsum...
+          termsAndConditions: Llorem ipsum...
+      properties:
+        id:
+          example: 12132
+          type: long
+        name:
+          example: Company name AG
+          maxLength: 40
+          type: string
+        subdomain:
+          example: subdomain
+          maxLength: 100
+          type: string
+        theming:
+          $ref: '#/components/schemas/Theming'
+        content:
+          $ref: '#/components/schemas/Content'
+        settings:
+          $ref: '#/components/schemas/Settings'
+      required:
+      - id
+      - name
+      type: object
+    Licensing:
+      example:
+        allowedNumberOfUsers: 1
+      properties:
+        allowedNumberOfUsers:
+          example: 1
+          type: integer
+      required:
+      - allowedNumberOfUsers
+      type: object
+    Theming:
+      example:
+        favicon: base64 encoded image
+        primaryColor: '#FFFFFF'
+        logo: base64 encoded image
+        secondaryColor: '#FFFFFF'
+      properties:
+        logo:
+          example: base64 encoded image
+          type: string
+        favicon:
+          example: base64 encoded image
+          type: string
+        primaryColor:
+          example: '#FFFFFF'
+          type: string
+        secondaryColor:
+          example: '#FFFFFF'
+          type: string
+      type: object
+    Content:
+      example:
+        termsAndConditionsConfirmation: 2000-01-23T04:56:07.000+00:00
+        claim: Llorem ipsum...
+        privacy: Llorem ipsum...
+        dataPrivacyConfirmation: 2000-01-23T04:56:07.000+00:00
+        impressum: Llorem ipsum...
+        termsAndConditions: Llorem ipsum...
+      properties:
+        impressum:
+          example: Llorem ipsum...
+          type: string
+        claim:
+          example: Llorem ipsum...
+          maxLength: 40
+          type: string
+        privacy:
+          example: Llorem ipsum...
+          type: string
+        termsAndConditions:
+          example: Llorem ipsum...
+          type: string
+        termsAndConditionsConfirmation:
+          description: Datetime stamp when new terms and condition defined
+          format: date-time
+          type: string
+        dataPrivacyConfirmation:
+          description: Datetime stamp when new privacy defined
+          format: date-time
+          type: string
+      required:
+      - impressum
+      type: object
+    Settings:
+      example:
+        featureToolsEnabled: false
+        featureAttachmentUploadDisabled: false
+        featureGroupChatV2Enabled: false
+        featureStatisticsEnabled: false
+        featureDemographicsEnabled: false
+        extendedSettings:
+          languageFormal: true
+          welcomeMessage: null
+          isVideoCallAllowed: true
+          sendFurtherStepsMessage: true
+          notifications: null
+        featureTopicsEnabled: false
+        featureToolsOICDToken: 1234-1234-1234-1234
+        activeLanguages: "[en, de, fr]"
+        topicsInRegistrationEnabled: false
+        featureAppointmentsEnabled: false
+      properties:
+        featureStatisticsEnabled:
+          example: false
+          type: boolean
+        featureTopicsEnabled:
+          example: false
+          type: boolean
+        topicsInRegistrationEnabled:
+          example: false
+          type: boolean
+        featureDemographicsEnabled:
+          example: false
+          type: boolean
+        featureAppointmentsEnabled:
+          example: false
+          type: boolean
+        featureGroupChatV2Enabled:
+          example: false
+          type: boolean
+        featureToolsEnabled:
+          example: false
+          type: boolean
+        featureAttachmentUploadDisabled:
+          example: false
+          type: boolean
+        featureToolsOICDToken:
+          example: 1234-1234-1234-1234
+          type: string
+        activeLanguages:
+          example: "[en, de, fr]"
+          items:
+            type: string
+          type: array
+        extendedSettings:
+          $ref: '#/components/schemas/ConsultingTypePatchDTO'
+      type: object
+    MultilingualContent:
+      example:
+        confirmPrivacy: true
+        claim:
+          key: claim
+        privacy:
+          key: privacy
+        impressum:
+          key: impressum
+        termsAndConditions:
+          key: termsAndConditions
+        confirmTermsAndConditions: true
+      properties:
+        impressum:
+          additionalProperties:
+            type: string
+          type: object
+        claim:
+          additionalProperties:
+            type: string
+          type: object
+        privacy:
+          additionalProperties:
+            type: string
+          type: object
+        confirmPrivacy:
+          type: boolean
+        termsAndConditions:
+          additionalProperties:
+            type: string
+          type: object
+        confirmTermsAndConditions:
+          type: boolean
+      required:
+      - impressum
+      type: object
+    AdminTenantDTO:
+      example:
+        updateDate: updateDate
+        adminEmails: "[admin1@ob.de, admin2@ob.de]"
+        name: Company name AG
+        beraterCount: 10
+        subdomain: companyname
+        id: 12132
+        createDate: createDate
+      properties:
+        id:
+          example: 12132
+          type: long
+        name:
+          example: Company name AG
+          maxLength: 40
+          type: string
+        subdomain:
+          example: companyname
+          maxLength: 100
+          type: string
+        beraterCount:
+          example: 10
+          type: integer
+        adminEmails:
+          example: "[admin1@ob.de, admin2@ob.de]"
+          items:
+            type: string
+          type: array
+        createDate:
+          type: string
+        updateDate:
+          type: string
+      required:
+      - id
+      - name
+      - subdomain
+      type: object
+    TenantsSearchResultDTO:
+      properties:
+        _embedded:
+          items:
+            $ref: '#/components/schemas/AdminTenantDTO'
+          type: array
+        _links:
+          $ref: '#/components/schemas/PaginationLinks'
+        total:
+          type: integer
+      type: object
+    PaginationLinks:
+      properties:
+        self:
+          $ref: '#/components/schemas/HalLink'
+        next:
+          $ref: '#/components/schemas/HalLink'
+        previous:
+          $ref: '#/components/schemas/HalLink'
+      required:
+      - self
+      type: object
+    HalLink:
+      properties:
+        href:
+          type: string
+        method:
+          enum:
+          - GET
+          - POST
+          - DELETE
+          - PUT
+          type: string
+        templated:
+          type: boolean
+      required:
+      - href
+      type: object
+    ConsultingTypePatchDTO:
+      example:
+        languageFormal: true
+        welcomeMessage: null
+        isVideoCallAllowed: true
+        sendFurtherStepsMessage: true
+        notifications: null
+      properties:
+        isVideoCallAllowed:
+          example: true
+          type: boolean
+        languageFormal:
+          example: true
+          type: boolean
+        sendFurtherStepsMessage:
+          example: true
+          type: boolean
+        welcomeMessage:
+          $ref: '#/components/schemas/ConsultingTypePatchDTO_welcomeMessage'
+        notifications:
+          $ref: '#/components/schemas/ConsultingTypePatchDTO_notifications'
+      type: object
+    WelcomeMessageDTO:
+      properties:
+        sendWelcomeMessage:
+          example: true
+          type: boolean
+        welcomeMessageText:
+          example: Lorem ipsum
+          type: string
+      type: object
+    NotificationsDTO:
+      properties:
+        teamSessions:
+          $ref: '#/components/schemas/NotificationsDTO_teamSessions'
+      type: object
+    TeamSessionsDTO:
+      properties:
+        newMessage:
+          $ref: '#/components/schemas/TeamSessionsDTO_newMessage'
+      type: object
+    NewMessageDTO:
+      properties:
+        allTeamConsultants:
+          example: true
+          type: boolean
+      type: object
+    ConsultingTypePatchDTO_welcomeMessage:
+      allOf:
+      - $ref: '#/components/schemas/WelcomeMessageDTO'
+    ConsultingTypePatchDTO_notifications:
+      allOf:
+      - $ref: '#/components/schemas/NotificationsDTO'
+    NotificationsDTO_teamSessions:
+      allOf:
+      - $ref: '#/components/schemas/TeamSessionsDTO'
+    TeamSessionsDTO_newMessage:
+      allOf:
+      - $ref: '#/components/schemas/NewMessageDTO'
+

@@ -1,0 +1,109 @@
+package de.caritas.cob.consultingtypeservice.api.model;
+
+import java.net.URI;
+import java.util.Objects;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import de.caritas.cob.consultingtypeservice.api.model.RequiredComponentsDTOAge;
+import de.caritas.cob.consultingtypeservice.api.model.RequiredComponentsDTOState;
+import org.openapitools.jackson.nullable.JsonNullable;
+import java.time.OffsetDateTime;
+import javax.validation.Valid;
+import javax.validation.constraints.*;
+import io.swagger.v3.oas.annotations.media.Schema;
+
+
+import java.util.*;
+import javax.annotation.Generated;
+
+/**
+ * RequiredComponentsDTO
+ */
+
+@Generated(value = "org.openapitools.codegen.languages.SpringCodegen", date = "2025-12-25T23:22:19.381612101Z[Etc/UTC]")
+public class RequiredComponentsDTO {
+
+  @JsonProperty("age")
+  private RequiredComponentsDTOAge age;
+
+  @JsonProperty("state")
+  private RequiredComponentsDTOState state;
+
+  public RequiredComponentsDTO age(RequiredComponentsDTOAge age) {
+    this.age = age;
+    return this;
+  }
+
+  /**
+   * Get age
+   * @return age
+  */
+  @Valid 
+  @Schema(name = "age", required = false)
+  public RequiredComponentsDTOAge getAge() {
+    return age;
+  }
+
+  public void setAge(RequiredComponentsDTOAge age) {
+    this.age = age;
+  }
+
+  public RequiredComponentsDTO state(RequiredComponentsDTOState state) {
+    this.state = state;
+    return this;
+  }
+
+  /**
+   * Get state
+   * @return state
+  */
+  @Valid 
+  @Schema(name = "state", required = false)
+  public RequiredComponentsDTOState getState() {
+    return state;
+  }
+
+  public void setState(RequiredComponentsDTOState state) {
+    this.state = state;
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    if (this == o) {
+      return true;
+    }
+    if (o == null || getClass() != o.getClass()) {
+      return false;
+    }
+    RequiredComponentsDTO requiredComponentsDTO = (RequiredComponentsDTO) o;
+    return Objects.equals(this.age, requiredComponentsDTO.age) &&
+        Objects.equals(this.state, requiredComponentsDTO.state);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(age, state);
+  }
+
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append("class RequiredComponentsDTO {\n");
+    sb.append("    age: ").append(toIndentedString(age)).append("\n");
+    sb.append("    state: ").append(toIndentedString(state)).append("\n");
+    sb.append("}");
+    return sb.toString();
+  }
+
+  /**
+   * Convert the given object to string with each line indented by 4 spaces
+   * (except the first line).
+   */
+  private String toIndentedString(Object o) {
+    if (o == null) {
+      return "null";
+    }
+    return o.toString().replace("\n", "\n    ");
+  }
+}
+
