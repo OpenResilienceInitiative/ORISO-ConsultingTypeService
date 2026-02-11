@@ -1,1 +1,0 @@
-drop table if exists `consultingtypeservice`.`group_topic`, `consultingtypeservice`.`group`;

@@ -1,1 +1,0 @@
-ALTER TABLE consultingtypeservice.`topic` ADD fallback_url varchar(200);
