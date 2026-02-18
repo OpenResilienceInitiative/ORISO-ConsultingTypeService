@@ -1,0 +1,29 @@
+{
+  "id": 1,
+  "tenantId": null,
+  "slug": "consultingtype1",
+  "excludeNonMainConsultantsFromTeamSessions": false,
+  "consultantBoundedToConsultingType": false,
+  "isVideoCallAllowed": true,
+  "languageFormal": true,
+  "roles": {
+    "consultant": {
+      "defaultRole": [
+        "consultant"
+      ]
+    }
+  },
+  "registration": {
+    "mandatoryFields": {
+      "age": false,
+      "state": false
+    },
+    "notes": {
+
+    }
+  },
+  "urls": {
+  } ,
+  "showAskerProfile": false,
+  "isSubsequentRegistrationAllowed": false
+}
