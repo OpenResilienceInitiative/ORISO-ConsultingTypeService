@@ -94,6 +94,25 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.value").value(true))
         .andExpect(
             jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.readOnly").value(false))
+        .andExpect(jsonPath("$.globalFeatureSystemNotificationEmailsEnabled.value").value(false))
+        .andExpect(
+            jsonPath("$.globalFeatureSystemNotificationEmailsEnabled.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpEnabled.value").value(false))
+        .andExpect(jsonPath("$.globalSmtpEnabled.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpHost.value").value(""))
+        .andExpect(jsonPath("$.globalSmtpHost.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpPort.value").value("587"))
+        .andExpect(jsonPath("$.globalSmtpPort.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpSecure.value").value(false))
+        .andExpect(jsonPath("$.globalSmtpSecure.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpUsername.value").value(""))
+        .andExpect(jsonPath("$.globalSmtpUsername.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpPassword.value").value(""))
+        .andExpect(jsonPath("$.globalSmtpPassword.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpFrom.value").value(""))
+        .andExpect(jsonPath("$.globalSmtpFrom.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpEmailThemeColor.value").value("#0f3b8f"))
+        .andExpect(jsonPath("$.globalSmtpEmailThemeColor.readOnly").value(false))
         .andExpect(jsonPath("$.documentationEnabled.value").value(false))
         .andExpect(jsonPath("$.documentationEnabled.readOnly").value(true));
   }
@@ -109,6 +128,15 @@ class ApplicationSettingsControllerIT {
     ApplicationSettingsPatchDTO patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(false);
     patchDTO.setMainTenantSubdomainForSingleDomainMultitenancy("app2");
+    patchDTO.setGlobalFeatureSystemNotificationEmailsEnabled(true);
+    patchDTO.setGlobalSmtpEnabled(true);
+    patchDTO.setGlobalSmtpHost("smtp.global.example");
+    patchDTO.setGlobalSmtpPort("2525");
+    patchDTO.setGlobalSmtpSecure(true);
+    patchDTO.setGlobalSmtpUsername("global-user");
+    patchDTO.setGlobalSmtpPassword("global-pass");
+    patchDTO.setGlobalSmtpFrom("noreply@global.example");
+    patchDTO.setGlobalSmtpEmailThemeColor("#112233");
     String jsonRequest = JsonConverter.convertToJson(patchDTO);
     mockMvc
         .perform(
@@ -148,6 +176,15 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.value").value(false))
         .andExpect(
             jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.readOnly").value(false))
+        .andExpect(jsonPath("$.globalFeatureSystemNotificationEmailsEnabled.value").value(true))
+        .andExpect(jsonPath("$.globalSmtpEnabled.value").value(true))
+        .andExpect(jsonPath("$.globalSmtpHost.value").value("smtp.global.example"))
+        .andExpect(jsonPath("$.globalSmtpPort.value").value("2525"))
+        .andExpect(jsonPath("$.globalSmtpSecure.value").value(true))
+        .andExpect(jsonPath("$.globalSmtpUsername.value").value("global-user"))
+        .andExpect(jsonPath("$.globalSmtpPassword.value").value("global-pass"))
+        .andExpect(jsonPath("$.globalSmtpFrom.value").value("noreply@global.example"))
+        .andExpect(jsonPath("$.globalSmtpEmailThemeColor.value").value("#112233"))
         .andExpect(jsonPath("$.releaseToggles.featureToggleTenantCreationEnabled").value(true));
 
     // clean up
@@ -158,6 +195,15 @@ class ApplicationSettingsControllerIT {
     var patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(true);
     patchDTO.setMainTenantSubdomainForSingleDomainMultitenancy("app");
+    patchDTO.setGlobalFeatureSystemNotificationEmailsEnabled(false);
+    patchDTO.setGlobalSmtpEnabled(false);
+    patchDTO.setGlobalSmtpHost("");
+    patchDTO.setGlobalSmtpPort("587");
+    patchDTO.setGlobalSmtpSecure(false);
+    patchDTO.setGlobalSmtpUsername("");
+    patchDTO.setGlobalSmtpPassword("");
+    patchDTO.setGlobalSmtpFrom("");
+    patchDTO.setGlobalSmtpEmailThemeColor("#0f3b8f");
     var jsonRequest = JsonConverter.convertToJson(patchDTO);
     mockMvc
         .perform(

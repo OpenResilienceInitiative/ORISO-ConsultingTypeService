@@ -44,7 +44,10 @@ public class ApplicationSettingsController implements SettingsApi, Settingsadmin
   }
 
   @Override
-  @PreAuthorize("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')")
+  @PreAuthorize(
+      "hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS') "
+          + "or hasAuthority('ROLE_tenant-admin') "
+          + "or hasAuthority('tenant-admin')")
   public ResponseEntity<ApplicationSettingsDTO> patchApplicationSettings(
       ApplicationSettingsPatchDTO settingsPatchDTO) {
     applicationSettingsServiceFacade.patchApplicationSettings(settingsPatchDTO);

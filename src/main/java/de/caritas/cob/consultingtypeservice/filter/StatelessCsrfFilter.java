@@ -76,6 +76,7 @@ public class StatelessCsrfFilter extends OncePerRequestFilter {
       List<String> csrfWhitelist = new ArrayList<>(Arrays.asList(SecurityConfig.WHITE_LIST));
       csrfWhitelist.add("/topic");
       csrfWhitelist.add("/consultingtypes");
+      csrfWhitelist.add("/settingsadmin");
       if (csrfWhitelist.parallelStream()
           .anyMatch(request.getRequestURI().toLowerCase()::contains)) {
         return false;

@@ -25,7 +25,14 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class HttpTenantFilter extends OncePerRequestFilter {
 
   private static final String[] TENANCY_FILTER_WHITELIST =
-      new String[] {"/actuator/health", "/actuator/health/**", "/swagger-ui.html", "/favicon.ico"};
+      new String[] {
+        "/actuator/health",
+        "/actuator/health/**",
+        "/swagger-ui.html",
+        "/favicon.ico",
+        "/settings",
+        "/settingsadmin"
+      };
   private final TenantResolver tenantResolver;
 
   private final DefaultRequiresTenantFilterMatcher requiresTenantFilterMatcher =
