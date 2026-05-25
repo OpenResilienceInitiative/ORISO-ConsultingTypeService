@@ -57,7 +57,9 @@ public class ApplicationSettingsServiceFacade {
     if (settingsPatchDTO.getGlobalFeatureSystemNotificationEmailsEnabled() != null) {
       if (entity.getGlobalFeatureSystemNotificationEmailsEnabled() == null) {
         entity.setGlobalFeatureSystemNotificationEmailsEnabled(
-            new GlobalFeatureSystemNotificationEmailsEnabled().withValue(false).withReadOnly(false));
+            new GlobalFeatureSystemNotificationEmailsEnabled()
+                .withValue(false)
+                .withReadOnly(false));
       }
       entity
           .getGlobalFeatureSystemNotificationEmailsEnabled()
