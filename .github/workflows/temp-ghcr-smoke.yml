@@ -2,6 +2,9 @@ name: Temp GHCR Smoke Test
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - ci
 
 permissions:
   contents: read
