@@ -1,0 +1,21 @@
+flowchart TD
+  Client[ORISO clients and admin UI]
+  OpenAPI[api OpenAPI contracts]
+  Controllers[REST controllers]
+  Security[SecurityConfig + CSRF + JWT]
+  Tenancy[HttpTenantFilter + TenantResolver + TenantContext]
+  Consulting[ConsultingTypeService]
+  Topics[TopicServiceFacade + TopicService]
+  Settings[ApplicationSettingsService]
+  Mongo[(MongoDB consulting_types and application_settings)]
+  Maria[(MariaDB topic and topic_group)]
+  TenantSvc[ORISO TenantService]
+  Client --> OpenAPI --> Controllers
+  Controllers --> Security
+  Security --> Tenancy
+  Controllers --> Consulting --> Mongo
+  Controllers --> Topics --> Maria
+  Controllers --> Settings --> Mongo
+  Tenancy --> TenantSvc
+  Tenancy --> Consulting
+  Tenancy --> Topics
