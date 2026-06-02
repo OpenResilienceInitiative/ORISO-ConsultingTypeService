@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+  xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
+
+    <!-- The base changeset contains the database state when liquibase was added to the project -->
+	<include file="db/changelog/changeset/0001_initsql/initSql.xml"/>
+  <include file="db/changelog/changeset/0002_topic_internal_identifier/topic_internal_identifier_column.xml"/>
+  <include
+    file="db/changelog/changeset/0003_migrate_topic_to_multilingual_structure/0003-changeSet.xml"/>
+  <include file="/db/changelog/changeset/0004_topic_groups/0004-changeSet.xml"/>
+  <include file="/db/changelog/changeset/0005_topic_fallback_agency_id/topic_fallback_agency_id.xml"/>
+    <include file="db/changelog/changeset/0006_topic_fallback_url/topic_fallback_url.xml"/>
+  <include file="db/changelog/changeset/0007_topic_welcome_message/topic_welcome_message.xml"/>
+  <include file="db/changelog/changeset/0008_topic_send_next_step_message/topic_send_next_step_message.xml"/>
+  <include file="db/changelog/changeset/0009_topic_add_titles_and_extend_internal_identifier/0009_topic_add_titles_and_extend_internal_identifier.xml"/>
+  <include file="db/changelog/changeset/0010_change_topic_and_topic_groups_to_be_i18n_aware/0010_change_topic_and_topic_groups_to_be_i18n_aware.xml"/>
+</databaseChangeLog>

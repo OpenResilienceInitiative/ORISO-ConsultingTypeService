@@ -16,7 +16,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>4.0.1</version>
+    <version>2.7.14</version>
     <relativePath/> <!-- lookup parent from repository -->
   </parent>
 
@@ -26,17 +26,19 @@
     <spring.upper.version>6.2.0</spring.upper.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <java.version>21</java.version>
-    <!-- springdoc is not managed by Spring Boot's dependency BOM -->
-    <springdoc.version>2.0.0</springdoc.version>
+    <java.version>11</java.version>
     <!-- force at least version 2.16 due to https://logging.apache.org/log4j/2.x/security.html -->
 
-    <log4j.version>2.17.1</log4j.version>
+    <log4j.version>2.16.0</log4j.version>
     <openapi-generator-maven-plugin.version>6.2.1</openapi-generator-maven-plugin.version>
     <jackson-databind-nullable.version>0.2.3</jackson-databind-nullable.version>
+    <springfox-swagger2.version>3.0.0</springfox-swagger2.version>
+    <springfox-bean-validators.version>3.0.0</springfox-bean-validators.version>
+    <springfox-swagger-ui.version>3.0.0</springfox-swagger-ui.version>
     <commons-lang3.version>3.11</commons-lang3.version>
-    <!-- Keycloak 17.x is javax.* based; Spring Boot 4.x is jakarta.* based -->
-    <keycloak-admin-client.version>24.0.5</keycloak-admin-client.version>
+    <keycloak-spring-security-adapter.version>16.0.0</keycloak-spring-security-adapter.version>
+    <keycloak-spring-boot-starter.version>16.0.0</keycloak-spring-boot-starter.version>
+    <keycloak-admin-client.version>16.0.0</keycloak-admin-client.version>
     <powermock-module-junit4.version>2.0.2</powermock-module-junit4.version>
     <powermock-api-mockito2.version>2.0.2</powermock-api-mockito2.version>
     <easy-random-core.version>4.3.0</easy-random-core.version>
@@ -44,10 +46,15 @@
     <json.version>20201115</json.version>
     <json-unit.version>2.25.0</json-unit.version>
     <json-unit-spring.version>2.25.0</json-unit-spring.version>
-    <jakarta.ws.rs-api.version>3.1.0</jakarta.ws.rs-api.version>
+    <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
     <liquibase-maven-plugin.version>4.1.1</liquibase-maven-plugin.version>
     <owasp-java-html-sanitizer.version>20211018.2</owasp-java-html-sanitizer.version>
     <liquibase-core.version>4.9.1</liquibase-core.version>
+    <hibernate-validator.version>6.1.6.Final</hibernate-validator.version>
+    <spring-security-test.version>5.5.7</spring-security-test.version>
+    <spring-boot-starter-data-mongodb.version>2.7.5</spring-boot-starter-data-mongodb.version>
+    <spring-boot-starter.version>2.6.15</spring-boot-starter.version>
+    <spring-data-mongodb.version>3.3.5</spring-data-mongodb.version>
     <ehcache.version>2.10.9.2</ehcache.version>
   </properties>
 
@@ -56,7 +63,7 @@
       <dependency>
         <groupId>org.springframework.cloud</groupId>
         <artifactId>spring-cloud-dependencies</artifactId>
-        <version>2025.0.0</version>
+        <version>2021.0.8</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -72,6 +79,7 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-mongodb</artifactId>
+      <version>${spring-boot-starter-data-mongodb.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -80,10 +88,6 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-validation</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -108,18 +112,25 @@
         </exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>org.hibernate.validator</groupId>
+      <artifactId>hibernate-validator</artifactId>
+      <version>${hibernate-validator.version}</version>
+    </dependency>
     <!-- Spring actuator  -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
     </dependency>
     <dependency>
-      <groupId>io.micrometer</groupId>
-      <artifactId>micrometer-tracing-bridge-otel</artifactId>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-sleuth</artifactId>
+      <version>3.1.11</version>
     </dependency>
     <dependency>
-      <groupId>io.opentelemetry</groupId>
-      <artifactId>opentelemetry-exporter-zipkin</artifactId>
+      <groupId>org.springframework.cloud</groupId>
+      <artifactId>spring-cloud-starter-zipkin</artifactId>
+      <version>2.2.8.RELEASE</version>
     </dependency>
     <!-- OpenApi/Swagger dependencies -->
     <dependency>
@@ -135,15 +146,24 @@
     </dependency>
 
 
+    <!-- SpringFox: generate YAML file from POJOs and generate documentation -->
+
+    <dependency>
+      <groupId>javax.validation</groupId>
+      <artifactId>validation-api</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>io.swagger.core.v3</groupId>
       <artifactId>swagger-annotations</artifactId>
       <version>2.2.15</version>
     </dependency>
+    <!-- SpringFox: generate YAML file from POJOs and generate documentation -->
+
     <dependency>
       <groupId>org.springdoc</groupId>
-      <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
-      <version>${springdoc.version}</version>
+      <artifactId>springdoc-openapi-ui</artifactId>
+      <version>1.8.0</version>
     </dependency>
 
     <!-- Lombok dependencies -->
@@ -172,17 +192,41 @@
       <version>4.3.1</version>
     </dependency>
 
-    <!-- Keycloak Admin client (used for server-side management calls) -->
+    <!-- Keycloak dependencies -->
+    <dependency>
+      <groupId>org.keycloak</groupId>
+      <artifactId>keycloak-spring-security-adapter</artifactId>
+      <version>${keycloak-spring-security-adapter.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.keycloak</groupId>
+      <artifactId>keycloak-spring-boot-starter</artifactId>
+      <version>${keycloak-spring-boot-starter.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>ch.qos.logback</groupId>
+          <artifactId>logback-classic</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
     <dependency>
       <groupId>org.keycloak</groupId>
       <artifactId>keycloak-admin-client</artifactId>
       <version>${keycloak-admin-client.version}</version>
     </dependency>
 
+    <!-- Mongo dependencies -->
+    <dependency>
+      <groupId>org.springframework.data</groupId>
+      <artifactId>spring-data-mongodb</artifactId>
+      <version>${spring-data-mongodb.version}</version>
+    </dependency>
+
     <!-- Test scope dependencies -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <version>${spring-boot-starter.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -194,6 +238,7 @@
     <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
+      <version>${spring-security-test.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -201,6 +246,11 @@
       <artifactId>de.flapdoodle.embed.mongo</artifactId>
       <version>4.13.0</version>
       <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>de.flapdoodle.embed</groupId>
+      <artifactId>de.flapdoodle.embed.mongo.spring26x</artifactId>
+      <version>4.13.0</version>
     </dependency>
 
     <dependency>
@@ -260,9 +310,9 @@
     </dependency>
 
     <dependency>
-      <groupId>jakarta.ws.rs</groupId>
-      <artifactId>jakarta.ws.rs-api</artifactId>
-      <version>${jakarta.ws.rs-api.version}</version>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <version>${javax.ws.rs-api.version}</version>
     </dependency>
 
 
@@ -286,10 +336,6 @@
       <groupId>org.liquibase</groupId>
       <artifactId>liquibase-core</artifactId>
       <version>${liquibase-core.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.springframework.boot</groupId>
-      <artifactId>spring-boot-starter-liquibase</artifactId>
     </dependency>
     <dependency>
       <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
@@ -604,6 +650,23 @@
             <phase>compile</phase>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.openrewrite.maven</groupId>
+        <artifactId>rewrite-maven-plugin</artifactId>
+        <version>5.30.0</version>
+        <configuration>
+          <activeRecipes>
+            <recipe>org.openrewrite.java.spring.boot2.UpgradeSpringBoot_2_6</recipe>
+          </activeRecipes>
+        </configuration>
+        <dependencies>
+          <dependency>
+            <groupId>org.openrewrite.recipe</groupId>
+            <artifactId>rewrite-spring</artifactId>
+            <version>5.9.0</version>
+          </dependency>
+        </dependencies>
       </plugin>
     </plugins>
   </build>

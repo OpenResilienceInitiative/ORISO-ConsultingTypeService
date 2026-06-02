@@ -5,7 +5,7 @@ import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.Internal
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
 import java.net.UnknownHostException;
-import jakarta.validation.ConstraintViolationException;
+import javax.validation.ConstraintViolationException;
 import lombok.NoArgsConstructor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;

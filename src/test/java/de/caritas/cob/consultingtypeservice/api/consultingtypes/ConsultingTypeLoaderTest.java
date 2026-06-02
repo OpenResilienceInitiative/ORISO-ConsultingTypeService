@@ -13,7 +13,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import jakarta.annotation.PostConstruct;
+import javax.annotation.PostConstruct;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

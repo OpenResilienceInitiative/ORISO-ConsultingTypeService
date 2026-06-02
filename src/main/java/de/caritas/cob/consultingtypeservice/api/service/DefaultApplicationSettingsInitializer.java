@@ -9,6 +9,15 @@ import de.caritas.cob.consultingtypeservice.schemas.model.CalendarAppUrl;
 import de.caritas.cob.consultingtypeservice.schemas.model.DisableVideoAppointments;
 import de.caritas.cob.consultingtypeservice.schemas.model.DocumentationEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import de.caritas.cob.consultingtypeservice.schemas.model.LegalContentChangesBySingleTenantAdminsAllowed;
 import de.caritas.cob.consultingtypeservice.schemas.model.MainTenantSubdomainForSingleDomainMultitenancy;
 import de.caritas.cob.consultingtypeservice.schemas.model.MultitenancyEnabled;
@@ -16,7 +25,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.MultitenancyWithSingle
 import de.caritas.cob.consultingtypeservice.schemas.model.UseConsultingTypesForAgencies;
 import de.caritas.cob.consultingtypeservice.schemas.model.UseOverviewPage;
 import de.caritas.cob.consultingtypeservice.schemas.model.UseTenantService;
-import jakarta.annotation.PostConstruct;
+import javax.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -78,6 +87,17 @@ public class DefaultApplicationSettingsInitializer {
     entity.setLegalContentChangesBySingleTenantAdminsAllowed(
         new LegalContentChangesBySingleTenantAdminsAllowed().withValue(true).withReadOnly(false));
     entity.setDocumentationEnabled(new DocumentationEnabled().withValue(false).withReadOnly(true));
+    entity.setGlobalFeatureSystemNotificationEmailsEnabled(
+        new GlobalFeatureSystemNotificationEmailsEnabled().withValue(false).withReadOnly(false));
+    entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
+    entity.setGlobalSmtpHost(new GlobalSmtpHost().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpPort(new GlobalSmtpPort().withValue("587").withReadOnly(false));
+    entity.setGlobalSmtpSecure(new GlobalSmtpSecure().withValue(false).withReadOnly(false));
+    entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpFrom(new GlobalSmtpFrom().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpEmailThemeColor(
+        new GlobalSmtpEmailThemeColor().withValue("#0f3b8f").withReadOnly(false));
     return entity;
   }
 }

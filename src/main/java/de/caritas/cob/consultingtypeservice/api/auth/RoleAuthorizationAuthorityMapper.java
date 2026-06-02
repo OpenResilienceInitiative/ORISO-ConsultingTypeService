@@ -19,7 +19,7 @@ public class RoleAuthorizationAuthorityMapper implements GrantedAuthoritiesMappe
     Set<String> roleNames =
         authorities.stream()
             .map(GrantedAuthority::getAuthority)
-            .map(String::toLowerCase)
+            .map(this::normalizeRoleName)
             .collect(Collectors.toSet());
 
     return mapAuthorities(roleNames);
@@ -34,5 +34,16 @@ public class RoleAuthorizationAuthorityMapper implements GrantedAuthoritiesMappe
         .flatMap(Collection::parallelStream)
         .map(SimpleGrantedAuthority::new)
         .collect(Collectors.toSet());
+  }
+
+  private String normalizeRoleName(String roleName) {
+    if (roleName == null) {
+      return "";
+    }
+    var normalized = roleName.toLowerCase();
+    if (normalized.startsWith("role_")) {
+      return normalized.substring("role_".length());
+    }
+    return normalized;
   }
 }

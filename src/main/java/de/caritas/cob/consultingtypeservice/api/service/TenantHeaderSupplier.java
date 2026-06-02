@@ -1,7 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
 import java.util.Optional;
-import jakarta.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

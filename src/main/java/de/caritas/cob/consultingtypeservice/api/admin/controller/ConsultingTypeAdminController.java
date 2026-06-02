@@ -6,8 +6,8 @@ import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeAdminResultD
 import de.caritas.cob.consultingtypeservice.api.model.RootDTO;
 import de.caritas.cob.consultingtypeservice.generated.api.admin.controller.ConsultingtypeadminApi;
 import io.swagger.annotations.Api;
-import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
+import javax.validation.Valid;
+import javax.validation.constraints.NotNull;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

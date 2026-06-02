@@ -105,6 +105,33 @@ components:
         documentationEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
+        globalFeatureSystemNotificationEmailsEnabled:
+          allOf:
+            - $ref: '#/components/schemas/FeatureToggleDTO'
+        globalSmtpEnabled:
+          allOf:
+            - $ref: '#/components/schemas/FeatureToggleDTO'
+        globalSmtpHost:
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        globalSmtpPort:
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        globalSmtpSecure:
+          allOf:
+            - $ref: '#/components/schemas/FeatureToggleDTO'
+        globalSmtpUsername:
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        globalSmtpPassword:
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        globalSmtpFrom:
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        globalSmtpEmailThemeColor:
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
         releaseToggles:
           type: object
           additionalProperties:
@@ -117,6 +144,24 @@ components:
         legalContentChangesBySingleTenantAdminsAllowed:
           type: boolean
         mainTenantSubdomainForSingleDomainMultitenancy:
+          type: string
+        globalFeatureSystemNotificationEmailsEnabled:
+          type: boolean
+        globalSmtpEnabled:
+          type: boolean
+        globalSmtpHost:
+          type: string
+        globalSmtpPort:
+          type: string
+        globalSmtpSecure:
+          type: boolean
+        globalSmtpUsername:
+          type: string
+        globalSmtpPassword:
+          type: string
+        globalSmtpFrom:
+          type: string
+        globalSmtpEmailThemeColor:
           type: string
     
     FeatureToggleDTO:

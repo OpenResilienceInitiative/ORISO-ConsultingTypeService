@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<checkstyle version="8.29">
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/api/service/TenantService.java">
+<error line="45" severity="warning" message="Overload methods should not be split. Previous overloaded method located at line &apos;28&apos;." source="com.puppycrawl.tools.checkstyle.checks.coding.OverloadMethodsDeclarationOrderCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/api/controller/ApplicationSettingsController.java">
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/api/controller/VersionController.java">
+<error line="43" severity="warning" message="Empty catch block." source="com.puppycrawl.tools.checkstyle.checks.blocks.EmptyCatchBlockCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/api/ApiResponseEntityExceptionHandler.java">
+<error line="132" severity="warning" message="&apos;NullPointerException&apos; has incorrect indentation level 4, expected level should be 6." source="com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck"/>
+<error line="133" severity="warning" message="&apos;IllegalArgumentException&apos; has incorrect indentation level 4, expected level should be 6." source="com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck"/>
+<error line="134" severity="warning" message="&apos;IllegalStateException&apos; has incorrect indentation level 4, expected level should be 6." source="com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck"/>
+<error line="135" severity="warning" message="&apos;UnknownHostException&apos; has incorrect indentation level 4, expected level should be 6." source="com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck"/>
+<error line="136" severity="warning" message="&apos;DataAccessException&apos; has incorrect indentation level 4, expected level should be 6." source="com.puppycrawl.tools.checkstyle.checks.indentation.IndentationCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/api/converter/TopicConverter.java">
+<error line="7" severity="warning" message="Using the &apos;.*&apos; form of import should be avoided - de.caritas.cob.consultingtypeservice.api.model.*." source="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
+<error line="56" severity="warning" message="Overload methods should not be split. Previous overloaded method located at line &apos;26&apos;." source="com.puppycrawl.tools.checkstyle.checks.coding.OverloadMethodsDeclarationOrderCheck"/>
+<error line="135" severity="warning" message="Overload methods should not be split. Previous overloaded method located at line &apos;101&apos;." source="com.puppycrawl.tools.checkstyle.checks.coding.OverloadMethodsDeclarationOrderCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/api/model/TopicGroupEntity.java">
+<error line="6" severity="warning" message="Using the &apos;.*&apos; form of import should be avoided - javax.persistence.*." source="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/api/model/TopicEntity.java">
+<error line="6" severity="warning" message="Using the &apos;.*&apos; form of import should be avoided - javax.persistence.*." source="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
+<error line="7" severity="warning" message="Using the &apos;.*&apos; form of import should be avoided - lombok.*." source="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/config/ConfigurationValidator.java">
+<error line="71" column="122" severity="warning" message="&apos;+&apos; should be on a new line." source="com.puppycrawl.tools.checkstyle.checks.whitespace.OperatorWrapCheck"/>
+<error line="72" column="117" severity="warning" message="&apos;+&apos; should be on a new line." source="com.puppycrawl.tools.checkstyle.checks.whitespace.OperatorWrapCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/main/java/de/caritas/cob/consultingtypeservice/filter/StatelessCsrfFilter.java">
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/test/java/de/caritas/cob/consultingtypeservice/api/mapper/group/ConsultingTypeGroupResponseMapperTest.java">
+<error line="4" severity="warning" message="Using the &apos;.*&apos; form of import should be avoided - org.hamcrest.Matchers.*." source="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/test/java/de/caritas/cob/consultingtypeservice/api/controller/ApplicationSettingsControllerIT.java">
+<error line="127" severity="warning" message="Distance between variable &apos;authentication&apos; declaration and its first usage is 12, but allowed 3.  Consider making that variable final if you still need to store its value in advance (before method calls that might have side effects on the original value)." source="com.puppycrawl.tools.checkstyle.checks.coding.VariableDeclarationUsageDistanceCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/test/java/de/caritas/cob/consultingtypeservice/api/util/MultilingualTopicTestDataBuilder.java">
+<error line="55" severity="warning" message="Overload methods should not be split. Previous overloaded method located at line &apos;45&apos;." source="com.puppycrawl.tools.checkstyle.checks.coding.OverloadMethodsDeclarationOrderCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/test/java/de/caritas/cob/consultingtypeservice/api/converter/TopicConverterTest.java">
+<error line="7" severity="warning" message="Using the &apos;.*&apos; form of import should be avoided - de.caritas.cob.consultingtypeservice.api.model.*." source="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
+</file>
+<file name="/root/online-beratung/ORISO-Complete/caritas-workspace/ORISO-ConsultingTypeService/src/test/java/de/caritas/cob/consultingtypeservice/api/converter/TopicGroupConverterTest.java">
+<error line="3" severity="warning" message="Using the &apos;.*&apos; form of import should be avoided - org.junit.jupiter.api.Assertions.*." source="com.puppycrawl.tools.checkstyle.checks.imports.AvoidStarImportCheck"/>
+</file>
+</checkstyle>

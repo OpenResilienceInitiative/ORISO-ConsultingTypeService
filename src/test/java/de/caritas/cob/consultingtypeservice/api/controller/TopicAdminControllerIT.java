@@ -1,8 +1,10 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -27,9 +29,15 @@ import de.caritas.cob.consultingtypeservice.testHelper.TopicPathConstants;
 import java.util.HashMap;
 import java.util.Map;
 import org.assertj.core.util.Maps;
+import org.assertj.core.util.Sets;
 import org.jeasy.random.EasyRandom;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.keycloak.adapters.RefreshableKeycloakSecurityContext;
+import org.keycloak.adapters.spi.KeycloakAccount;
+import org.keycloak.adapters.springsecurity.account.SimpleKeycloakAccount;
+import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
+import org.keycloak.representations.AccessToken;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -82,9 +90,9 @@ class TopicAdminControllerIT {
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
                 .with(authentication(builder.withUserRole(TOPIC_ADMIN.getValue()).build()))
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isBadRequest());
   }
 
@@ -112,9 +120,9 @@ class TopicAdminControllerIT {
         .perform(
             put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
                 .with(authentication(authentication))
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").exists())
         .andExpect(jsonPath("$.name['de']").value("new name"))
@@ -144,9 +152,9 @@ class TopicAdminControllerIT {
         .perform(
             put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
                 .with(authentication(authentication))
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isForbidden());
   }
 
@@ -163,9 +171,9 @@ class TopicAdminControllerIT {
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
                 .with(authentication(builder.withUserRole(TOPIC_ADMIN.getValue()).build()))
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isBadRequest());
   }
 
@@ -177,9 +185,7 @@ class TopicAdminControllerIT {
     final String payload = JsonConverter.convertToJson(topicDTO);
     mockMvc
         .perform(
-            post(TopicPathConstants.ADMIN_ROOT_PATH)
-                .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+            post(TopicPathConstants.ADMIN_ROOT_PATH).content(payload).contentType(APPLICATION_JSON))
         .andExpect(status().isForbidden());
   }
 
@@ -196,7 +202,7 @@ class TopicAdminControllerIT {
             post(TopicPathConstants.ADMIN_ROOT_PATH)
                 .with(authentication(builder.withUserRole("another-authority").build()))
                 .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isForbidden());
   }
 
@@ -219,9 +225,9 @@ class TopicAdminControllerIT {
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
                 .with(authentication(authentication))
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").exists())
         .andExpect(jsonPath("$.name").exists())
@@ -246,9 +252,9 @@ class TopicAdminControllerIT {
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
                 .with(authentication(authentication))
-                .contentType(MediaType.APPLICATION_JSON)
+                .contentType(APPLICATION_JSON)
                 .content(payload)
-                .contentType(MediaType.APPLICATION_JSON))
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isForbidden());
   }
 
@@ -316,7 +322,23 @@ class TopicAdminControllerIT {
   }
 
   private Authentication givenMockAuthentication(final UserRole userRole) {
-    return new AuthenticationMockBuilder().withUserRole(userRole.getValue()).build();
+    final var securityContext = mock(RefreshableKeycloakSecurityContext.class);
+    when(securityContext.getTokenString()).thenReturn("tokenString");
+    final var token = mock(AccessToken.class, Mockito.RETURNS_DEEP_STUBS);
+    when(securityContext.getToken()).thenReturn(token);
+    givenOtherClaimsAreDefinedForToken(token);
+    final KeycloakAccount mockAccount =
+        new SimpleKeycloakAccount(() -> "user", Sets.newHashSet(), securityContext);
+
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(userRole.getValue()).build();
+    return new KeycloakAuthenticationToken(mockAccount, true, authentication.getAuthorities());
+  }
+
+  private void givenOtherClaimsAreDefinedForToken(final AccessToken token) {
+    final Map<String, Object> claimMap = Maps.newHashMap("username", "test");
+    claimMap.put("userId", "some userid");
+    when(token.getOtherClaims()).thenReturn(claimMap);
   }
 
   private static Map<String, String> translateableMapWithGermanEntryFor(String value) {

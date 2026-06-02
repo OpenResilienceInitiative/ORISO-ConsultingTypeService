@@ -5,6 +5,15 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTOMainTenantSubdomainForSingleDomainMultitenancy;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTOMultitenancyWithSingleDomainEnabled;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -38,6 +47,53 @@ public class ApplicationSettingsConverter {
                 toFeatureToggleDTO(
                     applicationSettings.getLegalContentChangesBySingleTenantAdminsAllowed()))
             .documentationEnabled(toFeatureToggleDTO(applicationSettings.getDocumentationEnabled()))
+            .globalFeatureSystemNotificationEmailsEnabled(
+                toFeatureToggleDTO(
+                    applicationSettings.getGlobalFeatureSystemNotificationEmailsEnabled() != null
+                        ? applicationSettings.getGlobalFeatureSystemNotificationEmailsEnabled()
+                        : new GlobalFeatureSystemNotificationEmailsEnabled()
+                            .withValue(false)
+                            .withReadOnly(false)))
+            .globalSmtpEnabled(
+                toFeatureToggleDTO(
+                    applicationSettings.getGlobalSmtpEnabled() != null
+                        ? applicationSettings.getGlobalSmtpEnabled()
+                        : new GlobalSmtpEnabled().withValue(false).withReadOnly(false)))
+            .globalSmtpHost(
+                toSettingDTO(
+                    applicationSettings.getGlobalSmtpHost() != null
+                        ? applicationSettings.getGlobalSmtpHost()
+                        : new GlobalSmtpHost().withValue("").withReadOnly(false)))
+            .globalSmtpPort(
+                toSettingDTO(
+                    applicationSettings.getGlobalSmtpPort() != null
+                        ? applicationSettings.getGlobalSmtpPort()
+                        : new GlobalSmtpPort().withValue("587").withReadOnly(false)))
+            .globalSmtpSecure(
+                toFeatureToggleDTO(
+                    applicationSettings.getGlobalSmtpSecure() != null
+                        ? applicationSettings.getGlobalSmtpSecure()
+                        : new GlobalSmtpSecure().withValue(false).withReadOnly(false)))
+            .globalSmtpUsername(
+                toSettingDTO(
+                    applicationSettings.getGlobalSmtpUsername() != null
+                        ? applicationSettings.getGlobalSmtpUsername()
+                        : new GlobalSmtpUsername().withValue("").withReadOnly(false)))
+            .globalSmtpPassword(
+                toSettingDTO(
+                    applicationSettings.getGlobalSmtpPassword() != null
+                        ? applicationSettings.getGlobalSmtpPassword()
+                        : new GlobalSmtpPassword().withValue("").withReadOnly(false)))
+            .globalSmtpFrom(
+                toSettingDTO(
+                    applicationSettings.getGlobalSmtpFrom() != null
+                        ? applicationSettings.getGlobalSmtpFrom()
+                        : new GlobalSmtpFrom().withValue("").withReadOnly(false)))
+            .globalSmtpEmailThemeColor(
+                toSettingDTO(
+                    applicationSettings.getGlobalSmtpEmailThemeColor() != null
+                        ? applicationSettings.getGlobalSmtpEmailThemeColor()
+                        : new GlobalSmtpEmailThemeColor().withValue("#0f3b8f").withReadOnly(false)))
             .releaseToggles(Maps.newHashMap());
 
     settingsDTO.getReleaseToggles().putAll(applicationSettings.getReleaseToggles());

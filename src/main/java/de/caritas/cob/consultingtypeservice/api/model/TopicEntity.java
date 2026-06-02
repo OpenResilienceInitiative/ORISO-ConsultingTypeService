@@ -3,7 +3,7 @@ package de.caritas.cob.consultingtypeservice.api.model;
 import de.caritas.cob.consultingtypeservice.api.repository.TenantAware;
 import java.time.LocalDateTime;
 import java.util.Set;
-import jakarta.persistence.*;
+import javax.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.FilterDef;
