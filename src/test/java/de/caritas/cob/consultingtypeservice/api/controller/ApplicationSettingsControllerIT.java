@@ -95,8 +95,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(
             jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.readOnly").value(false))
         .andExpect(jsonPath("$.globalFeatureSystemNotificationEmailsEnabled.value").value(false))
-        .andExpect(
-            jsonPath("$.globalFeatureSystemNotificationEmailsEnabled.readOnly").value(false))
+        .andExpect(jsonPath("$.globalFeatureSystemNotificationEmailsEnabled.readOnly").value(false))
         .andExpect(jsonPath("$.globalSmtpEnabled.value").value(false))
         .andExpect(jsonPath("$.globalSmtpEnabled.readOnly").value(false))
         .andExpect(jsonPath("$.globalSmtpHost.value").value(""))
