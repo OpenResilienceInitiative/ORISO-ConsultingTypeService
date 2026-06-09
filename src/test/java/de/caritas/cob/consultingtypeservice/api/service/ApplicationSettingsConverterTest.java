@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.schemas.model.BudibaseAuthClientId;
@@ -21,7 +22,9 @@ import de.caritas.cob.consultingtypeservice.schemas.model.UseTenantService;
 import org.junit.jupiter.api.Test;
 
 class ApplicationSettingsConverterTest {
-  ApplicationSettingsConverter converter = new ApplicationSettingsConverter();
+  ApplicationSettingsConverter converter =
+      new ApplicationSettingsConverter(
+          new ApplicationPermissionSettingsConverter(new ObjectMapper()));
 
   @Test
   void toDTO_Should_ConvertToDTEmptySettings() {
@@ -41,6 +44,7 @@ class ApplicationSettingsConverterTest {
     assertThat(applicationSettingsDTO.getUseOverviewPage()).isNull();
     assertThat(applicationSettingsDTO.getLegalContentChangesBySingleTenantAdminsAllowed()).isNull();
     assertThat(applicationSettingsDTO.getDocumentationEnabled()).isNull();
+    assertThat(applicationSettingsDTO.getSettings().getFeatureAnonymousChatEnabled()).isFalse();
   }
 
   @Test

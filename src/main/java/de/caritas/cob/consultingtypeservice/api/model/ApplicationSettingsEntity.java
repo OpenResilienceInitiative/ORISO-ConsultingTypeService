@@ -10,6 +10,7 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class ApplicationSettingsEntity extends ApplicationSettings {
 
   Map<String, Object> releaseToggles = new LinkedHashMap<>();
+  Map<String, Boolean> settings = new LinkedHashMap<>();
 
   @JsonAnySetter
   public void setReleaseToggles(String key, Object value) {
@@ -18,5 +19,13 @@ public class ApplicationSettingsEntity extends ApplicationSettings {
 
   public Map<String, Object> getReleaseToggles() {
     return releaseToggles;
+  }
+
+  public Map<String, Boolean> getSettings() {
+    return settings;
+  }
+
+  public void setSettings(Map<String, Boolean> settings) {
+    this.settings = settings;
   }
 }

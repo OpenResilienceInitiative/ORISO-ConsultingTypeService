@@ -23,6 +23,13 @@ import org.springframework.util.ReflectionUtils;
 @Slf4j
 public class ApplicationSettingsConverter {
 
+  private final ApplicationPermissionSettingsConverter applicationPermissionSettingsConverter;
+
+  public ApplicationSettingsConverter(
+      ApplicationPermissionSettingsConverter applicationPermissionSettingsConverter) {
+    this.applicationPermissionSettingsConverter = applicationPermissionSettingsConverter;
+  }
+
   public ApplicationSettingsDTO toDTO(ApplicationSettingsEntity applicationSettings) {
     var settingsDTO =
         new ApplicationSettingsDTO()
@@ -94,7 +101,9 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getGlobalSmtpEmailThemeColor() != null
                         ? applicationSettings.getGlobalSmtpEmailThemeColor()
                         : new GlobalSmtpEmailThemeColor().withValue("#0f3b8f").withReadOnly(false)))
-            .releaseToggles(Maps.newHashMap());
+            .releaseToggles(Maps.newHashMap())
+            .settings(
+                applicationPermissionSettingsConverter.toDto(applicationSettings.getSettings()));
 
     settingsDTO.getReleaseToggles().putAll(applicationSettings.getReleaseToggles());
     return settingsDTO;

@@ -25,6 +25,8 @@ public class ApplicationSettingsServiceFacade {
 
   private final @NonNull ApplicationSettingsService applicationSettingsService;
   private final @NonNull ApplicationSettingsConverter applicationSettingsConverter;
+  private final @NonNull ApplicationPermissionSettingsConverter
+      applicationPermissionSettingsConverter;
 
   public Optional<ApplicationSettingsDTO> getApplicationSettings() {
     var applicationSettings = applicationSettingsService.getApplicationSettings();
@@ -115,6 +117,13 @@ public class ApplicationSettingsServiceFacade {
       entity
           .getGlobalSmtpEmailThemeColor()
           .setValue(settingsPatchDTO.getGlobalSmtpEmailThemeColor());
+    }
+    if (settingsPatchDTO.getSettings() != null) {
+      if (entity.getSettings() == null) {
+        entity.setSettings(applicationPermissionSettingsConverter.createDefaultSettings());
+      }
+      applicationPermissionSettingsConverter.applyPatch(
+          entity.getSettings(), settingsPatchDTO.getSettings());
     }
   }
 }

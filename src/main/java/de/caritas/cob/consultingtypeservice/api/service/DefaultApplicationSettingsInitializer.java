@@ -40,6 +40,8 @@ public class DefaultApplicationSettingsInitializer {
 
   @Autowired private ApplicationSettingsRepository applicationSettingsRepository;
 
+  @Autowired private ApplicationPermissionSettingsConverter applicationPermissionSettingsConverter;
+
   @Value("${multitenancy.enabled}")
   private boolean multitenancy;
 
@@ -98,6 +100,7 @@ public class DefaultApplicationSettingsInitializer {
     entity.setGlobalSmtpFrom(new GlobalSmtpFrom().withValue("").withReadOnly(false));
     entity.setGlobalSmtpEmailThemeColor(
         new GlobalSmtpEmailThemeColor().withValue("#0f3b8f").withReadOnly(false));
+    entity.setSettings(applicationPermissionSettingsConverter.createDefaultSettings());
     return entity;
   }
 }
