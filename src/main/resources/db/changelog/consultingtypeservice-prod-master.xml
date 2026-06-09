@@ -17,4 +17,5 @@
   <include file="db/changelog/changeset/0008_topic_send_next_step_message/topic_send_next_step_message.xml"/>
   <include file="db/changelog/changeset/0009_topic_add_titles_and_extend_internal_identifier/0009_topic_add_titles_and_extend_internal_identifier.xml"/>
   <include file="db/changelog/changeset/0010_change_topic_and_topic_groups_to_be_i18n_aware/0010_change_topic_and_topic_groups_to_be_i18n_aware.xml"/>
+  <include file="db/changelog/changeset/0011_add_english_topic_names/0011_add_english_topic_names.xml"/>
 </databaseChangeLog>
