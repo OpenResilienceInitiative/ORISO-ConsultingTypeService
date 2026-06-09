@@ -13,7 +13,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import de.caritas.cob.consultingtypeservice.ConsultingTypeServiceApplication;
 import de.caritas.cob.consultingtypeservice.api.auth.UserRole;
-import de.caritas.cob.consultingtypeservice.api.model.ApplicationPermissionSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.repository.ApplicationSettingsRepository;
@@ -137,7 +136,6 @@ class ApplicationSettingsControllerIT {
     patchDTO.setGlobalSmtpPassword("global-pass");
     patchDTO.setGlobalSmtpFrom("noreply@global.example");
     patchDTO.setGlobalSmtpEmailThemeColor("#112233");
-    patchDTO.setSettings(new ApplicationPermissionSettingsDTO().featureAnonymousChatEnabled(true));
     String jsonRequest = JsonConverter.convertToJson(patchDTO);
     mockMvc
         .perform(
@@ -186,9 +184,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.globalSmtpPassword.value").value("global-pass"))
         .andExpect(jsonPath("$.globalSmtpFrom.value").value("noreply@global.example"))
         .andExpect(jsonPath("$.globalSmtpEmailThemeColor.value").value("#112233"))
-        .andExpect(jsonPath("$.releaseToggles.featureToggleTenantCreationEnabled").value(true))
-        .andExpect(jsonPath("$.settings.featureAnonymousChatEnabled").value(true))
-        .andExpect(jsonPath("$.settings.featureGroupChatV2Enabled").value(false));
+        .andExpect(jsonPath("$.releaseToggles.featureToggleTenantCreationEnabled").value(true));
 
     // clean up
     resetSettingsToPreviousState(authentication);
@@ -207,7 +203,6 @@ class ApplicationSettingsControllerIT {
     patchDTO.setGlobalSmtpPassword("");
     patchDTO.setGlobalSmtpFrom("");
     patchDTO.setGlobalSmtpEmailThemeColor("#0f3b8f");
-    patchDTO.setSettings(new ApplicationPermissionSettingsDTO().featureAnonymousChatEnabled(false));
     var jsonRequest = JsonConverter.convertToJson(patchDTO);
     mockMvc
         .perform(

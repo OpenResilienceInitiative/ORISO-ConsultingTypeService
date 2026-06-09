@@ -136,8 +136,6 @@ components:
           type: object
           additionalProperties:
             type: object
-        settings:
-          $ref: '#/components/schemas/ApplicationPermissionSettingsDTO'
 
 
     ApplicationSettingsPatchDTO:
@@ -165,65 +163,7 @@ components:
           type: string
         globalSmtpEmailThemeColor:
           type: string
-        settings:
-          $ref: '#/components/schemas/ApplicationPermissionSettingsDTO'
-
-    ApplicationPermissionSettingsDTO:
-      type: object
-      properties:
-        featureAnonymousChatEnabled:
-          type: boolean
-        featureGroupChatV2Enabled:
-          type: boolean
-        featureCallsEnabled:
-          type: boolean
-        featureSupervisionEnabled:
-          type: boolean
-        featureSupervisionAnonymousChatsEnabled:
-          type: boolean
-        featureSupervisionOneOnOneChatsEnabled:
-          type: boolean
-        featureAudioCallsEnabled:
-          type: boolean
-        featureAudioCallsAnonymousChatsEnabled:
-          type: boolean
-        featureAudioCallsOneOnOneChatsEnabled:
-          type: boolean
-        featureAudioCallsGroupChatsEnabled:
-          type: boolean
-        featureAudioCallsSupervisionChatsEnabled:
-          type: boolean
-        featureVideoCallsEnabled:
-          type: boolean
-        featureVideoCallsAnonymousChatsEnabled:
-          type: boolean
-        featureVideoCallsOneOnOneChatsEnabled:
-          type: boolean
-        featureVideoCallsGroupChatsEnabled:
-          type: boolean
-        featureVideoCallsSupervisionChatsEnabled:
-          type: boolean
-        featureThreadsEnabled:
-          type: boolean
-        featureThreadsAnonymousChatsEnabled:
-          type: boolean
-        featureThreadsGroupChatsEnabled:
-          type: boolean
-        featureThreadsOneOnOneEnabled:
-          type: boolean
-        featureThreadsSupervisionChatsEnabled:
-          type: boolean
-        featureVoiceMessagesEnabled:
-          type: boolean
-        featureVoiceMessagesAnonymousChatsEnabled:
-          type: boolean
-        featureVoiceMessagesOneOnOneChatsEnabled:
-          type: boolean
-        featureVoiceMessagesGroupChatsEnabled:
-          type: boolean
-        featureVoiceMessagesSupervisionChatsEnabled:
-          type: boolean
-
+    
     FeatureToggleDTO:
       type: object
       required:
