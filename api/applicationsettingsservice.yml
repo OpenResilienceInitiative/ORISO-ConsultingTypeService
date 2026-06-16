@@ -120,12 +120,6 @@ components:
         globalSmtpSecure:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
-        globalSmtpUsername:
-          allOf:
-            - $ref: '#/components/schemas/SettingDTO'
-        globalSmtpPassword:
-          allOf:
-            - $ref: '#/components/schemas/SettingDTO'
         globalSmtpFrom:
           allOf:
             - $ref: '#/components/schemas/SettingDTO'

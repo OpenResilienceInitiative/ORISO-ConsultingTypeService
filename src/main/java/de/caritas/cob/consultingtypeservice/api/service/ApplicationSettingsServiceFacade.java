@@ -25,6 +25,7 @@ public class ApplicationSettingsServiceFacade {
 
   private final @NonNull ApplicationSettingsService applicationSettingsService;
   private final @NonNull ApplicationSettingsConverter applicationSettingsConverter;
+  private final @NonNull SmtpPasswordEncryptionService smtpPasswordEncryptionService;
 
   public Optional<ApplicationSettingsDTO> getApplicationSettings() {
     var applicationSettings = applicationSettingsService.getApplicationSettings();
@@ -99,7 +100,10 @@ public class ApplicationSettingsServiceFacade {
       if (entity.getGlobalSmtpPassword() == null) {
         entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
       }
-      entity.getGlobalSmtpPassword().setValue(settingsPatchDTO.getGlobalSmtpPassword());
+      entity
+          .getGlobalSmtpPassword()
+          .setValue(
+              smtpPasswordEncryptionService.encrypt(settingsPatchDTO.getGlobalSmtpPassword()));
     }
     if (settingsPatchDTO.getGlobalSmtpFrom() != null) {
       if (entity.getGlobalSmtpFrom() == null) {
