@@ -262,6 +262,45 @@ class ApplicationSettingsControllerIT {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnForbidden_When_UserIsNotSuperAdmin() throws Exception {
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(
+                    authentication(
+                        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("1").build())))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnCredentials_When_UserIsSuperAdmin() throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("admin-smtp-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("admin-smtp-pass").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(
+                    authentication(
+                        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.globalSmtpUsername").value("admin-smtp-user"))
+        .andExpect(jsonPath("$.globalSmtpPassword").value("admin-smtp-pass"));
+
+    entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+  }
+
   private void giveApplicationSettingEntityWithDynamicReleaseToggles() {
     ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
     entity.setReleaseToggles("featureToggleTenantCreationEnabled", true);

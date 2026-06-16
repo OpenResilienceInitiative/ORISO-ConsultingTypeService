@@ -3,6 +3,7 @@ package de.caritas.cob.consultingtypeservice.api.service;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
+import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
@@ -41,6 +42,21 @@ public class ApplicationSettingsServiceFacade {
       convertPatchedValues(settingsPatchDTO, entity);
       applicationSettingsService.saveApplicationSettings(entity);
     }
+  }
+
+  public Optional<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
+    return applicationSettingsService.getApplicationSettings().map(this::toSmtpCredentialsDTO);
+  }
+
+  private ApplicationSettingsSmtpCredentialsDTO toSmtpCredentialsDTO(
+      ApplicationSettingsEntity entity) {
+    var credentials = new ApplicationSettingsSmtpCredentialsDTO();
+    credentials.setGlobalSmtpUsername(
+        entity.getGlobalSmtpUsername() != null ? entity.getGlobalSmtpUsername().getValue() : "");
+    String storedPassword =
+        entity.getGlobalSmtpPassword() != null ? entity.getGlobalSmtpPassword().getValue() : "";
+    credentials.setGlobalSmtpPassword(smtpPasswordEncryptionService.decrypt(storedPassword));
+    return credentials;
   }
 
   private void convertPatchedValues(

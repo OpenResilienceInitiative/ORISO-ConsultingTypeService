@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,5 +65,26 @@ class ApplicationSettingsServiceFacadeTest {
     verify(applicationSettingsService)
         .saveApplicationSettings(any(ApplicationSettingsEntity.class));
     verify(smtpPasswordEncryptionService, never()).encrypt(any());
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_DecryptPasswordAndReturnUsername() {
+    // given
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("smtp-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("ENC:stored").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    when(smtpPasswordEncryptionService.decrypt("ENC:stored")).thenReturn("plain-pass");
+
+    // when
+    var credentials = applicationSettingsServiceFacade.getGlobalSmtpCredentials();
+
+    // then
+    assertThat(credentials).isPresent();
+    assertThat(credentials.get().getGlobalSmtpUsername()).isEqualTo("smtp-user");
+    assertThat(credentials.get().getGlobalSmtpPassword()).isEqualTo("plain-pass");
+    verify(smtpPasswordEncryptionService).decrypt("ENC:stored");
   }
 }
