@@ -19,11 +19,12 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
-@TestPropertySource(properties = "spring.profiles.active=testing")
+@TestPropertySource(properties = "spring.profiles.active=profile")
 @AutoConfigureMockMvc(addFilters = false)
 class ActuatorControllerIT {
 
-  @Autowired private WebApplicationContext context;
+  @Autowired
+  private WebApplicationContext context;
 
   private MockMvc mockMvc;
 
@@ -49,5 +50,18 @@ class ActuatorControllerIT {
     mockMvc
         .perform(get("/actuator/beans").contentType(APPLICATION_JSON))
         .andExpect(status().isNotFound());
+  }
+
+  @Test
+  void getVersion_Should_return404NotFound() throws Exception {
+    mockMvc.perform(get("/version").contentType(APPLICATION_JSON)).andExpect(status().isNotFound());
+  }
+
+  @Test
+  void getActuatorInfo_Should_return200WithBuildMetadata() throws Exception {
+    mockMvc
+        .perform(get("/actuator/info").contentType(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("build").exists());
   }
 }
