@@ -23,8 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 @AutoConfigureMockMvc(addFilters = false)
 class ActuatorControllerIT {
 
-  @Autowired
-  private WebApplicationContext context;
+  @Autowired private WebApplicationContext context;
 
   private MockMvc mockMvc;
 
