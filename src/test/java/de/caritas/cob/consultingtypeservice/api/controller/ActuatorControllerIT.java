@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
-@TestPropertySource(properties = "spring.profiles.active=profile")
+@TestPropertySource(properties = "spring.profiles.active=testing")
 @AutoConfigureMockMvc(addFilters = false)
 class ActuatorControllerIT {
 
