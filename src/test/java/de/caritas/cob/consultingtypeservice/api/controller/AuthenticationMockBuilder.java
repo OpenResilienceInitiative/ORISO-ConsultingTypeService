@@ -14,13 +14,8 @@ public class AuthenticationMockBuilder {
   private String userRole;
   private String tenantId;
 
-  public AuthenticationMockBuilder withUserRole(String userRole) {
+  AuthenticationMockBuilder withUserRole(String userRole) {
     this.userRole = userRole;
-    return this;
-  }
-
-  public AuthenticationMockBuilder withTenantId(String tenantId) {
-    this.tenantId = tenantId;
     return this;
   }
 

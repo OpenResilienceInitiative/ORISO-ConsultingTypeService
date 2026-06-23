@@ -2,7 +2,6 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
-import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
 import de.caritas.cob.consultingtypeservice.api.service.ApplicationSettingsServiceFacade;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.SettingsApi;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.SettingsadminApi;
@@ -55,15 +54,6 @@ public class ApplicationSettingsController implements SettingsApi, Settingsadmin
     var settings = applicationSettingsServiceFacade.getApplicationSettings();
     return settings.isPresent()
         ? new ResponseEntity<>(settings.get(), HttpStatus.OK)
-        : new ResponseEntity<>(HttpStatus.NO_CONTENT);
-  }
-
-  @Override
-  @PreAuthorize("@authorisationService.isSuperAdmin()")
-  public ResponseEntity<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
-    var credentials = applicationSettingsServiceFacade.getGlobalSmtpCredentials();
-    return credentials.isPresent()
-        ? new ResponseEntity<>(credentials.get(), HttpStatus.OK)
         : new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 }

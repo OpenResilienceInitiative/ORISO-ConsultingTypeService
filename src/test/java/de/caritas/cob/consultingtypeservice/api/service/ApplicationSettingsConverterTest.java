@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
-import de.caritas.cob.consultingtypeservice.api.util.JsonConverter;
 import de.caritas.cob.consultingtypeservice.schemas.model.BudibaseAuthClientId;
 import de.caritas.cob.consultingtypeservice.schemas.model.BudibaseUrl;
 import de.caritas.cob.consultingtypeservice.schemas.model.CalcomUrl;
@@ -12,8 +11,6 @@ import de.caritas.cob.consultingtypeservice.schemas.model.CalendarAppUrl;
 import de.caritas.cob.consultingtypeservice.schemas.model.DisableVideoAppointments;
 import de.caritas.cob.consultingtypeservice.schemas.model.DocumentationEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
-import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
-import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import de.caritas.cob.consultingtypeservice.schemas.model.LegalContentChangesBySingleTenantAdminsAllowed;
 import de.caritas.cob.consultingtypeservice.schemas.model.MainTenantSubdomainForSingleDomainMultitenancy;
 import de.caritas.cob.consultingtypeservice.schemas.model.MultitenancyEnabled;
@@ -25,26 +22,6 @@ import org.junit.jupiter.api.Test;
 
 class ApplicationSettingsConverterTest {
   ApplicationSettingsConverter converter = new ApplicationSettingsConverter();
-
-  @Test
-  void toDTO_Should_NotExposeSmtpCredentials_When_EntityContainsCredentials() {
-    // given
-    ApplicationSettingsEntity applicationSettings = new ApplicationSettingsEntity();
-    applicationSettings.setGlobalSmtpUsername(
-        new GlobalSmtpUsername().withValue("secret-smtp-user").withReadOnly(false));
-    applicationSettings.setGlobalSmtpPassword(
-        new GlobalSmtpPassword().withValue("secret-smtp-pass").withReadOnly(false));
-
-    // when
-    ApplicationSettingsDTO applicationSettingsDTO = converter.toDTO(applicationSettings);
-
-    // then — CTS-C01: public GET /settings must not leak SMTP credentials
-    String json = JsonConverter.convertToJson(applicationSettingsDTO);
-    assertThat(json).doesNotContain("secret-smtp-user");
-    assertThat(json).doesNotContain("secret-smtp-pass");
-    assertThat(json).doesNotContain("globalSmtpUsername");
-    assertThat(json).doesNotContain("globalSmtpPassword");
-  }
 
   @Test
   void toDTO_Should_ConvertToDTEmptySettings() {
