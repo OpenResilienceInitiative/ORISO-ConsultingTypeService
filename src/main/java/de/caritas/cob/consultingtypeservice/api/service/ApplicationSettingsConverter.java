@@ -10,10 +10,8 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeCo
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
-import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
-import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -74,16 +72,6 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getGlobalSmtpSecure() != null
                         ? applicationSettings.getGlobalSmtpSecure()
                         : new GlobalSmtpSecure().withValue(false).withReadOnly(false)))
-            .globalSmtpUsername(
-                toSettingDTO(
-                    applicationSettings.getGlobalSmtpUsername() != null
-                        ? applicationSettings.getGlobalSmtpUsername()
-                        : new GlobalSmtpUsername().withValue("").withReadOnly(false)))
-            .globalSmtpPassword(
-                toSettingDTO(
-                    applicationSettings.getGlobalSmtpPassword() != null
-                        ? applicationSettings.getGlobalSmtpPassword()
-                        : new GlobalSmtpPassword().withValue("").withReadOnly(false)))
             .globalSmtpFrom(
                 toSettingDTO(
                     applicationSettings.getGlobalSmtpFrom() != null

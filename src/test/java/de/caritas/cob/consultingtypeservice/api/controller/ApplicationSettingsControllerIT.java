@@ -18,6 +18,8 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDT
 import de.caritas.cob.consultingtypeservice.api.repository.ApplicationSettingsRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.util.JsonConverter;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import java.util.Map;
 import javax.servlet.http.Cookie;
 import org.assertj.core.util.Lists;
@@ -58,6 +60,31 @@ class ApplicationSettingsControllerIT {
   public void setup() {
     TenantContext.clear();
     mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
+  }
+
+  @Test
+  void
+      getApplicationSettings_Should_NotExposeSmtpCredentials_When_UserIsNotAuthenticatedAndCredentialsAreConfigured()
+          throws Exception {
+    // given
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("secret-smtp-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("secret-smtp-pass").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+
+    // when / then — CTS-C01: public GET /settings must not leak SMTP credentials
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.globalSmtpUsername").doesNotExist())
+        .andExpect(jsonPath("$.globalSmtpPassword").doesNotExist());
+
+    // clean up
+    entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
   }
 
   @Test
@@ -104,10 +131,8 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.globalSmtpPort.readOnly").value(false))
         .andExpect(jsonPath("$.globalSmtpSecure.value").value(false))
         .andExpect(jsonPath("$.globalSmtpSecure.readOnly").value(false))
-        .andExpect(jsonPath("$.globalSmtpUsername.value").value(""))
-        .andExpect(jsonPath("$.globalSmtpUsername.readOnly").value(false))
-        .andExpect(jsonPath("$.globalSmtpPassword.value").value(""))
-        .andExpect(jsonPath("$.globalSmtpPassword.readOnly").value(false))
+        .andExpect(jsonPath("$.globalSmtpUsername").doesNotExist())
+        .andExpect(jsonPath("$.globalSmtpPassword").doesNotExist())
         .andExpect(jsonPath("$.globalSmtpFrom.value").value(""))
         .andExpect(jsonPath("$.globalSmtpFrom.readOnly").value(false))
         .andExpect(jsonPath("$.globalSmtpEmailThemeColor.value").value("#0f3b8f"))
@@ -180,8 +205,8 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.globalSmtpHost.value").value("smtp.global.example"))
         .andExpect(jsonPath("$.globalSmtpPort.value").value("2525"))
         .andExpect(jsonPath("$.globalSmtpSecure.value").value(true))
-        .andExpect(jsonPath("$.globalSmtpUsername.value").value("global-user"))
-        .andExpect(jsonPath("$.globalSmtpPassword.value").value("global-pass"))
+        .andExpect(jsonPath("$.globalSmtpUsername").doesNotExist())
+        .andExpect(jsonPath("$.globalSmtpPassword").doesNotExist())
         .andExpect(jsonPath("$.globalSmtpFrom.value").value("noreply@global.example"))
         .andExpect(jsonPath("$.globalSmtpEmailThemeColor.value").value("#112233"))
         .andExpect(jsonPath("$.releaseToggles.featureToggleTenantCreationEnabled").value(true));
@@ -235,6 +260,45 @@ class ApplicationSettingsControllerIT {
                 .content(jsonRequest)
                 .contentType(javax.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnForbidden_When_UserIsNotSuperAdmin() throws Exception {
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(
+                    authentication(
+                        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("1").build())))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnCredentials_When_UserIsSuperAdmin() throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("admin-smtp-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("admin-smtp-pass").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(
+                    authentication(
+                        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.globalSmtpUsername").value("admin-smtp-user"))
+        .andExpect(jsonPath("$.globalSmtpPassword").value("admin-smtp-pass"));
+
+    entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
   }
 
   private void giveApplicationSettingEntityWithDynamicReleaseToggles() {

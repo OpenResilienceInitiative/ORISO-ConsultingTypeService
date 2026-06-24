@@ -1,1 +1,9 @@
 *.jar
+
+# Build artifacts
+target/
+target/*
+
+# Production logs
+log/
+log/*
