@@ -1,12 +1,14 @@
 package de.caritas.cob.consultingtypeservice.api.converter;
 
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
+import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTOData;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTODataItemsInner;
 import de.caritas.cob.consultingtypeservice.api.service.TranslationService;
 import de.caritas.cob.consultingtypeservice.api.util.TranslationUtils;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 import lombok.NonNull;
@@ -43,6 +45,7 @@ public class TopicGroupConverter {
 
   private static List<Integer> topicIdsOf(TopicGroupEntity topicGroup) {
     return topicGroup.getTopicEntities().stream()
+        .sorted(Comparator.comparing(TopicEntity::getId))
         .map(topicEntity -> topicEntity.getId().intValue())
         .collect(Collectors.toList());
   }
