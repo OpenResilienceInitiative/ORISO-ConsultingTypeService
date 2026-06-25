@@ -69,6 +69,9 @@ public class KeycloakConfig {
   }
 
   private String decodeUsername(String username) {
+    if (username == null) {
+      return null;
+    }
     if (!username.startsWith("enc.")) {
       return username;
     }
