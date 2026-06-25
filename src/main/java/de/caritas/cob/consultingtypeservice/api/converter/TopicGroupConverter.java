@@ -1,7 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api.converter;
 
-import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
+import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTOData;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTODataItemsInner;
