@@ -193,6 +193,12 @@
       <version>${commons-lang3.version}</version>
     </dependency>
 
+    <!-- Apache Commons Codec (Base32 username decoding) -->
+    <dependency>
+      <groupId>commons-codec</groupId>
+      <artifactId>commons-codec</artifactId>
+    </dependency>
+
     <dependency>
       <groupId>commons-io</groupId>
       <artifactId>commons-io</artifactId>

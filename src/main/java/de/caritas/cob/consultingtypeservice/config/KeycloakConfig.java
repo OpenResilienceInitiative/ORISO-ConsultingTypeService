@@ -4,11 +4,13 @@ import static java.util.Objects.nonNull;
 
 import de.caritas.cob.consultingtypeservice.api.auth.AuthenticatedUser;
 import de.caritas.cob.consultingtypeservice.api.exception.KeycloakException;
+import java.nio.charset.StandardCharsets;
 import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotBlank;
 import javax.validation.constraints.NotNull;
 import lombok.Data;
+import org.apache.commons.codec.binary.Base32;
 import org.hibernate.validator.constraints.URL;
 import org.keycloak.adapters.KeycloakConfigResolver;
 import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
@@ -18,6 +20,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Scope;
 import org.springframework.context.annotation.ScopedProxyMode;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.context.WebApplicationContext;
@@ -47,11 +50,13 @@ public class KeycloakConfig {
 
       try {
         if (claimMap.containsKey("username")) {
-          authenticatedUser.setUsername(claimMap.get("username").toString());
+          authenticatedUser.setUsername(decodeUsername(claimMap.get("username").toString()));
         }
         authenticatedUser.setUserId(claimMap.get("userId").toString());
         authenticatedUser.setAccessToken(securityContext.getTokenString());
         authenticatedUser.setRoles(securityContext.getToken().getRealmAccess().getRoles());
+      } catch (AccessDeniedException e) {
+        throw e;
       } catch (Exception exception) {
         throw new KeycloakException("Keycloak data missing.", exception);
       }
@@ -64,6 +69,21 @@ public class KeycloakConfig {
     }
 
     return authenticatedUser;
+  }
+
+  private String decodeUsername(String username) {
+    if (username == null) {
+      return null;
+    }
+    if (!username.startsWith("enc.")) {
+      return username;
+    }
+    try {
+      byte[] decoded = new Base32().decode(username.substring(4).toUpperCase().replace(".", "="));
+      return new String(decoded, StandardCharsets.UTF_8);
+    } catch (IllegalArgumentException e) {
+      throw new AccessDeniedException("Invalid encoded username: " + username, e);
+    }
   }
 
   @Bean
