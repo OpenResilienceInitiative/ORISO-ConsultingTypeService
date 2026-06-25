@@ -1,9 +1,10 @@
 package de.caritas.cob.consultingtypeservice.api.converter;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.when;
 
 import com.google.common.collect.Lists;
+import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.service.TranslationService;
 import org.assertj.core.util.Sets;
@@ -42,5 +43,23 @@ class TopicGroupConverterTest {
     // then
     assertEquals("name_en", result.getData().getItems().get(0).getName());
     assertEquals("second_name_en", result.getData().getItems().get(1).getName());
+  }
+
+  @Test
+  void should_ReturnTopicIdsOrderedById_When_TopicGroupConverterIsCalled() {
+    var topicGroups =
+        Lists.newArrayList(
+            TopicGroupEntity.builder()
+                .id(1L)
+                .name("{\"de\":\"name_de\",\"en\":\"name_en\"}")
+                .topicEntities(
+                    Sets.newHashSet(
+                        TopicEntity.builder().id(2L).build(), TopicEntity.builder().id(1L).build()))
+                .build());
+    when(translationService.getCurrentLanguageContext()).thenReturn("en");
+
+    var result = topicGroupConverter.toTopicGroupsDTO(topicGroups);
+
+    assertEquals(Lists.newArrayList(1, 2), result.getData().getItems().get(0).getTopicIds());
   }
 }

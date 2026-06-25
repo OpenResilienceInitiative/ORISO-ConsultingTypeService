@@ -14,6 +14,6 @@ public class TopicGroupService {
   private @NonNull TopicGroupRepository topicGroupRepository;
 
   public Collection<TopicGroupEntity> getAllTopicGroups() {
-    return topicGroupRepository.findAll();
+    return topicGroupRepository.findAllByOrderByIdAsc();
   }
 }
