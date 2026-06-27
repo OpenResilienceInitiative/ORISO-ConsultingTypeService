@@ -10,4 +10,4 @@ log/*
 
 # Local runtime config
 config.env
-run-local-remote-db.sh
+.env

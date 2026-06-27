@@ -18,24 +18,37 @@ JDKs.
 
 ## 2. Create `config.env`
 
-Create `config.env` in the repository root. This file is ignored by git and should not be committed.
+Copy the sample file and fill the `CHANGE_ME` values. `config.env` is ignored by git and should not
+be committed.
+
+```bash
+cp config.env.example config.env
+```
 
 Important values for the local integrated setup:
 
 ```env
 KEYCLOAK_AUTH_SERVER_URL=https://auth.oriso-dev.site
 KEYCLOAK_REALM=online-beratung
+KEYCLOAK_CONFIG_ADMIN_USERNAME=technical
+KEYCLOAK_CONFIG_ADMIN_PASSWORD=CHANGE_ME
+KEYCLOAK_CONFIG_ADMIN_CLIENT_ID=admin-cli
+KEYCLOAK_CONFIG_APP_CLIENT_ID=app
 KEYCLOAK_CORS=true
 SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI=https://auth.oriso-dev.site/realms/online-beratung
 SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI=https://auth.oriso-dev.site/realms/online-beratung/protocol/openid-connect/certs
 
-SPRING_DATASOURCE_URL=jdbc:mariadb://46.224.170.69:32492/consultingtypeservice
+LOCAL_JAVA_TRUSTSTORE=$HOME/.oriso/dev-truststore.jks
+LOCAL_JAVA_TRUSTSTORE_PASSWORD=changeit
+
+SPRING_DATASOURCE_URL=jdbc:mariadb://46.224.170.69:CHANGE_ME/consultingtypeservice
 SPRING_DATASOURCE_USERNAME=consultingtypeservice
 SPRING_DATASOURCE_PASSWORD=CHANGE_ME
 SPRING_LIQUIBASE_ENABLED=false
 SERVER_SERVLET_CONTEXT_PATH=/service
+APP_BASE_URL=http://localhost:8083
 
-SPRING_DATA_MONGODB_URI=mongodb://46.224.170.69:30091/consultingtypeservice?retryWrites=false
+SPRING_DATA_MONGODB_URI=mongodb://46.224.170.69:CHANGE_ME/consultingtypeservice?retryWrites=false
 
 TENANT_SERVICE_API_URL=http://localhost:8081/service
 
@@ -46,9 +59,6 @@ SETTING_MAIN_TENANT_SUBDOMAIN_FOR_SINGLE_DOMAIN_MULTITENANCY=caritas-berlin
 CONSULTING_TYPE_CORS_ENABLED=true
 CONSULTING_TYPE_CORS_ALLOWED_ORIGINS=http://localhost:9001,http://127.0.0.1:9001
 CONSULTING_TYPE_CORS_ALLOWED_PATHS=/**
-
-LOCAL_JAVA_TRUSTSTORE=$HOME/.oriso/dev-truststore.jks
-LOCAL_JAVA_TRUSTSTORE_PASSWORD=changeit
 ```
 
 `SERVER_SERVLET_CONTEXT_PATH=/service` means callers must use:
@@ -57,30 +67,9 @@ LOCAL_JAVA_TRUSTSTORE_PASSWORD=changeit
 http://localhost:8083/service
 ```
 
-The MongoDB value above uses the `oriso-platform-mongodb` NodePort:
+Use the NodePort values from the dev cluster for the MariaDB and MongoDB `CHANGE_ME` ports.
 
-```text
-46.224.170.69:30091
-```
-
-## 3. Create `run-local-remote-db.sh`
-
-Create this script in the repository root and make it executable:
-
-```bash
-chmod +x run-local-remote-db.sh
-```
-
-The script should load `config.env`, pass the local truststore to the Spring Boot app JVM, and run:
-
-```bash
-./mvnw spring-boot:run \
-  -Dspring-boot.run.profiles=local \
-  -Dspring-boot.run.jvmArguments="${JVM_ARGUMENTS}" \
-  -Dspotless.check.skip=true
-```
-
-## 4. Run
+## 3. Run
 
 ```bash
 ./run-local-remote-db.sh
@@ -92,7 +81,7 @@ Expected local base URL:
 http://localhost:8083/service
 ```
 
-## 5. Useful Checks
+## 4. Useful Checks
 
 Check whether ConsultingTypeService is listening:
 

@@ -25,12 +25,14 @@ public class CorsConfig {
   public FilterRegistrationBean<CorsFilter> corsFilterRegistrationBean() {
     var configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(allowedOrigins);
-    configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+    configuration.setAllowedMethods(
+        Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     configuration.setAllowedHeaders(List.of("*"));
     configuration.setAllowCredentials(true);
 
     var source = new UrlBasedCorsConfigurationSource();
-    Arrays.stream(allowedPaths).forEach(path -> source.registerCorsConfiguration(path, configuration));
+    Arrays.stream(allowedPaths)
+        .forEach(path -> source.registerCorsConfiguration(path, configuration));
 
     var registrationBean = new FilterRegistrationBean<>(new CorsFilter(source));
     registrationBean.setOrder(Integer.MIN_VALUE);
