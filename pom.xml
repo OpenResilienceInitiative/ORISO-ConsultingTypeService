@@ -59,6 +59,7 @@
     <spring-data-mongodb.version>3.3.5</spring-data-mongodb.version>
     <ehcache.version>2.10.9.2</ehcache.version>
     <sentry.version>8.43.2</sentry.version>
+    <lombok.version>1.18.32</lombok.version>
   </properties>
 
   <dependencyManagement>
@@ -183,6 +184,7 @@
     <dependency>
       <groupId>org.projectlombok</groupId>
       <artifactId>lombok</artifactId>
+      <version>${lombok.version}</version>
       <optional>true</optional>
     </dependency>
 

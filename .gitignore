@@ -7,3 +7,7 @@ target/*
 # Production logs
 log/
 log/*
+
+# Local runtime config
+config.env
+.env
