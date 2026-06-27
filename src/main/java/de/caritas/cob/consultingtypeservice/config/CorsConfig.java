@@ -23,6 +23,8 @@ public class CorsConfig {
 
   @Bean
   public FilterRegistrationBean<CorsFilter> corsFilterRegistrationBean() {
+    validateAllowedOrigins();
+
     var configuration = new CorsConfiguration();
     configuration.setAllowedOrigins(allowedOrigins);
     configuration.setAllowedMethods(
@@ -37,5 +39,14 @@ public class CorsConfig {
     var registrationBean = new FilterRegistrationBean<>(new CorsFilter(source));
     registrationBean.setOrder(Integer.MIN_VALUE);
     return registrationBean;
+  }
+
+  private void validateAllowedOrigins() {
+    if (allowedOrigins.contains("*")) {
+      throw new IllegalArgumentException(
+          "CONSULTING_TYPE_CORS_ALLOWED_ORIGINS must contain explicit origins when credentials are"
+              + " allowed. Use values like http://localhost:9001,http://127.0.0.1:9001 instead of"
+              + " *.");
+    }
   }
 }
