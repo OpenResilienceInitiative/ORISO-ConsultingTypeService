@@ -10,10 +10,10 @@ import static org.mockito.Mockito.verify;
 
 import de.caritas.cob.consultingtypeservice.api.exception.UnexpectedErrorException;
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
+import jakarta.annotation.PostConstruct;
 import java.io.File;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
-import javax.annotation.PostConstruct;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

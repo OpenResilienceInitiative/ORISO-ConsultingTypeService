@@ -1,19 +1,19 @@
 package de.caritas.cob.consultingtypeservice.api.consultingtypes;
 
-import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTOFurtherInformation;
-import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTOGroupChat;
-import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTORegistration;
-import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTOUrls;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
-import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTONotifications;
-import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTOSessionDataInitializing;
-import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTOWelcomeMessage;
-import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTOWhiteSpot;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypePatchDTO;
+import de.caritas.cob.consultingtypeservice.api.model.FurtherInformationDTO;
+import de.caritas.cob.consultingtypeservice.api.model.GroupChatDTO;
+import de.caritas.cob.consultingtypeservice.api.model.NotificationsDTO;
+import de.caritas.cob.consultingtypeservice.api.model.RegistrationDTO;
 import de.caritas.cob.consultingtypeservice.api.model.RequiredComponentsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.RolesDTO;
+import de.caritas.cob.consultingtypeservice.api.model.SessionDataInitializingDTO;
+import de.caritas.cob.consultingtypeservice.api.model.UrlsDTO;
+import de.caritas.cob.consultingtypeservice.api.model.WelcomeMessageDTO;
 import de.caritas.cob.consultingtypeservice.api.model.WelcomeScreenDTO;
+import de.caritas.cob.consultingtypeservice.api.model.WhiteSpotDTO;
 import de.caritas.cob.consultingtypeservice.schemas.model.Age;
 import de.caritas.cob.consultingtypeservice.schemas.model.Anonymous;
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
@@ -110,7 +110,7 @@ public class ConsultingTypeConverter {
                 welcomeScreen.getAnonymous().getTitle(), welcomeScreen.getAnonymous().getText()));
   }
 
-  private Urls convert(BasicConsultingTypeResponseDTOUrls urls) {
+  private Urls convert(UrlsDTO urls) {
     if (urls == null) {
       return null;
     }
@@ -118,7 +118,7 @@ public class ConsultingTypeConverter {
         urls.getRequiredAidMissingRedirectUrl(), urls.getRegistrationPostcodeFallbackUrl());
   }
 
-  private Registration convert(BasicConsultingTypeResponseDTORegistration registration) {
+  private Registration convert(RegistrationDTO registration) {
     if (registration == null) {
       return null;
     }
@@ -135,7 +135,7 @@ public class ConsultingTypeConverter {
                 registration.getMandatoryFields().getState()));
   }
 
-  private Notifications convert(ConsultingTypeDTONotifications notifications) {
+  private Notifications convert(NotificationsDTO notifications) {
     if (notifications == null) {
       return null;
     }
@@ -154,8 +154,7 @@ public class ConsultingTypeConverter {
     return new Roles(roles.getConsultant().getRoleNames());
   }
 
-  private SessionDataInitializing convert(
-      ConsultingTypeDTOSessionDataInitializing sessionDataInitializing) {
+  private SessionDataInitializing convert(SessionDataInitializingDTO sessionDataInitializing) {
     if (sessionDataInitializing == null) {
       return null;
     }
@@ -167,7 +166,7 @@ public class ConsultingTypeConverter {
         .withRelation(sessionDataInitializing.getRelation());
   }
 
-  private WelcomeMessage convert(ConsultingTypeDTOWelcomeMessage welcomeMessage) {
+  private WelcomeMessage convert(WelcomeMessageDTO welcomeMessage) {
     if (welcomeMessage == null) {
       return null;
     }
@@ -175,14 +174,14 @@ public class ConsultingTypeConverter {
         welcomeMessage.getSendWelcomeMessage(), welcomeMessage.getWelcomeMessageText());
   }
 
-  private GroupChat convert(BasicConsultingTypeResponseDTOGroupChat groupChat) {
+  private GroupChat convert(GroupChatDTO groupChat) {
     if (groupChat == null) {
       return null;
     }
     return new GroupChat(groupChat.getIsGroupChat(), groupChat.getGroupChatRules());
   }
 
-  private WhiteSpot convert(ConsultingTypeDTOWhiteSpot whiteSpot) {
+  private WhiteSpot convert(WhiteSpotDTO whiteSpot) {
     if (whiteSpot == null) {
       return null;
     }
@@ -207,8 +206,7 @@ public class ConsultingTypeConverter {
         .withState(new State(requiredComponents.getState().getIsEnabled()));
   }
 
-  private FurtherInformation convert(
-      BasicConsultingTypeResponseDTOFurtherInformation furtherInformation) {
+  private FurtherInformation convert(FurtherInformationDTO furtherInformation) {
     if (furtherInformation == null) {
       return null;
     }

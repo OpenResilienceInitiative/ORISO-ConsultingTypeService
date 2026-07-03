@@ -1,7 +1,10 @@
 DROP TABLE IF EXISTS topic_group_x_topic;
 DROP TABLE IF EXISTS `topic`;
 DROP TABLE IF EXISTS `topic_group`;
+DROP SEQUENCE IF EXISTS SEQUENCE_TOPIC;
+DROP SEQUENCE IF EXISTS sequence_topic;
 DROP SEQUENCE IF EXISTS sequence_topic_group_x_topic;
+DROP SEQUENCE IF EXISTS SEQUENCE_TOPIC_GROUP;
 DROP SEQUENCE IF EXISTS sequence_topic_group;
 
 CREATE TABLE IF NOT EXISTS `topic`
@@ -11,8 +14,8 @@ CREATE TABLE IF NOT EXISTS `topic`
     `name`                   varchar(100) NOT NULL,
     `description`            varchar(100) NULL,
     `status`                 varchar(20),
-    `create_date`            datetime     NOT NULL,
-    `update_date`            datetime     NULL,
+    `create_date`            timestamp    NOT NULL,
+    `update_date`            timestamp    NULL,
     `internal_identifier`    varchar(50)  NULL,
     `fallback_agency_id`     bigint   NULL,
     `fallback_url`           varchar(200) NULL,
@@ -31,7 +34,7 @@ ALTER TABLE `topic`
 ALTER TABLE `topic`
     ALTER COLUMN `update_date` SET DEFAULT CURRENT_TIMESTAMP;
 
-CREATE SEQUENCE IF NOT EXISTS sequence_topic
+CREATE SEQUENCE IF NOT EXISTS SEQUENCE_TOPIC
     INCREMENT BY 1
     START WITH 100000;
 
@@ -58,13 +61,13 @@ CREATE TABLE IF NOT EXISTS topic_group
 (
     `id`          bigint   NOT NULL,
     `name`        varchar(100) NOT NULL,
-    `create_date` datetime     NOT NULL,
+    `create_date` timestamp     NOT NULL,
     `tenant_id`   bigint   NULL,
-    `update_date` datetime     NOT NULL,
+    `update_date` timestamp     NOT NULL,
     PRIMARY KEY (`id`)
 );
 
-CREATE SEQUENCE sequence_topic_group
+CREATE SEQUENCE SEQUENCE_TOPIC_GROUP
     INCREMENT BY 1
     START WITH 1;
 

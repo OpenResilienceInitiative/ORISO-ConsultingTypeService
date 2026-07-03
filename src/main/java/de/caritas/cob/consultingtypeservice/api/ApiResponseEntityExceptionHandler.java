@@ -4,8 +4,8 @@ import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadReque
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
+import jakarta.validation.ConstraintViolationException;
 import java.net.UnknownHostException;
-import javax.validation.ConstraintViolationException;
 import lombok.NoArgsConstructor;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -13,9 +13,9 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.lang.NonNull;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -64,44 +64,26 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
   }
 
-  /**
-   * Incoming request body could not be deserialized.
-   *
-   * @param ex the thrown exception
-   * @param headers http headers
-   * @param status http status
-   * @param request web request
-   * @return response entity
-   */
-  @NonNull
+  /** Incoming request body could not be deserialized. */
   @Override
   protected ResponseEntity<Object> handleHttpMessageNotReadable(
-      final @NonNull HttpMessageNotReadableException ex,
-      final @NonNull HttpHeaders headers,
-      final @NonNull HttpStatus status,
-      final @NonNull WebRequest request) {
-    LogService.logWarning(status, ex);
+      final HttpMessageNotReadableException ex,
+      final HttpHeaders headers,
+      final HttpStatusCode status,
+      final WebRequest request) {
+    LogService.logWarning(HttpStatus.BAD_REQUEST, ex);
 
     return handleExceptionInternal(ex, null, headers, status, request);
   }
 
-  /**
-   * Valid on object fails validation.
-   *
-   * @param ex the thrown exception
-   * @param headers http headers
-   * @param status http status
-   * @param request web request
-   * @return response entity
-   */
-  @NonNull
+  /** Valid on object fails validation. */
   @Override
   protected ResponseEntity<Object> handleMethodArgumentNotValid(
-      final @NonNull MethodArgumentNotValidException ex,
-      final @NonNull HttpHeaders headers,
-      final @NonNull HttpStatus status,
-      final @NonNull WebRequest request) {
-    LogService.logWarning(status, ex);
+      final MethodArgumentNotValidException ex,
+      final HttpHeaders headers,
+      final HttpStatusCode status,
+      final WebRequest request) {
+    LogService.logWarning(HttpStatus.BAD_REQUEST, ex);
 
     return handleExceptionInternal(ex, null, headers, status, request);
   }

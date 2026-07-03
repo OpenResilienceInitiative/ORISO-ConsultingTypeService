@@ -7,8 +7,8 @@ import de.caritas.cob.consultingtypeservice.api.service.TopicFeatureAuthorisatio
 import de.caritas.cob.consultingtypeservice.api.service.TopicServiceFacade;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.TopicadminApi;
 import io.swagger.annotations.Api;
+import jakarta.validation.Valid;
 import java.util.List;
-import javax.validation.Valid;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

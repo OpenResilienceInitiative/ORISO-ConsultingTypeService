@@ -25,7 +25,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.MultitenancyWithSingle
 import de.caritas.cob.consultingtypeservice.schemas.model.UseConsultingTypesForAgencies;
 import de.caritas.cob.consultingtypeservice.schemas.model.UseOverviewPage;
 import de.caritas.cob.consultingtypeservice.schemas.model.UseTenantService;
-import javax.annotation.PostConstruct;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

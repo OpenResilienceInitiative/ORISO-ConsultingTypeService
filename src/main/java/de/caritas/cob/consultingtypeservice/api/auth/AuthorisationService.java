@@ -1,10 +1,10 @@
 package de.caritas.cob.consultingtypeservice.api.auth;
 
 import java.util.Optional;
-import org.keycloak.KeycloakPrincipal;
-import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 
 /** Resolves authorisation details from the current security context. */
@@ -13,25 +13,13 @@ public class AuthorisationService {
 
   public Optional<Long> findTenantIdInAccessToken() {
     Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-    if (authentication instanceof KeycloakAuthenticationToken) {
-      KeycloakAuthenticationToken keycloakAuthenticationToken =
-          (KeycloakAuthenticationToken) authentication;
-      return parseTenantId(
-          keycloakAuthenticationToken
-              .getAccount()
-              .getKeycloakSecurityContext()
-              .getToken()
-              .getOtherClaims()
-              .get("tenantId"));
+    if (authentication instanceof JwtAuthenticationToken) {
+      JwtAuthenticationToken jwtAuthenticationToken = (JwtAuthenticationToken) authentication;
+      return parseTenantId(jwtAuthenticationToken.getToken().getClaims().get("tenantId"));
     }
-    if (authentication != null && authentication.getPrincipal() instanceof KeycloakPrincipal) {
-      KeycloakPrincipal<?> keycloakPrincipal = (KeycloakPrincipal<?>) authentication.getPrincipal();
-      return parseTenantId(
-          keycloakPrincipal
-              .getKeycloakSecurityContext()
-              .getToken()
-              .getOtherClaims()
-              .get("tenantId"));
+    if (authentication != null && authentication.getPrincipal() instanceof Jwt) {
+      Jwt jwt = (Jwt) authentication.getPrincipal();
+      return parseTenantId(jwt.getClaims().get("tenantId"));
     }
     return Optional.empty();
   }

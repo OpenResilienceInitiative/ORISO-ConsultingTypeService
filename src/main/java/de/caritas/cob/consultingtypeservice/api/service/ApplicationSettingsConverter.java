@@ -2,9 +2,9 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import com.google.common.collect.Maps;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
-import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTOMainTenantSubdomainForSingleDomainMultitenancy;
-import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTOMultitenancyWithSingleDomainEnabled;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
+import de.caritas.cob.consultingtypeservice.api.model.FeatureToggleDTO;
+import de.caritas.cob.consultingtypeservice.api.model.SettingDTO;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
@@ -88,28 +88,22 @@ public class ApplicationSettingsConverter {
     return settingsDTO;
   }
 
-  private ApplicationSettingsDTOMainTenantSubdomainForSingleDomainMultitenancy toSettingDTO(
-      Object setting) {
+  private SettingDTO toSettingDTO(Object setting) {
     if (setting == null) {
       return null;
     }
     Boolean readOnly = getFieldValue(setting, "readOnly", Boolean.class);
     String value = getFieldValue(setting, "value", String.class);
-    return new ApplicationSettingsDTOMainTenantSubdomainForSingleDomainMultitenancy()
-        .readOnly(readOnly)
-        .value(value);
+    return new SettingDTO().readOnly(readOnly).value(value);
   }
 
-  private ApplicationSettingsDTOMultitenancyWithSingleDomainEnabled toFeatureToggleDTO(
-      Object setting) {
+  private FeatureToggleDTO toFeatureToggleDTO(Object setting) {
     if (setting == null) {
       return null;
     }
     Boolean readOnly = getFieldValue(setting, "readOnly", Boolean.class);
     Boolean value = getFieldValue(setting, "value", Boolean.class);
-    return new ApplicationSettingsDTOMultitenancyWithSingleDomainEnabled()
-        .readOnly(readOnly)
-        .value(value);
+    return new FeatureToggleDTO().readOnly(readOnly).value(value);
   }
 
   private <T> T getFieldValue(Object object, String fieldName, Class<T> fieldType) {
