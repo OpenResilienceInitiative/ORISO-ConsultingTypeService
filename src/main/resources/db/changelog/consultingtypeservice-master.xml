@@ -5,8 +5,20 @@
   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.2.xsd">
 
-    <!-- The base changeset contains the database state when liquibase was added to the project -->
-	<include file="db/changelog/changeset/0001_initsql/initSql.xml"/>
+  <!--
+    Single master changelog for ALL environments (decision: Liquibase Re-Enablement Plan
+    2026-07-04, package L1). Changeset order is the canonical order of the former
+    consultingtypeservice-prod-master.xml. Environment differences are expressed via
+    Liquibase contexts (spring.liquibase.contexts), NOT via separate master files:
+      - no context attribute  -> runs everywhere (schema changes, required data)
+      - context="seed"        -> local/dev only (demo/seed data)
+    Include paths (including the historical leading slashes) are kept EXACTLY as they
+    were recorded in DATABASECHANGELOG by earlier runs, so existing databases keep
+    matching on (id, author, filename).
+  -->
+
+  <!-- The base changeset contains the database state when liquibase was added to the project -->
+  <include file="db/changelog/changeset/0001_initsql/initSql.xml"/>
   <include file="db/changelog/changeset/0002_topic_internal_identifier/topic_internal_identifier_column.xml"/>
   <include file="db/changelog/changeset/0003_migrate_topic_to_multilingual_structure/0003-changeSet.xml"/>
   <include file="/db/changelog/changeset/0004_topic_groups/0004-changeSet.xml"/>
