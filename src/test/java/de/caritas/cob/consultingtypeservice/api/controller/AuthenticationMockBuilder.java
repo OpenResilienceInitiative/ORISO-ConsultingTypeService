@@ -1,13 +1,14 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
-import com.google.common.collect.Lists;
 import de.caritas.cob.consultingtypeservice.api.auth.RoleAuthorizationAuthorityMapper;
 import java.util.Collection;
-import org.keycloak.KeycloakPrincipal;
-import org.keycloak.KeycloakSecurityContext;
-import org.keycloak.representations.AccessToken;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 public class AuthenticationMockBuilder {
 
@@ -25,44 +26,25 @@ public class AuthenticationMockBuilder {
   }
 
   public Authentication build() {
-    return new Authentication() {
-      @Override
-      public Collection<? extends GrantedAuthority> getAuthorities() {
-        return new RoleAuthorizationAuthorityMapper()
-            .mapAuthorities(Lists.newArrayList(() -> userRole));
-      }
+    Map<String, Object> claims = new HashMap<>();
+    claims.put("username", "test");
+    claims.put("userId", "some userid");
+    if (tenantId != null) {
+      claims.put("tenantId", tenantId);
+    }
+    claims.put("realm_access", Map.of("roles", List.of(userRole)));
 
-      @Override
-      public Object getCredentials() {
-        return null;
-      }
+    Jwt jwt =
+        Jwt.withTokenValue("token")
+            .header("alg", "none")
+            .subject("some userid")
+            .claims(map -> map.putAll(claims))
+            .build();
 
-      @Override
-      public Object getDetails() {
-        return null;
-      }
+    Collection<? extends GrantedAuthority> authorities =
+        new RoleAuthorizationAuthorityMapper()
+            .mapAuthorities(List.of((GrantedAuthority) () -> userRole));
 
-      @Override
-      public Object getPrincipal() {
-        AccessToken token = new AccessToken();
-        token.setOtherClaims("tenantId", tenantId);
-        KeycloakSecurityContext keycloakSecurityContext =
-            new KeycloakSecurityContext("", token, null, null);
-        return new KeycloakPrincipal<>("name", keycloakSecurityContext);
-      }
-
-      @Override
-      public boolean isAuthenticated() {
-        return true;
-      }
-
-      @Override
-      public void setAuthenticated(boolean b) throws IllegalArgumentException {}
-
-      @Override
-      public String getName() {
-        return null;
-      }
-    };
+    return new JwtAuthenticationToken(jwt, authorities, "test");
   }
 }

@@ -16,7 +16,7 @@
   <parent>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-parent</artifactId>
-    <version>2.7.14</version>
+    <version>4.0.1</version>
     <relativePath /> <!-- lookup parent from repository -->
   </parent>
 
@@ -25,54 +25,36 @@
     upper version -->
     <java.upper.version>21</java.upper.version>
     <springboot.upper.version>4.0.1</springboot.upper.version>
-    <spring.upper.version>6.2.0</spring.upper.version>
+    <spring.upper.version>7.0.x</spring.upper.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <java.version>11</java.version>
+    <java.version>21</java.version>
+    <maven.compiler.source>21</maven.compiler.source>
+    <maven.compiler.target>21</maven.compiler.target>
     <!-- force at least version 2.16 due to https://logging.apache.org/log4j/2.x/security.html -->
-
-    <log4j.version>2.16.0</log4j.version>
-    <openapi-generator-maven-plugin.version>6.2.1</openapi-generator-maven-plugin.version>
+    <log4j.version>2.17.1</log4j.version>
+    <openapi.generator.maven.version>7.17.0</openapi.generator.maven.version>
     <jackson-databind-nullable.version>0.2.3</jackson-databind-nullable.version>
-    <springfox-swagger2.version>3.0.0</springfox-swagger2.version>
-    <springfox-bean-validators.version>3.0.0</springfox-bean-validators.version>
-    <springfox-swagger-ui.version>3.0.0</springfox-swagger-ui.version>
+    <springfox.boot.starter.version>3.0.0</springfox.boot.starter.version>
     <commons-lang3.version>3.11</commons-lang3.version>
-    <keycloak-spring-security-adapter.version>16.0.0</keycloak-spring-security-adapter.version>
-    <keycloak-spring-boot-starter.version>16.0.0</keycloak-spring-boot-starter.version>
-    <keycloak-admin-client.version>16.0.0</keycloak-admin-client.version>
-    <powermock-module-junit4.version>2.0.2</powermock-module-junit4.version>
-    <powermock-api-mockito2.version>2.0.2</powermock-api-mockito2.version>
-    <easy-random-core.version>4.3.0</easy-random-core.version>
+    <keycloak.version>17.0.0</keycloak.version>
+    <easy-random-core.version>5.0.0</easy-random-core.version>
     <org.everit.json.schema.version>1.12.2</org.everit.json.schema.version>
     <json.version>20201115</json.version>
-    <json-unit.version>2.25.0</json-unit.version>
-    <json-unit-spring.version>2.25.0</json-unit-spring.version>
+    <json-unit.version>2.28.0</json-unit.version>
+    <json-unit-spring.version>2.28.0</json-unit-spring.version>
+    <jakarta.ws.rs-api.version>3.1.0</jakarta.ws.rs-api.version>
     <javax.ws.rs-api.version>2.1.1</javax.ws.rs-api.version>
-    <liquibase-maven-plugin.version>4.1.1</liquibase-maven-plugin.version>
+    <liquibase-maven-plugin.version>4.23.2</liquibase-maven-plugin.version>
     <owasp-java-html-sanitizer.version>20211018.2</owasp-java-html-sanitizer.version>
-    <liquibase-core.version>4.9.1</liquibase-core.version>
-    <hibernate-validator.version>6.1.6.Final</hibernate-validator.version>
-    <spring-security-test.version>5.5.7</spring-security-test.version>
-    <spring-boot-starter-data-mongodb.version>2.7.5</spring-boot-starter-data-mongodb.version>
-    <spring-boot-starter.version>2.6.15</spring-boot-starter.version>
-    <spring-data-mongodb.version>3.3.5</spring-data-mongodb.version>
+    <liquibase-core.version>4.23.2</liquibase-core.version>
+    <spring-security.version>7.0.1</spring-security.version>
     <ehcache.version>2.10.9.2</ehcache.version>
-    <sentry.version>8.43.2</sentry.version>
-    <lombok.version>1.18.32</lombok.version>
+    <sentry.version>8.46.0</sentry.version>
+    <lombok.version>1.18.42</lombok.version>
+    <mockito.version>5.20.0</mockito.version>
+    <spring-security-oauth2-test-webmvc-addons.version>3.0.1</spring-security-oauth2-test-webmvc-addons.version>
   </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>org.springframework.cloud</groupId>
-        <artifactId>spring-cloud-dependencies</artifactId>
-        <version>2021.0.8</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
 
   <dependencies>
     <!-- Spring Boot dependencies -->
@@ -83,7 +65,6 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-data-mongodb</artifactId>
-      <version>${spring-boot-starter-data-mongodb.version}</version>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -117,9 +98,20 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-restclient</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework</groupId>
+      <artifactId>spring-context-support</artifactId>
+    </dependency>
+    <dependency>
       <groupId>org.hibernate.validator</groupId>
       <artifactId>hibernate-validator</artifactId>
-      <version>${hibernate-validator.version}</version>
     </dependency>
     <!-- Spring actuator  -->
     <dependency>
@@ -128,7 +120,7 @@
     </dependency>
     <dependency>
       <groupId>io.sentry</groupId>
-      <artifactId>sentry-spring-boot-starter</artifactId>
+      <artifactId>sentry-spring-boot-4-starter</artifactId>
       <version>${sentry.version}</version>
     </dependency>
     <dependency>
@@ -137,20 +129,18 @@
       <version>${sentry.version}</version>
     </dependency>
     <dependency>
-      <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-starter-sleuth</artifactId>
-      <version>3.1.11</version>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-tracing-bridge-otel</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.springframework.cloud</groupId>
-      <artifactId>spring-cloud-starter-zipkin</artifactId>
-      <version>2.2.8.RELEASE</version>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-exporter-zipkin</artifactId>
     </dependency>
     <!-- OpenApi/Swagger dependencies -->
     <dependency>
       <groupId>org.openapitools</groupId>
       <artifactId>openapi-generator-maven-plugin</artifactId>
-      <version>${openapi-generator-maven-plugin.version}</version>
+      <version>${openapi.generator.maven.version}</version>
       <scope>provided</scope>
     </dependency>
     <dependency>
@@ -160,24 +150,30 @@
     </dependency>
 
 
-    <!-- SpringFox: generate YAML file from POJOs and generate documentation -->
-
-    <dependency>
-      <groupId>javax.validation</groupId>
-      <artifactId>validation-api</artifactId>
-    </dependency>
-
     <dependency>
       <groupId>io.swagger.core.v3</groupId>
       <artifactId>swagger-annotations</artifactId>
       <version>2.2.15</version>
     </dependency>
-    <!-- SpringFox: generate YAML file from POJOs and generate documentation -->
-
     <dependency>
-      <groupId>org.springdoc</groupId>
-      <artifactId>springdoc-openapi-ui</artifactId>
-      <version>1.8.0</version>
+      <groupId>io.springfox</groupId>
+      <artifactId>springfox-boot-starter</artifactId>
+      <version>${springfox.boot.starter.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.springframework.plugin</groupId>
+          <artifactId>spring-plugin-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.springframework.plugin</groupId>
+          <artifactId>spring-plugin-metadata</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+    <dependency>
+      <groupId>io.swagger.parser.v3</groupId>
+      <artifactId>swagger-parser</artifactId>
+      <version>2.1.15</version>
     </dependency>
 
     <!-- Lombok dependencies -->
@@ -217,12 +213,12 @@
     <dependency>
       <groupId>org.keycloak</groupId>
       <artifactId>keycloak-spring-security-adapter</artifactId>
-      <version>${keycloak-spring-security-adapter.version}</version>
+      <version>${keycloak.version}</version>
     </dependency>
     <dependency>
       <groupId>org.keycloak</groupId>
       <artifactId>keycloak-spring-boot-starter</artifactId>
-      <version>${keycloak-spring-boot-starter.version}</version>
+      <version>${keycloak.version}</version>
       <exclusions>
         <exclusion>
           <groupId>ch.qos.logback</groupId>
@@ -233,21 +229,23 @@
     <dependency>
       <groupId>org.keycloak</groupId>
       <artifactId>keycloak-admin-client</artifactId>
-      <version>${keycloak-admin-client.version}</version>
+      <version>${keycloak.version}</version>
     </dependency>
-
-    <!-- Mongo dependencies -->
     <dependency>
-      <groupId>org.springframework.data</groupId>
-      <artifactId>spring-data-mongodb</artifactId>
-      <version>${spring-data-mongodb.version}</version>
+      <groupId>jakarta.ws.rs</groupId>
+      <artifactId>jakarta.ws.rs-api</artifactId>
+      <version>${jakarta.ws.rs-api.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>javax.ws.rs</groupId>
+      <artifactId>javax.ws.rs-api</artifactId>
+      <version>${javax.ws.rs-api.version}</version>
     </dependency>
 
     <!-- Test scope dependencies -->
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
-      <version>${spring-boot-starter.version}</version>
       <scope>test</scope>
       <exclusions>
         <exclusion>
@@ -257,21 +255,47 @@
       </exclusions>
     </dependency>
     <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-webmvc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-jdbc-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-data-jpa-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-data-mongodb-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
       <groupId>org.springframework.security</groupId>
       <artifactId>spring-security-test</artifactId>
-      <version>${spring-security-test.version}</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>de.flapdoodle.embed</groupId>
       <artifactId>de.flapdoodle.embed.mongo</artifactId>
-      <version>4.13.0</version>
+      <version>4.24.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>de.flapdoodle.embed</groupId>
-      <artifactId>de.flapdoodle.embed.mongo.spring26x</artifactId>
-      <version>4.13.0</version>
+      <artifactId>de.flapdoodle.embed.mongo.spring4x</artifactId>
+      <version>4.24.0</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.c4-soft.springaddons</groupId>
+      <artifactId>spring-security-oauth2-test-webmvc-addons</artifactId>
+      <version>${spring-security-oauth2-test-webmvc-addons.version}</version>
+      <scope>test</scope>
     </dependency>
 
     <dependency>
@@ -330,12 +354,6 @@
       <scope>test</scope>
     </dependency>
 
-    <dependency>
-      <groupId>javax.ws.rs</groupId>
-      <artifactId>javax.ws.rs-api</artifactId>
-      <version>${javax.ws.rs-api.version}</version>
-    </dependency>
-
 
     <dependency>
       <groupId>org.apache.logging.log4j</groupId>
@@ -352,6 +370,12 @@
       <groupId>org.liquibase</groupId>
       <artifactId>liquibase-maven-plugin</artifactId>
       <version>${liquibase-maven-plugin.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.liquibase</groupId>
+          <artifactId>liquibase-core</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.liquibase</groupId>
@@ -418,11 +442,36 @@
       <plugin>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <configuration>
+          <source>21</source>
+          <target>21</target>
+          <annotationProcessorPaths>
+            <path>
+              <groupId>org.projectlombok</groupId>
+              <artifactId>lombok</artifactId>
+              <version>${lombok.version}</version>
+            </path>
+          </annotationProcessorPaths>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>build-helper-maven-plugin</artifactId>
         <executions>
           <execution>
+            <phase>generate-sources</phase>
             <goals>
-              <goal>build-info</goal>
+              <goal>add-source</goal>
             </goals>
+            <configuration>
+              <sources>
+                <source>${project.build.directory}/generated-sources</source>
+              </sources>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -459,7 +508,7 @@
       <plugin>
         <groupId>org.openapitools</groupId>
         <artifactId>openapi-generator-maven-plugin</artifactId>
-        <version>${openapi-generator-maven-plugin.version}</version>
+        <version>${openapi.generator.maven.version}</version>
         <executions>
           <execution>
             <id>consulting-type-service</id>
@@ -470,6 +519,8 @@
               <configOptions>
                 <interfaceOnly>true</interfaceOnly>
                 <sourceFolder>/</sourceFolder>
+                <useJakartaEe>true</useJakartaEe>
+                <useSpringBoot3>true</useSpringBoot3>
               </configOptions>
               <inputSpec>${project.basedir}/api/consultingtypeservice.yml</inputSpec>
               <generatorName>spring</generatorName>
@@ -494,6 +545,8 @@
               <configOptions>
                 <interfaceOnly>true</interfaceOnly>
                 <sourceFolder>/</sourceFolder>
+                <useJakartaEe>true</useJakartaEe>
+                <useSpringBoot3>true</useSpringBoot3>
               </configOptions>
               <inputSpec>${project.basedir}/api/consultingtypeadminservice.yml</inputSpec>
               <generatorName>spring</generatorName>
@@ -518,6 +571,8 @@
               <configOptions>
                 <interfaceOnly>true</interfaceOnly>
                 <sourceFolder>/</sourceFolder>
+                <useJakartaEe>true</useJakartaEe>
+                <useSpringBoot3>true</useSpringBoot3>
               </configOptions>
               <inputSpec>${project.basedir}/api/topicservice.yml</inputSpec>
               <generatorName>spring</generatorName>
@@ -537,6 +592,8 @@
               <configOptions>
                 <interfaceOnly>true</interfaceOnly>
                 <sourceFolder>/</sourceFolder>
+                <useJakartaEe>true</useJakartaEe>
+                <useSpringBoot3>true</useSpringBoot3>
               </configOptions>
               <inputSpec>${project.basedir}/api/applicationsettingsservice.yml</inputSpec>
               <generatorName>spring</generatorName>
@@ -577,6 +634,8 @@
                 <sourceFolder>/</sourceFolder>
                 <library>resttemplate</library>
                 <dateLibrary>java8</dateLibrary>
+                <useJakartaEe>true</useJakartaEe>
+                <useSpringBoot3>true</useSpringBoot3>
               </configOptions>
               <inputSpec>${project.basedir}/services/tenantservice.yaml</inputSpec>
               <generatorName>java</generatorName>
@@ -592,6 +651,27 @@
               <modelPackage>
                 ${project.groupId}.${project.artifactId}.tenantservice.generated.web.model
               </modelPackage>
+            </configuration>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <artifactId>maven-antrun-plugin</artifactId>
+        <version>3.1.0</version>
+        <executions>
+          <execution>
+            <id>spring-7-openapi-client-compatibility</id>
+            <phase>generate-sources</phase>
+            <goals>
+              <goal>run</goal>
+            </goals>
+            <configuration>
+              <target>
+                <replace dir="${project.build.directory}/generated-sources/openapi"
+                  token="headers.entrySet()" value="headers.headerSet()">
+                  <include name="**/ApiClient.java"/>
+                </replace>
+              </target>
             </configuration>
           </execution>
         </executions>
@@ -657,12 +737,12 @@
       <plugin>
         <groupId>com.diffplug.spotless</groupId>
         <artifactId>spotless-maven-plugin</artifactId>
-        <version>2.23.0</version>
+        <version>2.43.0</version>
         <configuration>
           <java>
             <toggleOffOn />
             <googleJavaFormat>
-              <version>1.15.0</version>
+              <version>1.22.0</version>
               <style>GOOGLE</style>
             </googleJavaFormat>
           </java>
@@ -682,7 +762,7 @@
         <version>5.30.0</version>
         <configuration>
           <activeRecipes>
-            <recipe>org.openrewrite.java.spring.boot2.UpgradeSpringBoot_2_6</recipe>
+            <recipe>org.openrewrite.java.spring.boot2.UpgradeSpringBoot_2_7</recipe>
           </activeRecipes>
         </configuration>
         <dependencies>

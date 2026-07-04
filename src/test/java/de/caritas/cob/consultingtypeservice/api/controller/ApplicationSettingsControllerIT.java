@@ -2,8 +2,6 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -20,24 +18,13 @@ import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.util.JsonConverter;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
-import java.util.Map;
-import javax.servlet.http.Cookie;
-import org.assertj.core.util.Lists;
-import org.assertj.core.util.Maps;
-import org.assertj.core.util.Sets;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.keycloak.adapters.RefreshableKeycloakSecurityContext;
-import org.keycloak.adapters.spi.KeycloakAccount;
-import org.keycloak.adapters.springsecurity.account.SimpleKeycloakAccount;
-import org.keycloak.adapters.springsecurity.token.KeycloakAuthenticationToken;
-import org.keycloak.representations.AccessToken;
-import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -168,9 +155,9 @@ class ApplicationSettingsControllerIT {
                 .with(authentication(authentication))
                 .header("csrfHeader", "csrfToken")
                 .cookie(new Cookie("csrfCookie", "csrfToken"))
-                .contentType(javax.ws.rs.core.MediaType.APPLICATION_JSON)
+                .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
                 .content(jsonRequest)
-                .contentType(javax.ws.rs.core.MediaType.APPLICATION_JSON))
+                .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.value").value(true))
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.readOnly").value(true))
@@ -235,9 +222,9 @@ class ApplicationSettingsControllerIT {
                 .with(authentication(authentication))
                 .header("csrfHeader", "csrfToken")
                 .cookie(new Cookie("csrfCookie", "csrfToken"))
-                .contentType(javax.ws.rs.core.MediaType.APPLICATION_JSON)
+                .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
                 .content(jsonRequest)
-                .contentType(javax.ws.rs.core.MediaType.APPLICATION_JSON))
+                .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
   }
 
@@ -256,9 +243,9 @@ class ApplicationSettingsControllerIT {
                 .with(authentication(builder.withUserRole(TOPIC_ADMIN.getValue()).build()))
                 .header("csrfHeader", "csrfToken")
                 .cookie(new Cookie("csrfCookie", "csrfToken"))
-                .contentType(javax.ws.rs.core.MediaType.APPLICATION_JSON)
+                .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON)
                 .content(jsonRequest)
-                .contentType(javax.ws.rs.core.MediaType.APPLICATION_JSON))
+                .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isForbidden());
   }
 
@@ -309,20 +296,6 @@ class ApplicationSettingsControllerIT {
   }
 
   private Authentication givenMockAuthentication(final UserRole authority) {
-    final var securityContext = mock(RefreshableKeycloakSecurityContext.class);
-    when(securityContext.getTokenString()).thenReturn("tokenString");
-    final var token = mock(AccessToken.class, Mockito.RETURNS_DEEP_STUBS);
-    when(securityContext.getToken()).thenReturn(token);
-    givenOtherClaimsAreDefinedForToken(token);
-    final KeycloakAccount mockAccount =
-        new SimpleKeycloakAccount(() -> "user", Sets.newHashSet(), securityContext);
-    return new KeycloakAuthenticationToken(
-        mockAccount, true, Lists.newArrayList((GrantedAuthority) authority::getValue));
-  }
-
-  private void givenOtherClaimsAreDefinedForToken(final AccessToken token) {
-    final Map<String, Object> claimMap = Maps.newHashMap("username", "test");
-    claimMap.put("userId", "some userid");
-    when(token.getOtherClaims()).thenReturn(claimMap);
+    return new AuthenticationMockBuilder().withUserRole(authority.getValue()).build();
   }
 }

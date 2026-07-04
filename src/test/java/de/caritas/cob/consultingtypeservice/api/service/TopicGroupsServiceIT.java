@@ -41,8 +41,12 @@ class TopicGroupsServiceIT {
     topicRepository.saveAllAndFlush(List.of(te1, te2));
 
     val topicGroupEntity =
-        new TopicGroupEntity(
-            1L, "topicGroup1", LocalDateTime.now(), LocalDateTime.now(), Set.of(te1, te2));
+        TopicGroupEntity.builder()
+            .name("topicGroup1")
+            .createDate(now)
+            .updateDate(now)
+            .topicEntities(Set.of(te1, te2))
+            .build();
     topicGroupRepository.saveAndFlush(topicGroupEntity);
 
     val allTopicGroups = topicGroupService.getAllTopicGroups();

@@ -1,5 +1,4 @@
-# Runtime: Java 11 (eclipse-temurin:11-jre). See pom.xml:java.version and CTS-H01 for upgrade track.
-FROM eclipse-temurin:11-jre
+FROM eclipse-temurin:21-jre
 VOLUME ["/tmp","/log"]
 EXPOSE 8083
 ARG JAR_FILE
