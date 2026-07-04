@@ -26,3 +26,24 @@ jobs:
         push_to_ghcr: false
         image_name: oriso-consultingtypeservice
         github_token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Non-blocking burn-in (Test Quality Audit 2026-07-04, item 3 + CI Roadmap Part 1).
+  # Runs `mvnw -B verify`, which reaches the surefire `integration-tests` execution
+  # (integration-test phase, **/*IT.*) — 20 IT classes / ~141 methods that have never
+  # run in CI (`mvn package` stops before the integration-test phase). They use
+  # embedded H2 + embedded (flapdoodle) Mongo, so no external services are needed;
+  # the only network touch is flapdoodle fetching a MongoDB binary on first run.
+  # continue-on-error keeps this OFF the required-checks path during burn-in.
+  integration-tests:
+    name: integration-tests (non-blocking, burn-in)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Run integration tests (verify)
+      uses: ./.github/actions/maven-verify-burnin
+      with:
+        java_version: '17'
