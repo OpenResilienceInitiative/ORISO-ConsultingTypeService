@@ -46,4 +46,4 @@ jobs:
     - name: Run integration tests (verify)
       uses: ./.github/actions/maven-verify-burnin
       with:
-        java_version: '17'
+        java_version: '21'
