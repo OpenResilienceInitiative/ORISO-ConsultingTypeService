@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
+import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.SINGLE_TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
 import static de.caritas.cob.consultingtypeservice.testHelper.PathConstants.PATH_GET_FULL_CONSULTING_TYPE_BY_TENANT;
@@ -39,7 +40,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -137,7 +137,6 @@ class ConsultingTypeControllerE2EIT {
   }
 
   @Test
-  @WithMockUser(authorities = {AuthorityValue.LIMITED_PATCH_CONSULTING_TYPE})
   void patchConsultingType_Should_returnOk_When_singleTenantAdminTriesToPatchLimitedSettings()
       throws Exception {
     // given
@@ -164,6 +163,11 @@ class ConsultingTypeControllerE2EIT {
     this.mvc
         .perform(
             patch(ROOT_PATH + "/" + EXISTING_ID)
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(SINGLE_TENANT_ADMIN.getValue())
+                            .build()))
                 .cookie(CSRF_COOKIE)
                 .header(CSRF_HEADER, CSRF_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -179,7 +183,6 @@ class ConsultingTypeControllerE2EIT {
   }
 
   @Test
-  @WithMockUser(authorities = {AuthorityValue.LIMITED_PATCH_CONSULTING_TYPE})
   void
       patchConsultingType_Should_returnForbidden_When_singleTenantAdminTriesToPatchSettingsThatHeIsNotAllowedTo()
           throws Exception {
@@ -207,6 +210,11 @@ class ConsultingTypeControllerE2EIT {
         this.mvc
             .perform(
                 patch(ROOT_PATH + "/" + EXISTING_ID)
+                    .with(
+                        authentication(
+                            new AuthenticationMockBuilder()
+                                .withUserRole(SINGLE_TENANT_ADMIN.getValue())
+                                .build()))
                     .cookie(CSRF_COOKIE)
                     .header(CSRF_HEADER, CSRF_VALUE)
                     .contentType(MediaType.APPLICATION_JSON)
