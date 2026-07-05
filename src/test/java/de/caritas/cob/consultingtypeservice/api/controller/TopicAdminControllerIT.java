@@ -169,15 +169,17 @@ class TopicAdminControllerIT {
   }
 
   @Test
-  void createTopic_Should_returnForbidden_When_calledWithValidCreateParamsButAsUnauthenticatedUser()
-      throws Exception {
+  void
+      createTopic_Should_returnUnauthorized_When_calledWithValidCreateParamsButAsUnauthenticatedUser()
+          throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
     final String payload = JsonConverter.convertToJson(topicDTO);
+    // OAuth2 resource server returns 401 (not the legacy Keycloak-adapter 403) for anonymous calls
     mockMvc
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH).content(payload).contentType(APPLICATION_JSON))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
   }
 
   @Test
@@ -252,8 +254,12 @@ class TopicAdminControllerIT {
   @Test
   void save_Should_ReturnForbidden_IfUserIsAuthenticatedButDoesNotHavePermission()
       throws Exception {
+    final AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
     mockMvc
-        .perform(post(TopicPathConstants.ADMIN_ROOT_PATH).accept(MediaType.APPLICATION_JSON))
+        .perform(
+            post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(authentication(builder.withUserRole("another-authority").build()))
+                .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isForbidden());
   }
 
@@ -305,11 +311,12 @@ class TopicAdminControllerIT {
   }
 
   @Test
-  void getTopicList_Should_ReturnForbidden_When_UserIsNotAuthenticated() throws Exception {
+  void getTopicList_Should_ReturnUnauthorized_When_UserIsNotAuthenticated() throws Exception {
+    // OAuth2 resource server returns 401 (not the legacy Keycloak-adapter 403) for anonymous calls
     mockMvc
         .perform(
             get(TopicPathConstants.ADMIN_PATH_GET_TOPIC_LIST).accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
   }
 
   private Authentication givenMockAuthentication(final UserRole userRole) {

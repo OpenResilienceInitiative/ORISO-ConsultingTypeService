@@ -7,7 +7,6 @@ import de.caritas.cob.consultingtypeservice.api.service.TopicFeatureAuthorisatio
 import de.caritas.cob.consultingtypeservice.api.service.TopicServiceFacade;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.TopicadminApi;
 import io.swagger.annotations.Api;
-import jakarta.validation.Valid;
 import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -34,7 +33,7 @@ public class TopicAdminController implements TopicadminApi {
   @Override
   @PreAuthorize("hasAuthority('AUTHORIZATION_CREATE_TOPIC')")
   public ResponseEntity<TopicMultilingualDTO> createTopic(
-      @Valid final TopicMultilingualDTO topicMultilingualDTO) {
+      final TopicMultilingualDTO topicMultilingualDTO) {
     log.info("Creating topic by user {} ", authenticatedUser.getUsername());
     final TopicMultilingualDTO savedTopic = topicServiceFacade.createTopic(topicMultilingualDTO);
     return new ResponseEntity<>(savedTopic, HttpStatus.OK);
@@ -43,7 +42,7 @@ public class TopicAdminController implements TopicadminApi {
   @Override
   @PreAuthorize("hasAuthority('AUTHORIZATION_UPDATE_TOPIC')")
   public ResponseEntity<TopicMultilingualDTO> updateTopic(
-      final Long id, @Valid final TopicMultilingualDTO topicMultilingualDTO) {
+      final Long id, final TopicMultilingualDTO topicMultilingualDTO) {
     log.info("Updating topic with id {} by user {} ", id, authenticatedUser.getUsername());
     final TopicMultilingualDTO savedTopic =
         topicServiceFacade.updateTopic(id, topicMultilingualDTO);

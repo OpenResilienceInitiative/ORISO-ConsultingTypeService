@@ -126,10 +126,11 @@ class TopicControllerIT {
   }
 
   @Test
-  void getTopicList_Should_ReturnForbidden_When_UserIsNotAuthenticated() throws Exception {
+  void getTopicList_Should_ReturnUnauthorized_When_UserIsNotAuthenticated() throws Exception {
+    // OAuth2 resource server returns 401 (not the legacy Keycloak-adapter 403) for anonymous calls
     mockMvc
         .perform(get(TopicPathConstants.PATH_GET_TOPIC_LIST).accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
   }
 
   @Test
