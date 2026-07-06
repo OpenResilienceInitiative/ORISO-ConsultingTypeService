@@ -24,7 +24,11 @@ public class ConfigurationValidator {
   @Value("${spring.datasource.password:}")
   private String datasourcePassword;
 
-  @Value("${spring.data.mongodb.uri:}")
+  // Spring Boot 4 renamed the Mongo config property from spring.data.mongodb.uri to
+  // spring.mongodb.uri (old key is deprecation level=error since 4.0.0 and is no longer bound).
+  // Validate the property the framework actually reads so a missing URI fails fast with a clear
+  // message instead of the driver silently defaulting to localhost:27017 and crashlooping.
+  @Value("${spring.mongodb.uri:}")
   private String mongodbUri;
 
   @Value("${keycloak.auth-server-url:}")
@@ -53,7 +57,7 @@ public class ConfigurationValidator {
       missingConfigs.add("spring.datasource.password (SPRING_DATASOURCE_PASSWORD)");
     }
     if (isEmpty(mongodbUri)) {
-      missingConfigs.add("spring.data.mongodb.uri (SPRING_DATA_MONGODB_URI)");
+      missingConfigs.add("spring.mongodb.uri (SPRING_DATA_MONGODB_URI)");
     }
     if (isEmpty(keycloakAuthServerUrl)) {
       missingConfigs.add("keycloak.auth-server-url (KEYCLOAK_AUTH_SERVER_URL)");
