@@ -12,13 +12,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Spring Boot 4 / Spring Framework 7 removed trailing-slash path matching
- * ({@code setUseTrailingSlashMatch}). Some existing clients (e.g. the registration frontend calling
- * {@code /topic/public/}) still send a trailing slash, which now returns 404 ("No static resource").
+ * Spring Boot 4 / Spring Framework 7 removed trailing-slash path matching ({@code
+ * setUseTrailingSlashMatch}). Some existing clients (e.g. the registration frontend calling {@code
+ * /topic/public/}) still send a trailing slash, which now returns 404 ("No static resource").
  *
- * <p>This filter transparently strips a trailing slash from the request path so those requests match
- * the controller mappings again, restoring the pre-SB4 behaviour without editing generated API
- * interfaces. Kept intentionally narrow: only rewrites the perceived path, never redirects.
+ * <p>This filter transparently strips a trailing slash from the request path so those requests
+ * match the controller mappings again, restoring the pre-SB4 behaviour without editing generated
+ * API interfaces. Kept intentionally narrow: only rewrites the perceived path, never redirects.
  */
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE)
