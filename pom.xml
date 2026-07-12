@@ -327,6 +327,17 @@
       <version>${spring-security-oauth2-test-webmvc-addons.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- In-memory span exporter for asserting real spans get created/exported
+      end-to-end through the tracing autoconfiguration - see TracingSmokeIT.
+      Version pinned to the same OTel SDK line already used by
+      spring-boot-opentelemetry (${opentelemetry.version}), inherited from
+      spring-boot-dependencies. -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-testing</artifactId>
+      <version>${opentelemetry.version}</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.commons</groupId>
