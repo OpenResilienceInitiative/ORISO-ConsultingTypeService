@@ -31,12 +31,12 @@ import org.springframework.web.context.WebApplicationContext;
  * service's beans, jars and config were all confirmed correct via live inspection on Pre-Dev
  * (/actuator/beans showed the full Tracer/SdkTracerProvider/OtlpTracingAutoConfiguration chain,
  * identical to AgencyService). The zero-trace symptom here traced back to the default 10% root
- * sampler probability (management.tracing.sampling.probability, unset -&gt; TracingProperties'
- * Java default of 0.10f) combined with low, ad-hoc request volume during manual verification: a
- * handful of curls can easily produce zero *sampled* traces purely by chance, which is
- * indistinguishable from "tracing is broken" by looking at ClickHouse alone. This service's
- * application.properties now pins sampling to 100% by default (env-overridable), so this test -
- * and Pre-Dev observability in general - doesn't depend on request volume or luck.
+ * sampler probability (management.tracing.sampling.probability, unset -&gt; TracingProperties' Java
+ * default of 0.10f) combined with low, ad-hoc request volume during manual verification: a handful
+ * of curls can easily produce zero *sampled* traces purely by chance, which is indistinguishable
+ * from "tracing is broken" by looking at ClickHouse alone. This service's application.properties
+ * now pins sampling to 100% by default (env-overridable), so this test - and Pre-Dev observability
+ * in general - doesn't depend on request volume or luck.
  *
  * <p>This test runs the full filter chain (Spring Security + Spring MVC's ObservationFilter)
  * against a real request and asserts that an actual OpenTelemetry span was finished and handed to
@@ -45,10 +45,7 @@ import org.springframework.web.context.WebApplicationContext;
  */
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
 @TestPropertySource(
-    properties = {
-      "spring.profiles.active=testing",
-      "management.tracing.sampling.probability=1.0"
-    })
+    properties = {"spring.profiles.active=testing", "management.tracing.sampling.probability=1.0"})
 @AutoConfigureMockMvc
 @Import(TracingSmokeIT.InMemorySpanExporterConfig.class)
 class TracingSmokeIT {
