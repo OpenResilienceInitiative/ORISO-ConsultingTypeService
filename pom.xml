@@ -132,9 +132,39 @@
       <groupId>io.micrometer</groupId>
       <artifactId>micrometer-tracing-bridge-otel</artifactId>
     </dependency>
+    <!-- Spring Boot 4 split tracing autoconfiguration out of the actuator
+      starter (unlike metrics, which spring-boot-starter-actuator still pulls
+      in via spring-boot-starter-micrometer-metrics). Without this module,
+      OtlpTracingAutoConfiguration / ConditionalOnEnabledTracingExport never
+      load and management.opentelemetry.tracing.export.otlp.* is inert
+      regardless of value. Pulls in spring-boot-micrometer-tracing
+      transitively. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-micrometer-tracing-opentelemetry</artifactId>
+    </dependency>
+    <!-- Provides the base io.opentelemetry.api.OpenTelemetry SDK bean
+      (OpenTelemetrySdkAutoConfiguration) that OtlpTracingAutoConfiguration's
+      otelTracer bean requires - not pulled in by
+      spring-boot-micrometer-tracing-opentelemetry itself. Note: this module
+      also brings its own OTLP *logging* exporter
+      (OtlpLoggingAutoConfiguration, enabled by default) which is unrelated to
+      and would otherwise race with our logback JSON console logging -
+      explicitly disabled below (management.logging.export.otlp.enabled). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-opentelemetry</artifactId>
+    </dependency>
+    <!-- OTLP exporters for SigNoz (traces + JVM/app metrics). Zipkin exporter
+      removed: no Zipkin collector runs anywhere, it only produced dead
+      ResourceAccessException/Connection-refused noise against localhost:9411. -->
     <dependency>
       <groupId>io.opentelemetry</groupId>
-      <artifactId>opentelemetry-exporter-zipkin</artifactId>
+      <artifactId>opentelemetry-exporter-otlp</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-otlp</artifactId>
     </dependency>
     <!-- OpenApi/Swagger dependencies -->
     <dependency>
@@ -297,6 +327,17 @@
       <version>${spring-security-oauth2-test-webmvc-addons.version}</version>
       <scope>test</scope>
     </dependency>
+    <!-- In-memory span exporter for asserting real spans get created/exported
+      end-to-end through the tracing autoconfiguration - see TracingSmokeIT.
+      Version pinned to the same OTel SDK line already used by
+      spring-boot-opentelemetry (${opentelemetry.version}), inherited from
+      spring-boot-dependencies. -->
+    <dependency>
+      <groupId>io.opentelemetry</groupId>
+      <artifactId>opentelemetry-sdk-testing</artifactId>
+      <version>${opentelemetry.version}</version>
+      <scope>test</scope>
+    </dependency>
 
     <dependency>
       <groupId>org.apache.commons</groupId>
@@ -364,6 +405,13 @@
       <groupId>org.apache.logging.log4j</groupId>
       <artifactId>log4j-to-slf4j</artifactId>
       <version>${log4j.version}</version>
+    </dependency>
+    <!-- Structured JSON console logging (SigNoz log pipeline collects container
+      stdout); pattern ported from ORISO-UserService. -->
+    <dependency>
+      <groupId>net.logstash.logback</groupId>
+      <artifactId>logstash-logback-encoder</artifactId>
+      <version>7.0.1</version>
     </dependency>
     <!-- Liquibase -->
     <dependency>
