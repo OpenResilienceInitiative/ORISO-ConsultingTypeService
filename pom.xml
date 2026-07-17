@@ -423,6 +423,14 @@
       <artifactId>liquibase-core</artifactId>
       <version>${liquibase-core.version}</version>
     </dependency>
+    <!-- Spring Boot 4 moved LiquibaseAutoConfiguration into its own module;
+         without this, spring.liquibase.* is silently ignored at boot (no
+         DATABASECHANGELOG, no schema, Hibernate validate then fails with
+         "missing table"). See ORISO-TenantService/pom.xml for precedent. -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-liquibase</artifactId>
+    </dependency>
     <dependency>
       <groupId>com.googlecode.owasp-java-html-sanitizer</groupId>
       <artifactId>owasp-java-html-sanitizer</artifactId>
