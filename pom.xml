@@ -50,7 +50,6 @@
     <liquibase-core.version>4.23.2</liquibase-core.version>
     <spring-security.version>7.0.1</spring-security.version>
     <ehcache.version>2.10.9.2</ehcache.version>
-    <sentry.version>8.46.0</sentry.version>
     <lombok.version>1.18.42</lombok.version>
     <mockito.version>5.20.0</mockito.version>
     <spring-security-oauth2-test-webmvc-addons.version>3.0.1</spring-security-oauth2-test-webmvc-addons.version>
@@ -117,16 +116,6 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
-    </dependency>
-    <dependency>
-      <groupId>io.sentry</groupId>
-      <artifactId>sentry-spring-boot-4-starter</artifactId>
-      <version>${sentry.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>io.sentry</groupId>
-      <artifactId>sentry-logback</artifactId>
-      <version>${sentry.version}</version>
     </dependency>
     <dependency>
       <groupId>io.micrometer</groupId>
