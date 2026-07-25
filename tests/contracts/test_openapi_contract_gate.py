@@ -4,6 +4,8 @@ import subprocess
 import tempfile
 import unittest
 
+import yaml
+
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -62,6 +64,13 @@ class OpenApiContractGateTest(unittest.TestCase):
         self.assertIn("services/tenantservice.yaml", workflow)
         self.assertIn(".providers/tenant", workflow)
         self.assertIn("api/tenantservice.yaml", workflow)
+
+    def test_topic_text_and_url_schemas_use_valid_string_formats(self):
+        provider = yaml.safe_load((ROOT / "api/topicservice.yml").read_text())
+        schemas = provider["components"]["schemas"]
+
+        self.assertNotIn("format", schemas["WelcomeMessage"])
+        self.assertEqual("uri", schemas["FallBackUrl"]["format"])
 
 
 if __name__ == "__main__":
