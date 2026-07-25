@@ -10,6 +10,9 @@ env:
   REDOCLY_VERSION: 2.40.0
   OASDIFF_VERSION: v1.17.0
 
+permissions:
+  contents: read
+
 jobs:
   contracts:
     name: openapi provider and consumer contracts
@@ -20,6 +23,7 @@ jobs:
       uses: actions/checkout@v6
       with:
         fetch-depth: 0
+        persist-credentials: false
 
     - name: Checkout pull-request base
       if: github.event_name == 'pull_request'
@@ -27,13 +31,15 @@ jobs:
       with:
         ref: ${{ github.event.pull_request.base.sha }}
         path: .contract-base
+        persist-credentials: false
 
     - name: Checkout TenantService provider
       uses: actions/checkout@v6
       with:
         repository: OpenResilienceInitiative/ORISO-TenantService
-        ref: pre-dev
+        ref: ${{ github.event_name == 'pull_request' && 'a213d5546e2cdbcbd1f641291661f11cbbca2cfc' || 'pre-dev' }}
         path: .providers/tenant
+        persist-credentials: false
 
     - name: Set up Node.js
       uses: actions/setup-node@v6
@@ -60,7 +66,11 @@ jobs:
 
     - name: Reject provider breaking changes
       if: github.event_name == 'pull_request'
-      run: scripts/contracts/verify-provider-compatibility.sh contract-artifacts/base contract-artifacts/provider
+      run: >-
+        scripts/contracts/verify-provider-compatibility.sh
+        contract-artifacts/base
+        contract-artifacts/provider
+        contracts/topic-format-correction-96.md
 
     - name: Verify TenantService consumer compatibility
       run: >-

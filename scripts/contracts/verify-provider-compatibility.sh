@@ -4,7 +4,17 @@ set -euo pipefail
 
 base_dir="${1:?base bundle directory is required}"
 head_dir="${2:?head bundle directory is required}"
+err_ignore="${3:-}"
 oasdiff_bin="${OASDIFF_BIN:-oasdiff}"
+
+ignore_args=()
+if [[ -n "${err_ignore}" ]]; then
+  if [[ ! -f "${err_ignore}" ]]; then
+    echo "Reviewed breaking-change allowlist not found: ${err_ignore}" >&2
+    exit 1
+  fi
+  ignore_args=(--err-ignore "${err_ignore}")
+fi
 
 checked=0
 while IFS= read -r base_spec; do
@@ -14,6 +24,7 @@ while IFS= read -r base_spec; do
     exit 1
   fi
   "${oasdiff_bin}" breaking "${base_spec}" "${head_spec}" \
+    "${ignore_args[@]}" \
     --fail-on WARN \
     --format githubactions
   checked=$((checked + 1))

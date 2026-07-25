@@ -56,6 +56,12 @@ class OpenApiContractGateTest(unittest.TestCase):
         self.assertIn("provider-contracts-${{ github.sha }}", workflow)
         self.assertIn("repository: OpenResilienceInitiative/ORISO-TenantService", workflow)
         self.assertNotIn("continue-on-error:", workflow)
+        self.assertIn("permissions:\n  contents: read", workflow)
+        self.assertEqual(
+            workflow.count("uses: actions/checkout@v6"),
+            workflow.count("persist-credentials: false"),
+        )
+        self.assertIn("a213d5546e2cdbcbd1f641291661f11cbbca2cfc", workflow)
 
     def test_tenant_contract_is_checked_as_a_consumer_dependency(self):
         workflow = (
@@ -70,7 +76,31 @@ class OpenApiContractGateTest(unittest.TestCase):
         schemas = provider["components"]["schemas"]
 
         self.assertNotIn("format", schemas["WelcomeMessage"])
-        self.assertEqual("uri", schemas["FallBackUrl"]["format"])
+        self.assertNotIn("format", schemas["FallBackUrl"])
+
+    def test_reviewed_contract_correction_uses_a_narrow_err_allowlist(self):
+        gate = (
+            ROOT / "scripts/contracts/verify-provider-compatibility.sh"
+        ).read_text()
+        workflow = (
+            ROOT / ".github/workflows/openapi-contracts.yml"
+        ).read_text()
+        allowlist = (
+            ROOT / "contracts/topic-format-correction-96.md"
+        ).read_text()
+
+        self.assertIn("--err-ignore", gate)
+        self.assertIn("contracts/topic-format-correction-96.md", workflow)
+        entries = [
+            line for line in allowlist.splitlines()
+            if line.startswith(("GET ", "POST ", "PUT "))
+        ]
+        self.assertEqual(14, len(entries))
+        self.assertIn(
+            "https://github.com/OpenResilienceInitiative/"
+            "ORISO-ConsultingTypeService/issues/96",
+            allowlist,
+        )
 
 
 if __name__ == "__main__":
