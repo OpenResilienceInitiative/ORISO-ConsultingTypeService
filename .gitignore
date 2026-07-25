@@ -12,6 +12,6 @@ log/*
 config.env
 .env
 
-# Python bytecode from local pytest runs — never belongs in the tree.
+# Python contract-test cache
 __pycache__/
-*.py[cod]
+*.pyc
