@@ -38,10 +38,25 @@ class RequiredCiContractTest(unittest.TestCase):
 
         self.assertIn("name: required integration tests", integration)
         self.assertNotIn("continue-on-error:", integration)
-        self.assertIn("needs: [validate, required-integration-tests]", aggregate)
+        self.assertIn("needs: [validate, required-integration-tests, contract-tests]", aggregate)
         self.assertIn("if: always()", aggregate)
         self.assertIn("name: required PreDev CI", aggregate)
         self.assertIn("needs.required-integration-tests.result", aggregate)
+        self.assertIn("needs.contract-tests.result", aggregate)
+        # Reading a result into the environment is not the same as acting on
+        # it: the conclusion itself must consider every required job.
+        self.assertIn('"${CONTRACT_RESULT}" != success', aggregate)
+
+    def test_ci_contract_tests_are_executed_by_ci(self):
+        # These assertions are worthless unless something runs them. Without a
+        # job that invokes pytest, tests/ci is dead weight that can drift out
+        # of sync with the workflows it claims to protect.
+        workflow = (ROOT / ".github/workflows/ci-pull-request.yml").read_text()
+        contract = job_block(workflow, "contract-tests")
+
+        self.assertIn("pytest", contract)
+        self.assertIn("tests/ci", contract)
+        self.assertNotIn("continue-on-error:", contract)
 
     def test_publish_waits_for_required_integration_tests(self):
         workflow = (ROOT / ".github/workflows/ci-main.yml").read_text()
