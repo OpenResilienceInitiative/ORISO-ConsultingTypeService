@@ -11,3 +11,7 @@ log/*
 # Local runtime config
 config.env
 .env
+
+# Python bytecode from local pytest runs — never belongs in the tree.
+__pycache__/
+*.py[cod]
