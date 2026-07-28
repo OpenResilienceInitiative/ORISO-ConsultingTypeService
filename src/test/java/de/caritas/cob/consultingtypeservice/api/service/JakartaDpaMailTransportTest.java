@@ -12,9 +12,9 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
@@ -22,6 +22,50 @@ import org.junit.jupiter.api.Test;
 class JakartaDpaMailTransportTest {
 
   private final JakartaDpaMailTransport transport = new JakartaDpaMailTransport();
+
+  /**
+   * Hardening (parity with ORISO-Admin#569 / UserService JakartaInviteMailTransport): without
+   * {@code mail.smtp.starttls.required} a malicious or misconfigured SMTP server that does not
+   * offer STARTTLS silently downgrades the session to plaintext — including the AUTH exchange, i.e.
+   * the operator SMTP credentials, and the DPA signing link itself.
+   */
+  @Test
+  void buildSessionProperties_Should_requireStartTls_When_settingsNotSecure() {
+    Properties properties = JakartaDpaMailTransport.buildSessionProperties(insecureSettings());
+
+    assertThat(properties.getProperty("mail.smtp.starttls.enable")).isEqualTo("true");
+    assertThat(properties.getProperty("mail.smtp.starttls.required")).isEqualTo("true");
+  }
+
+  /** The negotiated TLS certificate must match the configured host (MITM defense in depth). */
+  @Test
+  void buildSessionProperties_Should_checkServerIdentity_When_settingsNotSecure() {
+    Properties properties = JakartaDpaMailTransport.buildSessionProperties(insecureSettings());
+
+    assertThat(properties.getProperty("mail.smtp.ssl.checkserveridentity")).isEqualTo("true");
+  }
+
+  @Test
+  void buildSessionProperties_Should_enableImplicitTlsAndCheckServerIdentity_When_settingsSecure() {
+    Properties properties = JakartaDpaMailTransport.buildSessionProperties(secureSettings());
+
+    assertThat(properties.getProperty("mail.smtp.ssl.enable")).isEqualTo("true");
+    assertThat(properties.getProperty("mail.smtp.ssl.checkserveridentity")).isEqualTo("true");
+    // Implicit TLS sessions must not also announce STARTTLS.
+    assertThat(properties.getProperty("mail.smtp.starttls.enable")).isNull();
+  }
+
+  @Test
+  void buildSessionProperties_Should_keepConnectionBasicsAndTimeouts() {
+    Properties properties = JakartaDpaMailTransport.buildSessionProperties(insecureSettings());
+
+    assertThat(properties.getProperty("mail.smtp.auth")).isEqualTo("true");
+    assertThat(properties.getProperty("mail.smtp.host")).isEqualTo("mail.example.org");
+    assertThat(properties.getProperty("mail.smtp.port")).isEqualTo("587");
+    assertThat(properties.getProperty("mail.smtp.connectiontimeout")).isEqualTo("10000");
+    assertThat(properties.getProperty("mail.smtp.timeout")).isEqualTo("10000");
+    assertThat(properties.getProperty("mail.smtp.writetimeout")).isEqualTo("10000");
+  }
 
   @Test
   void send_transportFailure_throwsSmtpSendExceptionInsteadOfSilentSuccess() throws Exception {
@@ -71,25 +115,41 @@ class JakartaDpaMailTransportTest {
         .isInstanceOf(BadRequestException.class);
   }
 
+  /**
+   * End-to-end proof of the hardening against a real (plaintext-only) SMTP conversation partner:
+   * the server never announces STARTTLS, so the send must fail instead of continuing in the clear.
+   * The command log proves the credentials and the DPA signing link never left the process — the
+   * conversation stops at EHLO, before AUTH / MAIL FROM / DATA.
+   */
   @Test
-  void send_successfulTransport_returnsReceiptWithRecipientAndTimestamp() throws Exception {
+  void send_serverWithoutStartTls_failsInsteadOfDowngradingToPlaintext() throws Exception {
     try (FakeSmtpServer server = FakeSmtpServer.start()) {
       DpaMailSettings settings =
           new DpaMailSettings(
               "127.0.0.1", server.port(), false, "mailer", "secret", "from@oriso.org");
-      Instant before = Instant.now();
 
-      DpaMailSendReceipt receipt =
-          transport.send(settings, "admin@oriso.org", "subject", "<html></html>");
+      assertThatThrownBy(
+              () -> transport.send(settings, "admin@oriso.org", "subject", "<html></html>"))
+          .isInstanceOf(SmtpSendException.class);
 
-      assertThat(receipt).isNotNull();
-      assertThat(receipt.getRecipientEmail()).isEqualTo("admin@oriso.org");
-      assertThat(receipt.getSentAt()).isNotNull().isAfterOrEqualTo(before);
-      assertThat(server.awaitDelivery()).isTrue();
+      assertThat(server.awaitDelivery(250)).isFalse();
       assertThat(server.receivedCommands())
-          .anyMatch(line -> line.toUpperCase().startsWith("RCPT TO"))
-          .anyMatch(line -> line.contains("admin@oriso.org"));
+          .anyMatch(line -> line.toUpperCase().startsWith("EHLO"))
+          .noneMatch(line -> line.toUpperCase().startsWith("AUTH"))
+          .noneMatch(line -> line.toUpperCase().startsWith("MAIL FROM"))
+          .noneMatch(line -> line.toUpperCase().startsWith("RCPT TO"))
+          .noneMatch(line -> line.toUpperCase().startsWith("DATA"));
     }
+  }
+
+  private static DpaMailSettings insecureSettings() {
+    return new DpaMailSettings(
+        "mail.example.org", 587, false, "user", "secret", "noreply@example.org");
+  }
+
+  private static DpaMailSettings secureSettings() {
+    return new DpaMailSettings(
+        "mail.example.org", 465, true, "user", "secret", "noreply@example.org");
   }
 
   /** Minimal in-process SMTP conversation partner; accepts one message, no TLS. */
@@ -116,8 +176,8 @@ class JakartaDpaMailTransportTest {
       return serverSocket.getLocalPort();
     }
 
-    boolean awaitDelivery() throws InterruptedException {
-      return delivered.await(10, TimeUnit.SECONDS);
+    boolean awaitDelivery(long timeoutMillis) throws InterruptedException {
+      return delivered.await(timeoutMillis, TimeUnit.MILLISECONDS);
     }
 
     synchronized List<String> receivedCommands() {
