@@ -2,11 +2,14 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
@@ -17,6 +20,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -50,14 +54,20 @@ class DpaSigningEmailServiceTest {
     when(applicationSettingsService.getApplicationSettings())
         .thenReturn(Optional.of(configuredSettings()));
     when(smtpPasswordEncryptionService.decrypt("encrypted-password")).thenReturn("secret");
+    DpaMailSendReceipt transportReceipt =
+        new DpaMailSendReceipt("bart.simpson@oriso.org", Instant.parse("2026-07-28T10:15:30Z"));
+    when(dpaMailTransport.send(any(), anyString(), anyString(), anyString()))
+        .thenReturn(transportReceipt);
 
-    service.send(
-        new DpaSigningEmailService.DpaSigningEmailCommand(
-            "bart.simpson@oriso.org",
-            "E2E Full Gate 202607191747",
-            "https://app.oriso-dev.site/dpa-sign/single-use-token",
-            LocalDateTime.parse("2026-08-03T13:27:28.243207790")));
+    DpaMailSendReceipt receipt =
+        service.send(
+            new DpaSigningEmailService.DpaSigningEmailCommand(
+                "bart.simpson@oriso.org",
+                "E2E Full Gate 202607191747",
+                "https://app.oriso-dev.site/dpa-sign/single-use-token",
+                LocalDateTime.parse("2026-08-03T13:27:28.243207790")));
 
+    assertThat(receipt).isSameAs(transportReceipt);
     ArgumentCaptor<String> subject = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
     verify(dpaMailTransport)
@@ -79,6 +89,24 @@ class DpaSigningEmailServiceTest {
         .contains("https://app.oriso-dev.site/dpa-sign/single-use-token")
         .contains("03.08.2026")
         .doesNotContain("secret");
+  }
+
+  @Test
+  void send_transportFailure_propagatesErrorInsteadOfSilentSuccess() {
+    when(applicationSettingsService.getApplicationSettings())
+        .thenReturn(Optional.of(configuredSettings()));
+    when(smtpPasswordEncryptionService.decrypt("encrypted-password")).thenReturn("secret");
+    when(dpaMailTransport.send(any(), anyString(), anyString(), anyString()))
+        .thenThrow(new SmtpSendException("SMTP transport failed", new IllegalStateException()));
+
+    var command =
+        new DpaSigningEmailService.DpaSigningEmailCommand(
+            "bart.simpson@oriso.org",
+            "E2E Full Gate 202607191747",
+            "https://app.oriso-dev.site/dpa-sign/single-use-token",
+            LocalDateTime.parse("2026-08-03T13:27:28.243207790"));
+
+    assertThatThrownBy(() -> service.send(command)).isInstanceOf(SmtpSendException.class);
   }
 
   @Test

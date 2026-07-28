@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
+import de.caritas.cob.consultingtypeservice.api.service.DpaMailSendReceipt;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailCommand;
 import jakarta.validation.Valid;
@@ -26,11 +27,15 @@ public class DpaSigningEmailController {
 
   @PostMapping
   @PreAuthorize("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')")
-  public ResponseEntity<Void> send(@Valid @RequestBody DpaSigningEmailRequest request) {
-    dpaSigningEmailService.send(
-        new DpaSigningEmailCommand(
-            request.recipientEmail, request.tenantName, request.signLink, request.expiresAt));
-    return ResponseEntity.noContent().build();
+  public ResponseEntity<DpaSigningEmailResponse> send(
+      @Valid @RequestBody DpaSigningEmailRequest request) {
+    DpaMailSendReceipt receipt =
+        dpaSigningEmailService.send(
+            new DpaSigningEmailCommand(
+                request.recipientEmail, request.tenantName, request.signLink, request.expiresAt));
+    return ResponseEntity.ok(
+        new DpaSigningEmailResponse(
+            "SENT", receipt.getRecipientEmail(), receipt.getSentAt().toString()));
   }
 
   @Data
@@ -39,5 +44,13 @@ public class DpaSigningEmailController {
     @NotBlank private String tenantName;
     @NotBlank private String signLink;
     @NotNull private LocalDateTime expiresAt;
+  }
+
+  /** Returned only after the SMTP server accepted the message - callers may set SENT on it. */
+  @lombok.Value
+  public static class DpaSigningEmailResponse {
+    String status;
+    String recipientEmail;
+    String sentAt;
   }
 }
