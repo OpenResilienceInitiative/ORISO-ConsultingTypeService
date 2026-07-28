@@ -11,3 +11,7 @@ log/*
 # Local runtime config
 config.env
 .env
+
+# Python contract-test cache
+__pycache__/
+*.pyc
