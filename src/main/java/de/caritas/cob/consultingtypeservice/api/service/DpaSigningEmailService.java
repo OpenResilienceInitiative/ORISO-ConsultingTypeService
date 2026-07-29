@@ -36,7 +36,14 @@ public class DpaSigningEmailService {
     this.permittedAppOrigin = parseUri(appBaseUrl, "appBaseUrl");
   }
 
-  public void send(DpaSigningEmailCommand command) {
+  /**
+   * Builds and sends the DPA signing email via the global SMTP settings.
+   *
+   * @return a receipt confirming the SMTP server accepted the message; any transport failure
+   *     propagates as {@link de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException}
+   *     - this method never reports success without a confirmed handover
+   */
+  public DpaMailSendReceipt send(DpaSigningEmailCommand command) {
     if (command == null
         || isBlank(command.getRecipientEmail())
         || isBlank(command.getTenantName())
@@ -57,7 +64,7 @@ public class DpaSigningEmailService {
             .orElseThrow(() -> new IllegalStateException("Global SMTP settings are unavailable"));
     DpaMailSettings mailSettings = toMailSettings(entity);
     String tenantName = command.getTenantName().trim();
-    dpaMailTransport.send(
+    return dpaMailTransport.send(
         mailSettings,
         command.getRecipientEmail().trim(),
         "ORISO: AVV für " + tenantName,
