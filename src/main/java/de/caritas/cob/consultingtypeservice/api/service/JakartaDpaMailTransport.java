@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
 import jakarta.mail.PasswordAuthentication;
@@ -7,6 +8,7 @@ import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import java.time.Instant;
 import java.util.Properties;
 import org.springframework.stereotype.Component;
 
@@ -14,7 +16,8 @@ import org.springframework.stereotype.Component;
 public class JakartaDpaMailTransport implements DpaMailTransport {
 
   @Override
-  public void send(DpaMailSettings settings, String recipient, String subject, String htmlBody) {
+  public DpaMailSendReceipt send(
+      DpaMailSettings settings, String recipient, String subject, String htmlBody) {
     try {
       Properties properties = new Properties();
       properties.put("mail.smtp.auth", "true");
@@ -44,8 +47,9 @@ public class JakartaDpaMailTransport implements DpaMailTransport {
       message.setSubject(subject);
       message.setContent(htmlBody, "text/html; charset=UTF-8");
       Transport.send(message);
+      return new DpaMailSendReceipt(recipient, Instant.now());
     } catch (Exception exception) {
-      throw new IllegalStateException("DPA signing email could not be sent", exception);
+      throw new SmtpSendException("DPA signing email could not be sent", exception);
     }
   }
 }
