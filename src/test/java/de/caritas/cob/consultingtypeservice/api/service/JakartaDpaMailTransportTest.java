@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -24,17 +25,50 @@ class JakartaDpaMailTransportTest {
 
   @Test
   void send_transportFailure_throwsSmtpSendExceptionInsteadOfSilentSuccess() throws Exception {
-    int closedPort;
-    try (ServerSocket socket = new ServerSocket(0)) {
-      closedPort = socket.getLocalPort();
+    // deterministic transport failure: the port stays bound by this test for its whole
+    // duration (no TOCTOU window as with a probed-then-closed port) and every connection is
+    // closed before the SMTP greeting, so the client fails fast instead of timing out
+    try (ServerSocket rejectingServer = new ServerSocket(0)) {
+      Thread rejector =
+          new Thread(
+              () -> {
+                while (!rejectingServer.isClosed()) {
+                  try {
+                    rejectingServer.accept().close();
+                  } catch (IOException e) {
+                    return;
+                  }
+                }
+              },
+              "rejecting-smtp");
+      rejector.setDaemon(true);
+      rejector.start();
+      DpaMailSettings settings =
+          new DpaMailSettings(
+              "127.0.0.1",
+              rejectingServer.getLocalPort(),
+              false,
+              "mailer",
+              "secret",
+              "from@oriso.org");
+
+      assertThatThrownBy(
+              () -> transport.send(settings, "admin@oriso.org", "subject", "<html></html>"))
+          .isInstanceOf(SmtpSendException.class)
+          .hasCauseInstanceOf(Exception.class);
     }
+  }
+
+  @Test
+  void send_malformedRecipient_throwsBadRequestInsteadOfSmtpSendException() {
+    // a recipient that cannot even be parsed is a client error (400), not an upstream SMTP
+    // failure (502): no connection attempt must happen, so no server is needed here
     DpaMailSettings settings =
-        new DpaMailSettings("127.0.0.1", closedPort, false, "mailer", "secret", "from@oriso.org");
+        new DpaMailSettings("127.0.0.1", 25, false, "mailer", "secret", "from@oriso.org");
 
     assertThatThrownBy(
-            () -> transport.send(settings, "admin@oriso.org", "subject", "<html></html>"))
-        .isInstanceOf(SmtpSendException.class)
-        .hasCauseInstanceOf(Exception.class);
+            () -> transport.send(settings, "not an email address", "subject", "<html></html>"))
+        .isInstanceOf(BadRequestException.class);
   }
 
   @Test

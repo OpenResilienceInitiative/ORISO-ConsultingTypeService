@@ -1,11 +1,13 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
 import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
 import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
+import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import java.time.Instant;
@@ -18,6 +20,15 @@ public class JakartaDpaMailTransport implements DpaMailTransport {
   @Override
   public DpaMailSendReceipt send(
       DpaMailSettings settings, String recipient, String subject, String htmlBody) {
+    // parse the recipient before anything touches the transport: an unparseable address is a
+    // client error (400), not an upstream SMTP failure (502) - the broad catch below must
+    // never reclassify it (U5 verify finding)
+    InternetAddress[] recipients;
+    try {
+      recipients = InternetAddress.parse(recipient, true);
+    } catch (AddressException exception) {
+      throw new BadRequestException("Recipient email address is not valid: " + recipient);
+    }
     try {
       Properties properties = new Properties();
       properties.put("mail.smtp.auth", "true");
@@ -43,7 +54,7 @@ public class JakartaDpaMailTransport implements DpaMailTransport {
               });
       Message message = new MimeMessage(session);
       message.setFrom(new InternetAddress(settings.getFrom()));
-      message.setRecipients(Message.RecipientType.TO, InternetAddress.parse(recipient, true));
+      message.setRecipients(Message.RecipientType.TO, recipients);
       message.setSubject(subject);
       message.setContent(htmlBody, "text/html; charset=UTF-8");
       Transport.send(message);
