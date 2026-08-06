@@ -36,7 +36,7 @@
     <openapi.generator.maven.version>7.17.0</openapi.generator.maven.version>
     <jackson-databind-nullable.version>0.2.3</jackson-databind-nullable.version>
     <springfox.boot.starter.version>3.0.0</springfox.boot.starter.version>
-    <commons-lang3.version>3.11</commons-lang3.version>
+    <commons-lang3.version>3.18.0</commons-lang3.version>
     <keycloak.version>17.0.0</keycloak.version>
     <easy-random-core.version>5.0.0</easy-random-core.version>
     <org.everit.json.schema.version>1.12.2</org.everit.json.schema.version>
