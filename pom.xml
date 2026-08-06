@@ -40,7 +40,7 @@
     <keycloak.version>17.0.0</keycloak.version>
     <easy-random-core.version>5.0.0</easy-random-core.version>
     <org.everit.json.schema.version>1.12.2</org.everit.json.schema.version>
-    <json.version>20201115</json.version>
+    <json.version>20231013</json.version>
     <json-unit.version>2.28.0</json-unit.version>
     <json-unit-spring.version>2.28.0</json-unit-spring.version>
     <jakarta.ws.rs-api.version>3.1.0</jakarta.ws.rs-api.version>
