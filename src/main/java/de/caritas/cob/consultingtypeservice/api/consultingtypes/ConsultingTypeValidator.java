@@ -1,8 +1,13 @@
 package de.caritas.cob.consultingtypeservice.api.consultingtypes;
 
+import de.caritas.cob.consultingtypeservice.api.exception.UnexpectedErrorException;
+import de.caritas.cob.consultingtypeservice.api.service.LogService;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Objects;
 import org.everit.json.schema.Schema;
+import org.everit.json.schema.ValidationException;
 import org.everit.json.schema.loader.SchemaLoader;
 import org.json.JSONObject;
 import org.json.JSONTokener;
@@ -25,7 +30,22 @@ public class ConsultingTypeValidator {
    * @param consultingTypeJsonFile the {@link File} to be validated
    */
   public void validateConsultingTypeConfigurationJsonFile(File consultingTypeJsonFile) {
-    // VALIDATION DISABLED - Skip validation to allow service to start
+    try (var inputStream = new FileInputStream(consultingTypeJsonFile)) {
+      var consultingTypeJson = new JSONObject(new JSONTokener(inputStream));
+      buildSchema().validate(consultingTypeJson);
+    } catch (ValidationException validationException) {
+      LogService.logError(
+          validationException,
+          "Consulting type configuration file violates the json schema: "
+              + consultingTypeJsonFile.getName());
+      throw new UnexpectedErrorException();
+    } catch (IOException | org.json.JSONException jsonException) {
+      LogService.logError(
+          jsonException,
+          "Could not parse consulting type configuration file: "
+              + consultingTypeJsonFile.getName());
+      throw new UnexpectedErrorException();
+    }
   }
 
   private Schema buildSchema() {

@@ -26,11 +26,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -46,9 +46,9 @@ class TopicControllerIT {
 
   @Autowired private WebApplicationContext context;
 
-  @MockBean TenantService tenantService;
+  @MockitoBean TenantService tenantService;
 
-  @Autowired private ObjectMapper objectMapper;
+  private static final ObjectMapper objectMapper = new ObjectMapper();
 
   @BeforeEach
   public void setup() {
@@ -126,10 +126,11 @@ class TopicControllerIT {
   }
 
   @Test
-  void getTopicList_Should_ReturnForbidden_When_UserIsNotAuthenticated() throws Exception {
+  void getTopicList_Should_ReturnUnauthorized_When_UserIsNotAuthenticated() throws Exception {
+    // OAuth2 resource server returns 401 (not the legacy Keycloak-adapter 403) for anonymous calls
     mockMvc
         .perform(get(TopicPathConstants.PATH_GET_TOPIC_LIST).accept(MediaType.APPLICATION_JSON))
-        .andExpect(status().isForbidden());
+        .andExpect(status().isUnauthorized());
   }
 
   @Test

@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
+import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.SINGLE_TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
 import static de.caritas.cob.consultingtypeservice.testHelper.PathConstants.PATH_GET_FULL_CONSULTING_TYPE_BY_TENANT;
@@ -22,26 +23,25 @@ import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRe
 import de.caritas.cob.consultingtypeservice.api.mapper.ConsultingTypeMapper;
 import de.caritas.cob.consultingtypeservice.api.mapper.FullConsultingTypeMapper;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
-import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTOWelcomeMessage;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypePatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.FullConsultingTypeResponseDTO;
+import de.caritas.cob.consultingtypeservice.api.model.WelcomeMessageDTO;
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
+import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import java.util.HashSet;
-import javax.servlet.http.Cookie;
 import org.jeasy.random.EasyRandom;
 import org.junit.jupiter.api.Test;
 import org.keycloak.admin.client.Keycloak;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
@@ -60,15 +60,16 @@ class ConsultingTypeControllerE2EIT {
 
   private static final Integer EXISTING_ID = 1;
 
+  private static final ObjectMapper objectMapper = new ObjectMapper();
+
   @Autowired private MockMvc mvc;
-  @Autowired private ObjectMapper objectMapper;
   @Autowired private ConsultingTypeConverter consultingTypeConverter;
 
   @Autowired private ConsultingTypeRepository consultingTypeRepository;
 
-  @MockBean private Keycloak keycloak;
+  @MockitoBean private Keycloak keycloak;
 
-  @MockBean AuthenticatedUser authenticatedUser;
+  @MockitoBean AuthenticatedUser authenticatedUser;
 
   @Test
   void createConsultingType_Should_returnOk_When_requiredConsultingTypeDTOIsGiven()
@@ -109,9 +110,7 @@ class ConsultingTypeControllerE2EIT {
             .isVideoCallAllowed(true)
             .languageFormal(true)
             .welcomeMessage(
-                new ConsultingTypeDTOWelcomeMessage()
-                    .sendWelcomeMessage(true)
-                    .welcomeMessageText("welcome"));
+                new WelcomeMessageDTO().sendWelcomeMessage(true).welcomeMessageText("welcome"));
 
     objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     Authentication authentication =
@@ -138,7 +137,6 @@ class ConsultingTypeControllerE2EIT {
   }
 
   @Test
-  @WithMockUser(authorities = {AuthorityValue.LIMITED_PATCH_CONSULTING_TYPE})
   void patchConsultingType_Should_returnOk_When_singleTenantAdminTriesToPatchLimitedSettings()
       throws Exception {
     // given
@@ -157,9 +155,7 @@ class ConsultingTypeControllerE2EIT {
             .isVideoCallAllowed(existingVideoCallSetting)
             .languageFormal(existingLanguageFormal)
             .welcomeMessage(
-                new ConsultingTypeDTOWelcomeMessage()
-                    .sendWelcomeMessage(true)
-                    .welcomeMessageText("welcome"));
+                new WelcomeMessageDTO().sendWelcomeMessage(true).welcomeMessageText("welcome"));
 
     objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 
@@ -167,6 +163,11 @@ class ConsultingTypeControllerE2EIT {
     this.mvc
         .perform(
             patch(ROOT_PATH + "/" + EXISTING_ID)
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(SINGLE_TENANT_ADMIN.getValue())
+                            .build()))
                 .cookie(CSRF_COOKIE)
                 .header(CSRF_HEADER, CSRF_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -182,7 +183,6 @@ class ConsultingTypeControllerE2EIT {
   }
 
   @Test
-  @WithMockUser(authorities = {AuthorityValue.LIMITED_PATCH_CONSULTING_TYPE})
   void
       patchConsultingType_Should_returnForbidden_When_singleTenantAdminTriesToPatchSettingsThatHeIsNotAllowedTo()
           throws Exception {
@@ -201,9 +201,7 @@ class ConsultingTypeControllerE2EIT {
             .isVideoCallAllowed(!existingVideoCallSetting)
             .languageFormal(!existingLanguageFormal)
             .welcomeMessage(
-                new ConsultingTypeDTOWelcomeMessage()
-                    .sendWelcomeMessage(true)
-                    .welcomeMessageText("welcome"));
+                new WelcomeMessageDTO().sendWelcomeMessage(true).welcomeMessageText("welcome"));
 
     objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
 
@@ -212,6 +210,11 @@ class ConsultingTypeControllerE2EIT {
         this.mvc
             .perform(
                 patch(ROOT_PATH + "/" + EXISTING_ID)
+                    .with(
+                        authentication(
+                            new AuthenticationMockBuilder()
+                                .withUserRole(SINGLE_TENANT_ADMIN.getValue())
+                                .build()))
                     .cookie(CSRF_COOKIE)
                     .header(CSRF_HEADER, CSRF_VALUE)
                     .contentType(MediaType.APPLICATION_JSON)

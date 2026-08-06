@@ -95,7 +95,7 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
   private List<ConsultingType> findBySlug(String slug) {
     if (isTechnicalTenantContext()) {
       List<ConsultingTypeEntity> bySlug = consultingTypeMongoTenantAwareRepository.findBySlug(slug);
-      consultingTypeConverter.convertList(bySlug);
+      return consultingTypeConverter.convertList(bySlug);
     }
     List<ConsultingTypeEntity> bySlugAndTenantId =
         consultingTypeMongoTenantAwareRepository.findBySlugAndTenantId(

@@ -5,13 +5,29 @@ on:
     branches:
       - main
       - dev
+      - pre-dev
 
 env:
   REGISTRY: ghcr.io
   ORG: openresilienceinitiative
 
 jobs:
-  build:
+  required-integration-tests:
+    name: required integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Run complete integration suite
+      uses: ./.github/actions/maven-verify-required
+      with:
+        java_version: '21'
+
+  publish:
+    name: test, build and publish image
+    needs: required-integration-tests
     runs-on: ubuntu-latest
 
     permissions:
@@ -25,7 +41,7 @@ jobs:
     - name: Compile and Package Java application
       uses: ./.github/actions/maven-build
       with:
-        java_version: '17'
+        java_version: '21'
 
     - name: Create and Publish Docker image
       uses: ./.github/actions/docker-build-push

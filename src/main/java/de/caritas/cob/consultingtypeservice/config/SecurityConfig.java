@@ -3,42 +3,39 @@ package de.caritas.cob.consultingtypeservice.config;
 import de.caritas.cob.consultingtypeservice.api.auth.RoleAuthorizationAuthorityMapper;
 import de.caritas.cob.consultingtypeservice.filter.HttpTenantFilter;
 import de.caritas.cob.consultingtypeservice.filter.StatelessCsrfFilter;
-import javax.annotation.Nullable;
-import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
-import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.annotation.Nullable;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
+import lombok.RequiredArgsConstructor;
+import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.core.convert.converter.Converter;
 import org.springframework.http.HttpMethod;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
-import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.authentication.session.NullAuthenticatedSessionStrategy;
-import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
-import org.springframework.security.web.authentication.www.BasicAuthenticationFilter;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
+import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.csrf.CsrfFilter;
-import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
-import org.springframework.security.web.util.matcher.NegatedRequestMatcher;
 
 /** Provides the Security configuration. */
-@Configuration
-@EnableGlobalMethodSecurity(prePostEnabled = true)
+@KeycloakConfiguration
+@EnableMethodSecurity(prePostEnabled = true)
 @EnableWebSecurity
-public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
-
-  @Value("${csrf.cookie.property}")
-  private String csrfCookieProperty;
-
-  @Value("${csrf.header.property}")
-  private String csrfHeaderProperty;
-
-  @Value("${multitenancy.enabled}")
-  private boolean multitenancy;
-
-  @Autowired(required = false)
-  private @Nullable HttpTenantFilter tenantFilter;
+@RequiredArgsConstructor
+public class SecurityConfig {
 
   public static final String[] WHITE_LIST =
       new String[] {
@@ -54,99 +51,124 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter {
         "/actuator/health/**"
       };
 
-  /** Configure spring security filter chain */
-  @Override
-  protected void configure(final HttpSecurity http) throws Exception {
+  private final JwtGrantedAuthoritiesConverter jwtGrantedAuthoritiesConverter =
+      new JwtGrantedAuthoritiesConverter();
+
+  @Value("${csrf.cookie.property}")
+  private String csrfCookieProperty;
+
+  @Value("${csrf.header.property}")
+  private String csrfHeaderProperty;
+
+  @Value("${multitenancy.enabled}")
+  private boolean multitenancy;
+
+  @Value("${keycloak.principal-attribute:preferred_username}")
+  private String principalAttribute;
+
+  @Nullable private final HttpTenantFilter tenantFilter;
+
+  @Bean
+  public SecurityFilterChain filterChain(
+      HttpSecurity http, Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter)
+      throws Exception {
     var httpSecurity =
-        http.csrf()
-            .disable()
+        http.csrf(csrf -> csrf.disable())
             .addFilterBefore(
                 new StatelessCsrfFilter(csrfCookieProperty, csrfHeaderProperty), CsrfFilter.class);
 
     httpSecurity = enableTenantFilterIfMultitenancyEnabled(httpSecurity);
 
     httpSecurity
-        .csrf()
-        .disable()
-        .authenticationProvider(keycloakAuthenticationProvider())
-        .addFilterBefore(keycloakAuthenticationProcessingFilter(), BasicAuthenticationFilter.class)
-        .sessionManagement()
-        .sessionCreationPolicy(SessionCreationPolicy.STATELESS)
-        .sessionAuthenticationStrategy(sessionAuthenticationStrategy())
-        .and()
-        .authorizeRequests()
-        .requestMatchers(new AntPathRequestMatcher("/settings"))
-        .permitAll()
-        .requestMatchers(new AntPathRequestMatcher("/settings/*"))
-        .permitAll()
-        .requestMatchers(new AntPathRequestMatcher("/topic/public"))
-        .permitAll()
-        .requestMatchers(new AntPathRequestMatcher("/topic/public/*"))
-        .permitAll()
-        .requestMatchers(new AntPathRequestMatcher("/topic"))
-        .authenticated()
-        .requestMatchers(new AntPathRequestMatcher("/topic/*"))
-        .authenticated()
-        .antMatchers(HttpMethod.GET, "/topic-groups")
-        .permitAll()
-        .requestMatchers(new AntPathRequestMatcher("/topicadmin"))
-        .authenticated()
-        .requestMatchers(new AntPathRequestMatcher("/topicadmin/*"))
-        .authenticated()
-        .requestMatchers(new AntPathRequestMatcher("/settingsadmin"))
-        .authenticated()
-        .requestMatchers(new AntPathRequestMatcher("/settingsadmin/*"))
-        .authenticated()
-        .requestMatchers(new NegatedRequestMatcher(new AntPathRequestMatcher("/topic")))
-        .permitAll()
-        .requestMatchers(new NegatedRequestMatcher(new AntPathRequestMatcher("/topic/*")))
-        .permitAll()
-        .requestMatchers(new NegatedRequestMatcher(new AntPathRequestMatcher("/topic-groups")))
-        .permitAll()
-        .requestMatchers(new NegatedRequestMatcher(new AntPathRequestMatcher("/topicadmin")))
-        .permitAll()
-        .requestMatchers(new NegatedRequestMatcher(new AntPathRequestMatcher("/topicadmin/*")))
-        .permitAll()
-        .anyRequest()
-        .permitAll()
-        .and()
-        .headers()
-        .xssProtection()
-        .and()
-        .contentSecurityPolicy("script-src 'self'");
+        .sessionManagement(
+            session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(
+            authorize ->
+                authorize
+                    .requestMatchers(WHITE_LIST)
+                    .permitAll()
+                    .requestMatchers("/settings", "/settings/*")
+                    .permitAll()
+                    .requestMatchers("/topic/public", "/topic/public/*")
+                    .permitAll()
+                    .requestMatchers("/topic", "/topic/*")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/topic-groups")
+                    .permitAll()
+                    .requestMatchers("/topicadmin", "/topicadmin/*")
+                    .authenticated()
+                    .requestMatchers("/settingsadmin", "/settingsadmin/*")
+                    .authenticated()
+                    .anyRequest()
+                    .permitAll())
+        .oauth2ResourceServer(
+            oauth2 ->
+                oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+
+    return httpSecurity.build();
   }
 
-  /**
-   * Adds additional filter for tenant feature if enabled that sets tenant_id into current thread.
-   *
-   * @param httpSecurity
-   * @return
-   */
-  private HttpSecurity enableTenantFilterIfMultitenancyEnabled(HttpSecurity httpSecurity) {
-    if (multitenancy) {
-      httpSecurity = httpSecurity.addFilterAfter(this.tenantFilter, StatelessCsrfFilter.class);
+  @Bean
+  public Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter(
+      RoleAuthorizationAuthorityMapper authorityMapper) {
+    return jwt -> {
+      Collection<GrantedAuthority> authorities = grantedAuthorities(jwt, authorityMapper);
+      return new JwtAuthenticationToken(jwt, authorities, principalName(jwt));
+    };
+  }
+
+  private HttpSecurity enableTenantFilterIfMultitenancyEnabled(HttpSecurity httpSecurity)
+      throws Exception {
+    if (multitenancy && tenantFilter != null) {
+      httpSecurity.addFilterAfter(tenantFilter, BearerTokenAuthenticationFilter.class);
     }
     return httpSecurity;
   }
 
-  @Override
-  protected SessionAuthenticationStrategy sessionAuthenticationStrategy() {
-    return new NullAuthenticatedSessionStrategy();
+  private Collection<GrantedAuthority> grantedAuthorities(
+      Jwt jwt, RoleAuthorizationAuthorityMapper authorityMapper) {
+    var authorities = new HashSet<GrantedAuthority>();
+    Collection<GrantedAuthority> jwtAuthorities = jwtGrantedAuthoritiesConverter.convert(jwt);
+    if (jwtAuthorities != null) {
+      authorities.addAll(jwtAuthorities);
+    }
+
+    Set<GrantedAuthority> roleAuthorities =
+        extractKeycloakRoles(jwt).stream()
+            .map(SimpleGrantedAuthority::new)
+            .collect(Collectors.toSet());
+    authorities.addAll(authorityMapper.mapAuthorities(roleAuthorities));
+    return authorities;
   }
 
-  @Autowired
-  public void configureGlobal(
-      final AuthenticationManagerBuilder auth, RoleAuthorizationAuthorityMapper authorityMapper) {
-    final KeycloakAuthenticationProvider keycloakAuthenticationProvider =
-        keycloakAuthenticationProvider();
-    keycloakAuthenticationProvider.setGrantedAuthoritiesMapper(authorityMapper);
-    auth.authenticationProvider(keycloakAuthenticationProvider);
+  @SuppressWarnings("unchecked")
+  private Set<String> extractKeycloakRoles(Jwt jwt) {
+    var roles = new HashSet<String>();
+    Object realmAccess = jwt.getClaims().get("realm_access");
+    if (realmAccess instanceof Map) {
+      addRoles(roles, ((Map<String, Object>) realmAccess).get("roles"));
+    }
+
+    Object resourceAccess = jwt.getClaims().get("resource_access");
+    if (resourceAccess instanceof Map) {
+      Map<String, Object> resourceAccessMap = (Map<String, Object>) resourceAccess;
+      resourceAccessMap.values().stream()
+          .filter(Map.class::isInstance)
+          .map(value -> (Map<String, Object>) value)
+          .forEach(clientAccess -> addRoles(roles, clientAccess.get("roles")));
+    }
+    return roles;
   }
 
-  @Override
-  protected KeycloakAuthenticationProvider keycloakAuthenticationProvider() {
-    var provider = new KeycloakAuthenticationProvider();
-    provider.setGrantedAuthoritiesMapper(new RoleAuthorizationAuthorityMapper());
-    return provider;
+  private void addRoles(Set<String> roles, Object rolesClaim) {
+    if (rolesClaim instanceof Collection) {
+      Collection<?> roleCollection = (Collection<?>) rolesClaim;
+      roleCollection.stream().filter(Objects::nonNull).map(Object::toString).forEach(roles::add);
+    }
+  }
+
+  private String principalName(Jwt jwt) {
+    String principal = jwt.getClaimAsString(principalAttribute);
+    return principal == null ? jwt.getSubject() : principal;
   }
 }

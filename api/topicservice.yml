@@ -279,11 +279,9 @@ components:
       format: int32
     WelcomeMessage:
       type: string
-      format: int32
       maxLength: 200
     FallBackUrl:
       type: string
-      format: url
       maxLength: 200
     TopicDTO:
       type: object
@@ -292,7 +290,8 @@ components:
         - description
       properties:
         id:
-          type: long
+          type: integer
+          format: int64
           example: 12132
         name:
           type: string
@@ -334,7 +333,8 @@ components:
         - description
       properties:
         id:
-          type: long
+          type: integer
+          format: int64
           example: 12132
         name:
           type: object

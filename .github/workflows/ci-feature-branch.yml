@@ -5,6 +5,7 @@ on:
     branches-ignore:
     - main
     - dev
+    - pre-dev
 
 jobs:
   build:
@@ -17,4 +18,17 @@ jobs:
     - name: Compile and Package Java application
       uses: ./.github/actions/maven-build
       with:
-        java_version: '17'
+        java_version: '21'
+
+  required-integration-tests:
+    name: required integration tests
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v6
+
+    - name: Run complete integration suite
+      uses: ./.github/actions/maven-verify-required
+      with:
+        java_version: '21'

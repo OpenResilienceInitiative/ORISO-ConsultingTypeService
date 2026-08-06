@@ -1,9 +1,9 @@
 package de.caritas.cob.consultingtypeservice.api.model;
 
 import de.caritas.cob.consultingtypeservice.api.repository.TenantAware;
+import jakarta.persistence.*;
 import java.time.LocalDateTime;
 import java.util.Set;
-import javax.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.FilterDef;
@@ -19,7 +19,7 @@ import org.hibernate.annotations.ParamDef;
 @Access(AccessType.FIELD)
 @FilterDef(
     name = "tenantFilter",
-    parameters = {@ParamDef(name = "tenantId", type = "long")})
+    parameters = {@ParamDef(name = "tenantId", type = Long.class)})
 @Filter(name = "tenantFilter", condition = "tenant_id = :tenantId")
 public class TopicEntity implements TenantAware {
 

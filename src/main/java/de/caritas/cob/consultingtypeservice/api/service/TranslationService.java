@@ -2,10 +2,10 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static java.util.Objects.nonNull;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Optional;
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;

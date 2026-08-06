@@ -12,8 +12,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
@@ -25,6 +26,7 @@ class TopicGroupRepositoryIT {
 
   @Autowired private TopicRepository topicRepository;
   @Autowired private TopicGroupRepository topicGroupRepository;
+  @Autowired private TestEntityManager testEntityManager;
 
   @BeforeEach
   void setup() {
@@ -227,11 +229,24 @@ class TopicGroupRepositoryIT {
     topicGroupShouldContainTopics(allTopicGroups, "tg1", te1, te2);
 
     /* when */
+    // Detach the managed graph first so the delete relies on the DB-level
+    // ON DELETE CASCADE of topic_group_x_topic (the group is the owning side of the
+    // many-to-many and would otherwise still hold a stale reference to the removed topic).
+    testEntityManager.flush();
+    testEntityManager.clear();
     topicRepository.delete(te1);
+    testEntityManager.flush();
+    testEntityManager.clear();
 
     /* then */
-    assertThat(topicGroupRepository.findAll()).containsOnly(tg1);
-    assertThat(topicRepository.findAll()).containsOnly(te2);
+    // Compare by a stable key (name) rather than object identity, because clearing the
+    // persistence context above means findAll() returns freshly loaded instances.
+    assertThat(topicRepository.findAll()).extracting(TopicEntity::getName).containsOnly("te2");
+    val topicGroupsAfterDelete = topicGroupRepository.findAll();
+    assertThat(topicGroupsAfterDelete).hasSize(1);
+    assertThat(topicGroupsAfterDelete.get(0).getTopicEntities())
+        .extracting(TopicEntity::getName)
+        .containsOnly("te2");
   }
 
   private void topicGroupShouldContainTopics(

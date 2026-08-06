@@ -1,11 +1,12 @@
 package de.caritas.cob.consultingtypeservice.api.mapper;
 
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 
-import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTOGroupChat;
+import de.caritas.cob.consultingtypeservice.api.model.GroupChatDTO;
 import de.caritas.cob.consultingtypeservice.api.model.NotificationsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.SessionDataInitializingDTO;
 import de.caritas.cob.consultingtypeservice.api.model.WelcomeMessageDTO;
@@ -26,10 +27,10 @@ public class ConsultingTypeMapperTest {
   @Test
   public void mapGroupChat_Should_InitializeDefaultObjectIfNull() {
 
-    BasicConsultingTypeResponseDTOGroupChat result = ConsultingTypeMapper.mapGroupChat(null);
+    GroupChatDTO result = ConsultingTypeMapper.mapGroupChat(null);
     assertThat(result, notNullValue());
     assertThat(result.getIsGroupChat(), is(false));
-    assertThat(result.getGroupChatRules(), nullValue());
+    assertThat(result.getGroupChatRules(), is(empty()));
   }
 
   @Test
