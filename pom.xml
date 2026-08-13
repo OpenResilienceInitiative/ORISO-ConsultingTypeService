@@ -32,7 +32,7 @@
     <maven.compiler.source>21</maven.compiler.source>
     <maven.compiler.target>21</maven.compiler.target>
     <!-- force at least version 2.16 due to https://logging.apache.org/log4j/2.x/security.html -->
-    <log4j.version>2.17.1</log4j.version>
+    <log4j.version>2.25.5</log4j.version>
     <openapi.generator.maven.version>7.17.0</openapi.generator.maven.version>
     <jackson-databind-nullable.version>0.2.3</jackson-databind-nullable.version>
     <springfox.boot.starter.version>3.0.0</springfox.boot.starter.version>
