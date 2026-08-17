@@ -202,6 +202,23 @@ class ApplicationSettingsControllerIT {
     resetSettingsToPreviousState(authentication);
   }
 
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_PatchContainsUnsupportedSetting()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(authentication(authentication))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content("{\"enableWalkthrough\":true}"))
+        .andExpect(status().isBadRequest());
+  }
+
   private void resetSettingsToPreviousState(Authentication authentication) throws Exception {
     var patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(true);
