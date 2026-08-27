@@ -97,7 +97,7 @@ class JakartaDpaMailTransportTest {
               "from@oriso.org");
 
       assertThatThrownBy(
-              () -> transport.send(settings, "admin@oriso.org", "subject", "<html></html>"))
+              () -> transport.send(settings, "admin@oriso.org", "subject", "<html></html>", "text"))
           .isInstanceOf(SmtpSendException.class)
           .hasCauseInstanceOf(Exception.class);
     }
@@ -111,7 +111,9 @@ class JakartaDpaMailTransportTest {
         new DpaMailSettings("127.0.0.1", 25, false, "mailer", "secret", "from@oriso.org");
 
     assertThatThrownBy(
-            () -> transport.send(settings, "not an email address", "subject", "<html></html>"))
+            () ->
+                transport.send(
+                    settings, "not an email address", "subject", "<html></html>", "text"))
         .isInstanceOf(BadRequestException.class);
   }
 
@@ -129,7 +131,7 @@ class JakartaDpaMailTransportTest {
               "127.0.0.1", server.port(), false, "mailer", "secret", "from@oriso.org");
 
       assertThatThrownBy(
-              () -> transport.send(settings, "admin@oriso.org", "subject", "<html></html>"))
+              () -> transport.send(settings, "admin@oriso.org", "subject", "<html></html>", "text"))
           .isInstanceOf(SmtpSendException.class);
 
       assertThat(server.awaitDelivery(250)).isFalse();

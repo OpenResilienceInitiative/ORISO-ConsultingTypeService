@@ -47,6 +47,13 @@ class DpaSigningEmailServiceTest {
             smtpPasswordEncryptionService,
             dpaMailTransport,
             "https://app.oriso-dev.site");
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        service, "platformName", "Online-Beratung");
+    org.springframework.test.util.ReflectionTestUtils.setField(service, "orgName", "ORISO");
+    org.springframework.test.util.ReflectionTestUtils.setField(service, "orgAddress", "");
+    org.springframework.test.util.ReflectionTestUtils.setField(service, "contactLine", "");
+    org.springframework.test.util.ReflectionTestUtils.setField(service, "logoUrl", "");
+    service.loadTemplates();
   }
 
   @Test
@@ -56,7 +63,7 @@ class DpaSigningEmailServiceTest {
     when(smtpPasswordEncryptionService.decrypt("encrypted-password")).thenReturn("secret");
     DpaMailSendReceipt transportReceipt =
         new DpaMailSendReceipt("bart.simpson@oriso.org", Instant.parse("2026-07-28T10:15:30Z"));
-    when(dpaMailTransport.send(any(), anyString(), anyString(), anyString()))
+    when(dpaMailTransport.send(any(), anyString(), anyString(), anyString(), anyString()))
         .thenReturn(transportReceipt);
 
     DpaMailSendReceipt receipt =
@@ -70,6 +77,7 @@ class DpaSigningEmailServiceTest {
     assertThat(receipt).isSameAs(transportReceipt);
     ArgumentCaptor<String> subject = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> text = ArgumentCaptor.forClass(String.class);
     verify(dpaMailTransport)
         .send(
             eq(
@@ -82,10 +90,17 @@ class DpaSigningEmailServiceTest {
                     "oriso@dreambau.com")),
             eq("bart.simpson@oriso.org"),
             subject.capture(),
-            html.capture());
-    assertThat(subject.getValue()).contains("AVV", "E2E Full Gate 202607191747");
+            html.capture(),
+            text.capture());
+    assertThat(subject.getValue()).isEqualTo("Auftragsverarbeitungsvertrag zur Unterschrift");
     assertThat(html.getValue())
-        .contains("vollständigen Vertrag lesen")
+        .contains("<!DOCTYPE html>")
+        .contains("E2E Full Gate 202607191747")
+        .contains("https://app.oriso-dev.site/dpa-sign/single-use-token")
+        .contains("03.08.2026")
+        .doesNotContain("secret");
+    assertThat(text.getValue())
+        .contains("E2E Full Gate 202607191747")
         .contains("https://app.oriso-dev.site/dpa-sign/single-use-token")
         .contains("03.08.2026")
         .doesNotContain("secret");
@@ -96,7 +111,7 @@ class DpaSigningEmailServiceTest {
     when(applicationSettingsService.getApplicationSettings())
         .thenReturn(Optional.of(configuredSettings()));
     when(smtpPasswordEncryptionService.decrypt("encrypted-password")).thenReturn("secret");
-    when(dpaMailTransport.send(any(), anyString(), anyString(), anyString()))
+    when(dpaMailTransport.send(any(), anyString(), anyString(), anyString(), anyString()))
         .thenThrow(new SmtpSendException("SMTP transport failed", new IllegalStateException()));
 
     var command =
