@@ -15,8 +15,8 @@
     ],
     "frameworks": [],
     "description": "",
-    "analyzedAt": "2026-08-26T02:00:38.827Z",
-    "gitCommitHash": "067cf42fa917bdbfe68a94d8c88c808672749547"
+    "analyzedAt": "2026-08-27T12:30:33.072Z",
+    "gitCommitHash": "8d9797bc0e8f0a9f9ec6483b56522835c2b51db9"
   },
   "nodes": [
     {
@@ -159,11 +159,51 @@
       "type": "config",
       "name": "applicationsettingsservice.yml",
       "filePath": "api/applicationsettingsservice.yml",
-      "summary": "config file with 4 sections (214 lines).",
+      "summary": "OpenAPI specification: 3 endpoints (214 lines).",
       "tags": [
-        "config",
+        "openapi",
+        "api",
         "api"
       ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/applicationsettingsservice.yml:GET /settings",
+      "type": "endpoint",
+      "name": "GET /settings",
+      "filePath": "api/applicationsettingsservice.yml",
+      "lineRange": [
+        10,
+        10
+      ],
+      "summary": "Endpoint: GET /settings",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/applicationsettingsservice.yml:PATCH /settingsadmin",
+      "type": "endpoint",
+      "name": "PATCH /settingsadmin",
+      "filePath": "api/applicationsettingsservice.yml",
+      "lineRange": [
+        32,
+        32
+      ],
+      "summary": "Endpoint: PATCH /settingsadmin",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/applicationsettingsservice.yml:GET /settingsadmin/smtp-credentials",
+      "type": "endpoint",
+      "name": "GET /settingsadmin/smtp-credentials",
+      "filePath": "api/applicationsettingsservice.yml",
+      "lineRange": [
+        59,
+        59
+      ],
+      "summary": "Endpoint: GET /settingsadmin/smtp-credentials",
+      "tags": [],
       "complexity": "moderate"
     },
     {
@@ -171,11 +211,38 @@
       "type": "config",
       "name": "consultingtypeadminservice.yml",
       "filePath": "api/consultingtypeadminservice.yml",
-      "summary": "config file with 4 sections (109 lines).",
+      "summary": "OpenAPI specification: 2 endpoints (109 lines).",
       "tags": [
-        "config",
+        "openapi",
+        "api",
         "api"
       ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin",
+      "type": "endpoint",
+      "name": "GET /consultingtypeadmin",
+      "filePath": "api/consultingtypeadminservice.yml",
+      "lineRange": [
+        8,
+        8
+      ],
+      "summary": "Endpoint: GET /consultingtypeadmin",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin/consultingtypes",
+      "type": "endpoint",
+      "name": "GET /consultingtypeadmin/consultingtypes",
+      "filePath": "api/consultingtypeadminservice.yml",
+      "lineRange": [
+        21,
+        21
+      ],
+      "summary": "Endpoint: GET /consultingtypeadmin/consultingtypes",
+      "tags": [],
       "complexity": "moderate"
     },
     {
@@ -183,11 +250,129 @@
       "type": "config",
       "name": "consultingtypeservice.yml",
       "filePath": "api/consultingtypeservice.yml",
-      "summary": "config file with 4 sections (634 lines).",
+      "summary": "OpenAPI specification: 9 endpoints (634 lines).",
       "tags": [
-        "config",
+        "openapi",
+        "api",
         "api"
       ],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/basic",
+      "type": "endpoint",
+      "name": "GET /consultingtypes/basic",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        8,
+        8
+      ],
+      "summary": "Endpoint: GET /consultingtypes/basic",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/basic",
+      "type": "endpoint",
+      "name": "GET /consultingtypes/{consultingTypeId}/basic",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        27,
+        27
+      ],
+      "summary": "Endpoint: GET /consultingtypes/{consultingTypeId}/basic",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/extended",
+      "type": "endpoint",
+      "name": "GET /consultingtypes/{consultingTypeId}/extended",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        53,
+        53
+      ],
+      "summary": "Endpoint: GET /consultingtypes/{consultingTypeId}/extended",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/full",
+      "type": "endpoint",
+      "name": "GET /consultingtypes/{consultingTypeId}/full",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        79,
+        79
+      ],
+      "summary": "Endpoint: GET /consultingtypes/{consultingTypeId}/full",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/byslug/{slug}/full",
+      "type": "endpoint",
+      "name": "GET /consultingtypes/byslug/{slug}/full",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        105,
+        105
+      ],
+      "summary": "Endpoint: GET /consultingtypes/byslug/{slug}/full",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/bytenant/{tenantId}/full",
+      "type": "endpoint",
+      "name": "GET /consultingtypes/bytenant/{tenantId}/full",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        131,
+        131
+      ],
+      "summary": "Endpoint: GET /consultingtypes/bytenant/{tenantId}/full",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/groups",
+      "type": "endpoint",
+      "name": "GET /consultingtypes/groups",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        157,
+        157
+      ],
+      "summary": "Endpoint: GET /consultingtypes/groups",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:POST /consultingtypes",
+      "type": "endpoint",
+      "name": "POST /consultingtypes",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        177,
+        177
+      ],
+      "summary": "Endpoint: POST /consultingtypes",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:api/consultingtypeservice.yml:PATCH /consultingtypes/{id}",
+      "type": "endpoint",
+      "name": "PATCH /consultingtypes/{id}",
+      "filePath": "api/consultingtypeservice.yml",
+      "lineRange": [
+        204,
+        204
+      ],
+      "summary": "Endpoint: PATCH /consultingtypes/{id}",
+      "tags": [],
       "complexity": "complex"
     },
     {
@@ -195,11 +380,116 @@
       "type": "config",
       "name": "topicservice.yml",
       "filePath": "api/topicservice.yml",
-      "summary": "config file with 4 sections (384 lines).",
+      "summary": "OpenAPI specification: 8 endpoints (384 lines).",
       "tags": [
-        "config",
+        "openapi",
+        "api",
         "api"
       ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:GET /topic-groups",
+      "type": "endpoint",
+      "name": "GET /topic-groups",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        10,
+        10
+      ],
+      "summary": "Endpoint: GET /topic-groups",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:GET /topic",
+      "type": "endpoint",
+      "name": "GET /topic",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        29,
+        29
+      ],
+      "summary": "Endpoint: GET /topic",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:GET /topic/{id}",
+      "type": "endpoint",
+      "name": "GET /topic/{id}",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        54,
+        54
+      ],
+      "summary": "Endpoint: GET /topic/{id}",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:GET /topic/public",
+      "type": "endpoint",
+      "name": "GET /topic/public",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        84,
+        84
+      ],
+      "summary": "Endpoint: GET /topic/public",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:POST /topicadmin",
+      "type": "endpoint",
+      "name": "POST /topicadmin",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        106,
+        106
+      ],
+      "summary": "Endpoint: POST /topicadmin",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:GET /topicadmin",
+      "type": "endpoint",
+      "name": "GET /topicadmin",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        129,
+        129
+      ],
+      "summary": "Endpoint: GET /topicadmin",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:GET /topicadmin/{id}",
+      "type": "endpoint",
+      "name": "GET /topicadmin/{id}",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        154,
+        154
+      ],
+      "summary": "Endpoint: GET /topicadmin/{id}",
+      "tags": [],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:api/topicservice.yml:PUT /topicadmin/{id}",
+      "type": "endpoint",
+      "name": "PUT /topicadmin/{id}",
+      "filePath": "api/topicservice.yml",
+      "lineRange": [
+        182,
+        182
+      ],
+      "summary": "Endpoint: PUT /topicadmin/{id}",
+      "tags": [],
       "complexity": "moderate"
     },
     {
@@ -464,11 +754,363 @@
       "type": "config",
       "name": "tenantservice.yaml",
       "filePath": "services/tenantservice.yaml",
-      "summary": "config file with 4 sections (1723 lines).",
+      "summary": "OpenAPI specification: 27 endpoints (1723 lines).",
       "tags": [
-        "config",
+        "openapi",
+        "api",
         "services"
       ],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:POST /tenantadmin",
+      "type": "endpoint",
+      "name": "POST /tenantadmin",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        8,
+        8
+      ],
+      "summary": "Endpoint: POST /tenantadmin",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin",
+      "type": "endpoint",
+      "name": "GET /tenantadmin",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        31,
+        31
+      ],
+      "summary": "Endpoint: GET /tenantadmin",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin/search",
+      "type": "endpoint",
+      "name": "GET /tenantadmin/search",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        54,
+        54
+      ],
+      "summary": "Endpoint: GET /tenantadmin/search",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin/controls",
+      "type": "endpoint",
+      "name": "GET /tenantadmin/controls",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        118,
+        118
+      ],
+      "summary": "Endpoint: GET /tenantadmin/controls",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/controls",
+      "type": "endpoint",
+      "name": "PUT /tenantadmin/controls",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        136,
+        136
+      ],
+      "summary": "Endpoint: PUT /tenantadmin/controls",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin/translation/keys",
+      "type": "endpoint",
+      "name": "GET /tenantadmin/translation/keys",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        160,
+        160
+      ],
+      "summary": "Endpoint: GET /tenantadmin/translation/keys",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/translation/keys/{provider}",
+      "type": "endpoint",
+      "name": "PUT /tenantadmin/translation/keys/{provider}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        180,
+        180
+      ],
+      "summary": "Endpoint: PUT /tenantadmin/translation/keys/{provider}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:POST /tenantadmin/translate",
+      "type": "endpoint",
+      "name": "POST /tenantadmin/translate",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        215,
+        215
+      ],
+      "summary": "Endpoint: POST /tenantadmin/translate",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:POST /tenant/translate/group-chat-author-content",
+      "type": "endpoint",
+      "name": "POST /tenant/translate/group-chat-author-content",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        253,
+        253
+      ],
+      "summary": "Endpoint: POST /tenant/translate/group-chat-author-content",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}",
+      "type": "endpoint",
+      "name": "PUT /tenantadmin/{id}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        293,
+        293
+      ],
+      "summary": "Endpoint: PUT /tenantadmin/{id}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}",
+      "type": "endpoint",
+      "name": "GET /tenantadmin/{id}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        324,
+        324
+      ],
+      "summary": "Endpoint: GET /tenantadmin/{id}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant",
+      "type": "endpoint",
+      "name": "GET /tenant",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        353,
+        353
+      ],
+      "summary": "Endpoint: GET /tenant",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant/{id}",
+      "type": "endpoint",
+      "name": "GET /tenant/{id}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        378,
+        378
+      ],
+      "summary": "Endpoint: GET /tenant/{id}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant/public/{subdomain}",
+      "type": "endpoint",
+      "name": "GET /tenant/public/{subdomain}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        409,
+        409
+      ],
+      "summary": "Endpoint: GET /tenant/public/{subdomain}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant/public/id/{tenantId}",
+      "type": "endpoint",
+      "name": "GET /tenant/public/id/{tenantId}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        444,
+        444
+      ],
+      "summary": "Endpoint: GET /tenant/public/id/{tenantId}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant/public/single",
+      "type": "endpoint",
+      "name": "GET /tenant/public/single",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        473,
+        473
+      ],
+      "summary": "Endpoint: GET /tenant/public/single",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant/public/",
+      "type": "endpoint",
+      "name": "GET /tenant/public/",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        494,
+        494
+      ],
+      "summary": "Endpoint: GET /tenant/public/",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant/access",
+      "type": "endpoint",
+      "name": "GET /tenant/access",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        515,
+        515
+      ],
+      "summary": "Endpoint: GET /tenant/access",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenant/public/dpa/confirm/{token}",
+      "type": "endpoint",
+      "name": "GET /tenant/public/dpa/confirm/{token}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        533,
+        533
+      ],
+      "summary": "Endpoint: GET /tenant/public/dpa/confirm/{token}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:POST /tenant/public/dpa/confirm/{token}",
+      "type": "endpoint",
+      "name": "POST /tenant/public/dpa/confirm/{token}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        556,
+        556
+      ],
+      "summary": "Endpoint: POST /tenant/public/dpa/confirm/{token}",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/signatures",
+      "type": "endpoint",
+      "name": "GET /tenantadmin/{id}/dpa/signatures",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        589,
+        589
+      ],
+      "summary": "Endpoint: GET /tenantadmin/{id}/dpa/signatures",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/gate",
+      "type": "endpoint",
+      "name": "GET /tenantadmin/{id}/dpa/gate",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        617,
+        617
+      ],
+      "summary": "Endpoint: GET /tenantadmin/{id}/dpa/gate",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:POST /tenantadmin/{id}/dpa/invite",
+      "type": "endpoint",
+      "name": "POST /tenantadmin/{id}/dpa/invite",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        643,
+        643
+      ],
+      "summary": "Endpoint: POST /tenantadmin/{id}/dpa/invite",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}/dpa",
+      "type": "endpoint",
+      "name": "PUT /tenantadmin/{id}/dpa",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        671,
+        671
+      ],
+      "summary": "Endpoint: PUT /tenantadmin/{id}/dpa",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/versions",
+      "type": "endpoint",
+      "name": "GET /tenantadmin/{id}/dpa/versions",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        708,
+        708
+      ],
+      "summary": "Endpoint: GET /tenantadmin/{id}/dpa/versions",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:POST /tenantadmin/media",
+      "type": "endpoint",
+      "name": "POST /tenantadmin/media",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        735,
+        735
+      ],
+      "summary": "Endpoint: POST /tenantadmin/media",
+      "tags": [],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:services/tenantservice.yaml:GET /media/{mediaId}",
+      "type": "endpoint",
+      "name": "GET /media/{mediaId}",
+      "filePath": "services/tenantservice.yaml",
+      "lineRange": [
+        765,
+        765
+      ],
+      "summary": "Endpoint: GET /media/{mediaId}",
+      "tags": [],
       "complexity": "complex"
     },
     {
@@ -13877,6 +14519,160 @@
       "weight": 1
     },
     {
+      "source": "config:api/applicationsettingsservice.yml",
+      "target": "endpoint:api/applicationsettingsservice.yml:GET /settings",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/applicationsettingsservice.yml",
+      "target": "endpoint:api/applicationsettingsservice.yml:PATCH /settingsadmin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/applicationsettingsservice.yml",
+      "target": "endpoint:api/applicationsettingsservice.yml:GET /settingsadmin/smtp-credentials",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeadminservice.yml",
+      "target": "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeadminservice.yml",
+      "target": "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin/consultingtypes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/basic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/basic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/extended",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/full",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/byslug/{slug}/full",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/bytenant/{tenantId}/full",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/groups",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:POST /consultingtypes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/consultingtypeservice.yml",
+      "target": "endpoint:api/consultingtypeservice.yml:PATCH /consultingtypes/{id}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:GET /topic-groups",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:GET /topic",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:GET /topic/{id}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:GET /topic/public",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:POST /topicadmin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:GET /topicadmin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:GET /topicadmin/{id}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:api/topicservice.yml",
+      "target": "endpoint:api/topicservice.yml:PUT /topicadmin/{id}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
       "source": "file:scripts/ci/assert-required-test-reports.py",
       "target": "function:scripts/ci/assert-required-test-reports.py:main",
       "type": "contains",
@@ -13907,6 +14703,195 @@
     {
       "source": "file:scripts/ci/coverage-summary.py",
       "target": "class:scripts/ci/coverage-summary.py:Coverage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:POST /tenantadmin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin/search",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin/controls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/controls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin/translation/keys",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/translation/keys/{provider}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:POST /tenantadmin/translate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:POST /tenant/translate/group-chat-author-content",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant/{id}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant/public/{subdomain}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant/public/id/{tenantId}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant/public/single",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant/public/",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant/access",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenant/public/dpa/confirm/{token}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:POST /tenant/public/dpa/confirm/{token}",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/signatures",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/gate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:POST /tenantadmin/{id}/dpa/invite",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}/dpa",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/versions",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:POST /tenantadmin/media",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "config:services/tenantservice.yaml",
+      "target": "endpoint:services/tenantservice.yaml:GET /media/{mediaId}",
       "type": "contains",
       "direction": "forward",
       "weight": 1
@@ -21558,21 +22543,70 @@
   ],
   "layers": [
     {
-      "id": "layer:core",
-      "name": "Core",
-      "description": "Core application files",
+      "id": "layer:domain-concepts",
+      "name": "Domain Concepts",
+      "description": "High-level domain concepts and flows (coarse enrichment pass).",
       "nodeIds": [
-        "file:commitlint.config.js",
-        "file:deploy-development.sh",
-        "file:run-local-remote-db.sh",
-        "file:run-trivy.sh",
-        "file:scripts/ci/assert-required-test-reports.py",
-        "file:scripts/ci/coverage-summary.py",
-        "file:scripts/ci/run-required-integration-tests.sh",
-        "file:scripts/contracts/publish-provider-contracts.sh",
-        "file:scripts/contracts/verify-consumer-contract.sh",
-        "file:scripts/contracts/verify-provider-compatibility.sh",
-        "file:src/main/java/de/caritas/cob/consultingtypeservice/ConsultingTypeServiceApplication.java"
+        "concept:consulting-types",
+        "concept:topics",
+        "concept:application-settings",
+        "flow:topic-administration"
+      ]
+    },
+    {
+      "id": "layer:api-endpoints",
+      "name": "API Endpoints",
+      "description": "REST operations extracted from the OpenAPI specification (method + route).",
+      "nodeIds": [
+        "endpoint:api/applicationsettingsservice.yml:GET /settings",
+        "endpoint:api/applicationsettingsservice.yml:PATCH /settingsadmin",
+        "endpoint:api/applicationsettingsservice.yml:GET /settingsadmin/smtp-credentials",
+        "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin",
+        "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin/consultingtypes",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/basic",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/basic",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/extended",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/full",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/byslug/{slug}/full",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/bytenant/{tenantId}/full",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/groups",
+        "endpoint:api/consultingtypeservice.yml:POST /consultingtypes",
+        "endpoint:api/consultingtypeservice.yml:PATCH /consultingtypes/{id}",
+        "endpoint:api/topicservice.yml:GET /topic-groups",
+        "endpoint:api/topicservice.yml:GET /topic",
+        "endpoint:api/topicservice.yml:GET /topic/{id}",
+        "endpoint:api/topicservice.yml:GET /topic/public",
+        "endpoint:api/topicservice.yml:POST /topicadmin",
+        "endpoint:api/topicservice.yml:GET /topicadmin",
+        "endpoint:api/topicservice.yml:GET /topicadmin/{id}",
+        "endpoint:api/topicservice.yml:PUT /topicadmin/{id}",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/search",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/controls",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/controls",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/translation/keys",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/translation/keys/{provider}",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin/translate",
+        "endpoint:services/tenantservice.yaml:POST /tenant/translate/group-chat-author-content",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}",
+        "endpoint:services/tenantservice.yaml:GET /tenant",
+        "endpoint:services/tenantservice.yaml:GET /tenant/{id}",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/{subdomain}",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/id/{tenantId}",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/single",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/",
+        "endpoint:services/tenantservice.yaml:GET /tenant/access",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/dpa/confirm/{token}",
+        "endpoint:services/tenantservice.yaml:POST /tenant/public/dpa/confirm/{token}",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/signatures",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/gate",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin/{id}/dpa/invite",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}/dpa",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/versions",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin/media",
+        "endpoint:services/tenantservice.yaml:GET /media/{mediaId}"
       ]
     },
     {
@@ -21730,6 +22764,38 @@
       ]
     },
     {
+      "id": "layer:middleware-layer",
+      "name": "Middleware Layer",
+      "description": "Request/response middleware and interceptors",
+      "nodeIds": [
+        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/CorrelationIdFilter.java",
+        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/HttpTenantFilter.java",
+        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/HttpUrlUtils.java",
+        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/StatelessCsrfFilter.java",
+        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/SubdomainExtractor.java",
+        "file:src/test/java/de/caritas/cob/consultingtypeservice/filter/HttpTenantFilterTest.java",
+        "file:src/test/java/de/caritas/cob/consultingtypeservice/filter/StatelessCsrfFilterTest.java"
+      ]
+    },
+    {
+      "id": "layer:core",
+      "name": "Core",
+      "description": "Core application files",
+      "nodeIds": [
+        "file:commitlint.config.js",
+        "file:deploy-development.sh",
+        "file:run-local-remote-db.sh",
+        "file:run-trivy.sh",
+        "file:scripts/ci/assert-required-test-reports.py",
+        "file:scripts/ci/coverage-summary.py",
+        "file:scripts/ci/run-required-integration-tests.sh",
+        "file:scripts/contracts/publish-provider-contracts.sh",
+        "file:scripts/contracts/verify-consumer-contract.sh",
+        "file:scripts/contracts/verify-provider-compatibility.sh",
+        "file:src/main/java/de/caritas/cob/consultingtypeservice/ConsultingTypeServiceApplication.java"
+      ]
+    },
+    {
       "id": "layer:configuration-layer",
       "name": "Configuration Layer",
       "description": "Application configuration and environment settings",
@@ -21750,20 +22816,6 @@
       ]
     },
     {
-      "id": "layer:middleware-layer",
-      "name": "Middleware Layer",
-      "description": "Request/response middleware and interceptors",
-      "nodeIds": [
-        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/CorrelationIdFilter.java",
-        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/HttpTenantFilter.java",
-        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/HttpUrlUtils.java",
-        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/StatelessCsrfFilter.java",
-        "file:src/main/java/de/caritas/cob/consultingtypeservice/filter/SubdomainExtractor.java",
-        "file:src/test/java/de/caritas/cob/consultingtypeservice/filter/HttpTenantFilterTest.java",
-        "file:src/test/java/de/caritas/cob/consultingtypeservice/filter/StatelessCsrfFilterTest.java"
-      ]
-    },
-    {
       "id": "layer:test-layer",
       "name": "Test Layer",
       "description": "Test files and test utilities",
@@ -21780,17 +22832,6 @@
         "file:tests/ci/test_coverage_summary.py",
         "file:tests/ci/test_required_ci_contract.py",
         "file:tests/contracts/test_openapi_contract_gate.py"
-      ]
-    },
-    {
-      "id": "layer:domain-concepts",
-      "name": "Domain Concepts",
-      "description": "High-level domain concepts and flows (coarse enrichment pass).",
-      "nodeIds": [
-        "concept:consulting-types",
-        "concept:topics",
-        "concept:application-settings",
-        "flow:topic-administration"
       ]
     }
   ],
@@ -22022,6 +23063,62 @@
     },
     {
       "order": 6,
+      "title": "API Endpoints",
+      "description": "REST operations extracted from the OpenAPI specification (method + route).. Key files: GET /settings, PATCH /settingsadmin, GET /settingsadmin/smtp-credentials, GET /consultingtypeadmin, GET /consultingtypeadmin/consultingtypes, GET /consultingtypes/basic, GET /consultingtypes/{consultingTypeId}/basic, GET /consultingtypes/{consultingTypeId}/extended, GET /consultingtypes/{consultingTypeId}/full, GET /consultingtypes/byslug/{slug}/full, GET /consultingtypes/bytenant/{tenantId}/full, GET /consultingtypes/groups, POST /consultingtypes, PATCH /consultingtypes/{id}, GET /topic-groups, GET /topic, GET /topic/{id}, GET /topic/public, POST /topicadmin, GET /topicadmin, GET /topicadmin/{id}, PUT /topicadmin/{id}, POST /tenantadmin, GET /tenantadmin, GET /tenantadmin/search, GET /tenantadmin/controls, PUT /tenantadmin/controls, GET /tenantadmin/translation/keys, PUT /tenantadmin/translation/keys/{provider}, POST /tenantadmin/translate, POST /tenant/translate/group-chat-author-content, PUT /tenantadmin/{id}, GET /tenantadmin/{id}, GET /tenant, GET /tenant/{id}, GET /tenant/public/{subdomain}, GET /tenant/public/id/{tenantId}, GET /tenant/public/single, GET /tenant/public/, GET /tenant/access, GET /tenant/public/dpa/confirm/{token}, POST /tenant/public/dpa/confirm/{token}, GET /tenantadmin/{id}/dpa/signatures, GET /tenantadmin/{id}/dpa/gate, POST /tenantadmin/{id}/dpa/invite, PUT /tenantadmin/{id}/dpa, GET /tenantadmin/{id}/dpa/versions, POST /tenantadmin/media, GET /media/{mediaId}.",
+      "nodeIds": [
+        "endpoint:api/applicationsettingsservice.yml:GET /settings",
+        "endpoint:api/applicationsettingsservice.yml:PATCH /settingsadmin",
+        "endpoint:api/applicationsettingsservice.yml:GET /settingsadmin/smtp-credentials",
+        "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin",
+        "endpoint:api/consultingtypeadminservice.yml:GET /consultingtypeadmin/consultingtypes",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/basic",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/basic",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/extended",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/{consultingTypeId}/full",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/byslug/{slug}/full",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/bytenant/{tenantId}/full",
+        "endpoint:api/consultingtypeservice.yml:GET /consultingtypes/groups",
+        "endpoint:api/consultingtypeservice.yml:POST /consultingtypes",
+        "endpoint:api/consultingtypeservice.yml:PATCH /consultingtypes/{id}",
+        "endpoint:api/topicservice.yml:GET /topic-groups",
+        "endpoint:api/topicservice.yml:GET /topic",
+        "endpoint:api/topicservice.yml:GET /topic/{id}",
+        "endpoint:api/topicservice.yml:GET /topic/public",
+        "endpoint:api/topicservice.yml:POST /topicadmin",
+        "endpoint:api/topicservice.yml:GET /topicadmin",
+        "endpoint:api/topicservice.yml:GET /topicadmin/{id}",
+        "endpoint:api/topicservice.yml:PUT /topicadmin/{id}",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/search",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/controls",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/controls",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/translation/keys",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/translation/keys/{provider}",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin/translate",
+        "endpoint:services/tenantservice.yaml:POST /tenant/translate/group-chat-author-content",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}",
+        "endpoint:services/tenantservice.yaml:GET /tenant",
+        "endpoint:services/tenantservice.yaml:GET /tenant/{id}",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/{subdomain}",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/id/{tenantId}",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/single",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/",
+        "endpoint:services/tenantservice.yaml:GET /tenant/access",
+        "endpoint:services/tenantservice.yaml:GET /tenant/public/dpa/confirm/{token}",
+        "endpoint:services/tenantservice.yaml:POST /tenant/public/dpa/confirm/{token}",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/signatures",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/gate",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin/{id}/dpa/invite",
+        "endpoint:services/tenantservice.yaml:PUT /tenantadmin/{id}/dpa",
+        "endpoint:services/tenantservice.yaml:GET /tenantadmin/{id}/dpa/versions",
+        "endpoint:services/tenantservice.yaml:POST /tenantadmin/media",
+        "endpoint:services/tenantservice.yaml:GET /media/{mediaId}"
+      ]
+    },
+    {
+      "order": 7,
       "title": "Supporting Components",
       "description": "Additional supporting files: AGENTS.md, CHANGELOG.md, Dockerfile, README.md, applicationsettingsservice.yml, consultingtypeadminservice.yml, consultingtypeservice.yml, topicservice.yml, consulting-type-0.json, consulting-type-1.json, consulting-type-2.json, topic-format-correction-96.md, local-development.md, package.json, tenantservice.yaml, initTables.sql, topic_internal_identifier_column.sql, migrateToMultilingualTopic.sql, topicGroups-rollback.sql, topicGroups.sql, topic_fallback_agency_id-rollback.sql, topic_fallback_agency_id.sql, topic_fallback_url-rollback.sql, topic_fallback_url.sql, topic_welcome_message-rollback.sql, topic_welcome_message.sql, topic_send_next_step_message-rollback.sql, topic_send_next_step_message.sql, topic_add_titles_and_extend_internal_identifier-rollback.sql, topic_add_titles_and_extend_internal_identifier.sql, 0010_change_topic_and_topic_groups_to_be_i18n_aware-rollback.sql, 0010_change_topic_and_topic_groups_to_be_i18n_aware.sql, 0011_add_english_topic_names-rollback.sql, 0011_add_english_topic_names.sql, application-settings.json, consulting-type.json, broken-consulting-type.json, consulting-type-0.json, consulting-type-1.json, consulting-type-2.json, consulting-type-0.json, consulting-type-1.json, consulting-type-2.json, consulting-type-3.json, null-value-consulting-type-settings.json, TopicDatabase.sql, invalid-consulting-type.json, consulting-type-groups-response.json, eclipse-temurin, FROM eclipse-temurin:21-jre, VOLUME [\"/tmp\",\"/log\"], EXPOSE 8083, ARG JAR_FILE, COPY ./target/ConsultingTypeService.jar app.jar, ENTRYPOINT [\"java\",\"-Djava.security.egd=file:/dev/./urandom\",\"-XX:MaxRA, main, collect, render_markdown, main, Coverage, handleInternal, ApiDefaultResponseEntityExceptionHandler, beforeQueryAspect, TopicFeatureAssertionAspect, HalLinkBuilder, findTenantIdInAccessToken, isSuperAdmin, parseTenantId, AuthorisationService, getConsultingTypesGroupMap, findAllConsultingTypes, isTechnicalTenantContext, addConsultingType, ConsultingTypeGroupTenantAwareRepositoryImpl, init, obtainInitializedConsultingType, addConsultingTypeToRepositories, setTechnicalTenantContext, determineConsultingTypeConfigurationFiles, ConsultingTypeLoader, getListOfConsultingTypes, isTechnicalTenantContext, getConsultingTypeById, findById, getConsultingTypeBySlug, findBySlug, update, getNextId, getConsultingTypeByTenantId, isConsultingTypeWithGivenIdPresent, isConsultingTypeWithGivenSlugPresent, ConsultingTypeMongoTenantAwareRepositoryService, ConsultingTypeTenantAwareRepository, validateConsultingTypeConfigurationJsonFile, buildSchema, ConsultingTypeValidator, getRequest, getApplicationSettings, patchApplicationSettings, getGlobalSmtpCredentials, ApplicationSettingsController, getBasicConsultingTypeList, getFullConsultingTypeById, getFullConsultingTypeBySlug, getFullConsultingTypeByTenantId, getExtendedConsultingTypeById, getBasicConsultingTypeById, getConsultingTypeGroups, createConsultingType, patchConsultingType, ConsultingTypeController, send, DpaSigningEmailController, createTopic, updateTopic, getAllTopicsAsAdmin, getTopicWithTranslationById, TopicAdminController, getAllTopics, getAllActiveTopics, TopicController, getAllTopicGroups, TopicGroupsController, CustomHttpStatusException, executeLogging, CustomHttpStatusException, toSettingDTO, toFeatureToggleDTO, getFieldValue, ApplicationSettingsConverter, getApplicationSettings, saveApplicationSettings, assertExactlyOneEntryFound, ApplicationSettingsService, init, createDefaultApplicationSettings, DefaultApplicationSettingsInitializer, DpaMailSettings, DpaMailTransport, send, buildSessionProperties, JakartaDpaMailTransport, SmtpPasswordEncryptionService, encrypt, decrypt, isEncrypted, deriveKey, SmtpPasswordEncryptionService, preFlush, resolveMultiTenancy, getParamFromPropertyFile, getParamFromEnvVariable, TenantHibernateInterceptor, getAllTopics, getAllActiveTopics, findTopicById, createTopic, updateTopic, TopicService, getKeycloakAndCsrfHttpHeaders, getCsrfHttpHeaders, addCsrfValues, SecurityHeaderSupplier, beforeQueryAspect, TenantAspect, sanitize, InputSanitizer, validator, AppConfig, validateConfiguration, isEmpty, ConfigurationValidator, corsFilterRegistrationBean, validateAllowedOrigins, CorsConfig, addResourceHandlers, CustomSwaggerUIPathWebMvcConfigurer, authenticatedUser, extractRealmRoles, decodeUsername, keycloakConfigResolver, KeycloakConfig, strictRequestBodyModule, StrictRequestBodyConfig, doFilterInternal, TrailingSlashFilter, TenantServiceApiClient, parameterToMultiValueMap, noValidFilterParams, obtainQueryParameters, setMethodKeyValuePairs, TenantServiceApiClient, handleError, CustomResponseErrorHandler, restTemplate, RestTemplateConfig, doFilterInternal, CorrelationIdFilter, HttpUrlUtils, removeHttpPrefix, HttpUrlUtils, consultingtypeservice, consultingtypeservice, liquibaseAutoConfigurationClassIsOnClasspath, liquibaseAutoConfigurationIsRegisteredAsImportCandidate, isClassPresent, getClassLoader, LiquibaseAutoConfigurationPresenceTest, freshDatabaseMigratedByLiquibase_shouldMatchJpaEntities, runLiquibaseUpdate, validateJpaMappingAgainstDatabase, LiquibaseSchemaDriftIT, findConsultingTypes_Should_returnOneResult_When_perPageIsSetToOneAndPageIsSetToOne, findConsultingTypes_Should_returnOneResult_When_paginationParamsAreZero, findConsultingTypes_Should_returnOneResult_When_paginationParamsAreNegative, findConsultingTypes_Should_returnPaginatedEntities_When_paginationParamsAreSplitted, findConsultingTypes_Should_haveExpectedLinks_When_AllParamsAreProvided, findConsultingTypes_Should_returnAllConsultingTypes_When_ProvidedWithMaxPerPagesParam, ConsultingTypeAdminControllerIT, buildPaginationLinks_Should_returnPaginationLinks_When_allParametersAreSet, buildPaginationLinks_Should_havePreviousLink_When_currentPageIsNotTheFirst, buildPaginationLinks_ShouldNot_havePreviousLink_When_currentPageIsTheFirst, buildPaginationLinks_Should_haveNextLink_When_currentPageIsNotTheLast, buildPaginationLinks_ShouldNot_haveNextLink_When_currentPageIsTheLast, buildPaginationLinks_Should_returnSelfLink, buildPaginationLinks_Should_returnDefaultPaginationValues_When_noParametersAreSet, ConsultingTypePaginationLinksBuilderTest, buildRootDTO_Should_returnRootDTOWithConsultingTypeHalLinks, buildRootDTO_Should_returnRootDTOWithSelfHalLink, RootDTOBuilderTest, findConsultingTypes_Should_returnOneResult_When_perPageIsSetToOneAndPageIsSetToOne, findConsultingTypes_Should_returnOneResult_When_paginationParamsAreZero, findConsultingTypes_Should_returnOneResult_When_paginationParamsAreNegative, findConsultingTypes_Should_returnPaginatedEntities_When_paginationParamsAreSplitted, findConsultingTypes_Should_haveExpectedLinks_When_AllParamsAreProvided, findConsultingTypes_Should_returnAllConsultingTypes_When_ProvidedWithMaxPerPagesParam, ConsultingTypeAdminServiceIT, tearDown, isSuperAdmin_Should_ReturnTrue_When_TenantIdIsZero, isSuperAdmin_Should_ReturnFalse_When_TenantIdIsNotZero, isSuperAdmin_Should_ReturnFalse_When_TenantIdIsMissing, AuthorisationServiceTest, getConsultingTypesGroupMap_Should_ReturnMapWithConsultingTypeGroups, ConsultingTypeGroupRepositoryIT, setup, getConsultingTypesGroupMap_Should_ReturnMapWithConsultingTypeGroups, ConsultingTypeGroupRepositoryImplTest, tearDown, getConsultingTypesGroupMap_Should_ReturnMapWithConsultingTypeGroups, assertGroupsCorrectlyRetrievedAndFilteredForTenant, ConsultingTypeGroupRespositoryTenantAwareIT, setup, tearDown, getConsultingTypesGroupMap_Should_ReturnMapWithConsultingTypeGroups_ForTechnicalTenantContext, getConsultingTypesGroupMap_Should_ReturnMapWithConsultingTypeGroups_ForNonTechnicalTenantContext, ConsultingTypeGroupTenantAwareRepositoryImplTest, setup, test_Should_Fail_WhenMethodInitDoesNotHavePostConstructAnnotation, init_Should_ThrowUnexpectedErrorException_WhenInvalidConsultingTypeSettingsPath, init_Should_ThrowUnexpectedErrorException_WhenBrokenConsultingTypeSettings, init_Should_AddConsultingTypesToRepository, init_Should_ValidateConsultingTypeSettings, getInitMethodFromConsultingTypeLoader, setConsultingTypesFilePath, ConsultingTypeLoaderTest, tearDown, addConsultingType_Should_notAdd_When_givenSlugExists, addConsultingType_Should_Add_When_GivenSlugAndIdNotExist, addConsultingType_Should_Add_When_GivenIdExists, addConsultingType_Should_Add_When_GivenIdNotExistsAndSlugExistsAndSingleDomainMultitenancy, addConsultingType_Should_NotAdd_When_GivenIdNotExistsAndSlugExistsAndNotSingleDomainMultitenancy, ConsultingTypeMongoRepositoryServiceTest, initializeMongoDbWithData, insertJsonFromFilename, findByConsultingTypeId_Should_ReturnCorrectConsultingType, findBySlug_Should_ReturnCorrectConsultingTyp, findAll_Should_ReturnAllConsultingTypes, ConsultingTypeMongoRespositoryIT, cleanUp, getListOfConsultingTypes_Should_returnNotFilteredConsultingTypesForTechnicalTenantContext, getListOfConsultingTypes_Should_returnFilteredConsultingTypesForNonTechnicalTenantContext, getConsultingTypeById_Should_getConsultingTypeByIdAndNotFilterByTenantIdForTechnicalTenantContext, getConsultingTypeById_Should_getConsultingTypeByIdAndFilterByTenantIdForNonTechnicalTenantContext, getConsultingTypeById_Should_throwExceptionIfConsultingTypeNotFoundForTechnicalTenantContext, getConsultingTypeById_Should_throwExceptionIfConsultingTypeNotFoundForNonTechnicalTenantContext, isConsultingTypeWithGivenSlugPresent_Should_CallFindSlugByTenantIdFromProvidedConsultingType, ConsultingTypeMongoTenantAwareRepositoryServiceTest, initializeMongoDbWithData, insertJsonFromFilename, findConsultingTypeByIdAndTenantId_Should_ReturnCorrectConsultingType, findConsultingTypeByTenantId_Should_ReturnCorrectConsultingType, findByConsultingTypeId_Should_ReturnCorrectConsultingType, findBySlugAndTenantId_Should_ReturnCorrectConsultingType, findBySlug_Should_ReturnCorrectConsultingTyp, findAllHavingTenantId_Should_ReturnFilteredListOfConsultingTypes, findAll_Should_ReturnAllConsultingTypes, ConsultingTypeMongoTenantAwareRespositoryIT, cleanUp, getListOfConsultingTypes_Should_returnNotFilteredConsultingTypes, getConsultingTypeById_Should_getConsultingTypeById, getConsultingTypeById_Should_throwExceptionIfConsultingTypeNotFoundFor, getConsultingTypeBySlug_Should_CallFindBySlugInTheRepository, getConsultingTypeByTenant_Should_CallFindByTenantIdInTheRepository, ConsultingTypeRepositoryServiceTest, getConsultingTypeById_Should_ReturnCorrectConsultingType, getConsultingTypeBySlug_Should_ReturnCorrectConsultingType, getListOfConsultingTypes_Should_ReturnCompleteListOfConsultingTypes, ConsultingTypeRespositoryIT, setup, validateConsultingTypeConfigurationJsonFile_Should_ThrowUnexpectedErrorException_WhenJsonViolatesSchema, validateConsultingTypeConfigurationJsonFile_Should_ThrowUnexpectedErrorException_WhenJsonFileCouldNotBeParsed, validateConsultingTypeConfigurationJsonFile_ShouldNot_ThrowException_For_NullValues, ConsultingTypeValidatorTest, setup, getHealtcheck_Should_returnHealtcheck, getActuatorEndpoints_Should_return404NotFoundIfEndpointsNotExposed, getVersion_Should_return404NotFound, getActuatorInfo_Should_return200WithBuildMetadata, ActuatorControllerIT, setup, getApplicationSettings_Should_NotExposeSmtpCredentials_When_UserIsNotAuthenticatedAndCredentialsAreConfigured, getApplicationSettings_Should_ReturnApplicationSettings_When_UserIsNotAuthenticated, patchApplicationSettings_Should_ReturnUpdatedApplicationSettings_When_PatchOperationSuccessful, patchApplicationSettings_Should_ReturnBadRequest_When_PatchContainsUnsupportedSetting, resetSettingsToPreviousState, patchApplicationSettings_Should_ReturnForbidden_When_UserNameDoesNotHavePermissionToPatchSettings, getGlobalSmtpCredentials_Should_ReturnForbidden_When_UserIsNotSuperAdmin, getGlobalSmtpCredentials_Should_ReturnCredentials_When_UserIsSuperAdmin, giveApplicationSettingEntityWithDynamicReleaseToggles, givenMockAuthentication, ApplicationSettingsControllerIT, createConsultingType_Should_returnOk_When_requiredConsultingTypeDTOIsGiven, patchConsultingType_Should_returnOk_When_requiredConsultingTypeDTOIsGiven, patchConsultingType_Should_returnOk_When_singleTenantAdminTriesToPatchLimitedSettings, patchConsultingType_Should_returnForbidden_When_singleTenantAdminTriesToPatchSettingsThatHeIsNotAllowedTo, patchConsultingType_Should_returnForbidden_When_userInDifferentRoleThanTenantAdminOrTenantSuperadmin, getConsultingTypeByTenantId_Should_returnNoContent_When_CalledAsTenantAdminButNoConsultingTypeIfFound, createConsultingType_Should_return_forbidden_When_userNotHaveRequiredAuthority, createFrom, ConsultingTypeControllerE2EIT, setup, getBasicConsultingTypeList_Should_ReturnNoContent_When_ServiceReturnsEmptyList, getBasicConsultingTypeList_Should_ReturnConsultingTypeBasicList, getFullConsultingTypeById_Should_ReturnFullConsultingTypeDTO, getFullConsultingTypeById_Should_ReturnNotFound_WhenConsultingTypeIsMissing, getFullConsultingTypeBySlug_Should_ReturnFullConsultingTypeDTO, getFullConsultingTypeBySlug_Should_ReturnNotFound_WhenConsultingTypeIsMissing, getExtendedConsultingTypeById_Should_ReturnFullConsultingTypeDTO, getExtendedConsultingTypeId_Should_ReturnNotFound_WhenConsultingTypeIsMissing, getBasicConsultingTypeById_Should_ReturnBasicConsultingTypeDTO, getBasicConsultingTypeById_Should_ReturnNotFound_WhenConsultingTypeIsMissing, getConsultingTypeGroups_Should_ReturnNoContent_WhenNoGroupsDefined, getConsultingTypeGroups_Should_ReturnListOfConsultingTypeGroupResponseDTO, getConsultingTypeGroups_Should_ReturnInternalServerError_WhenUnexpectedErrorOccurs, createConsultingType_Should_returnOk_When_requiredConsultingTypeDTOIsGiven, createConsultingType_Should_returnForbidden_When_AttemptToCreateConsultingTypeWithoutPermissions, removeGroupsNode, ConsultingTypeControllerIT, setUp, send_confirmedTransport_returnsSentStatusWithReceiptDetails, send_smtpFailure_returnsBadGatewayInsteadOfSuccess, send_isRestrictedToTenantSettingsAuthority, DpaSigningEmailControllerTest, setup, givenTopicFeatureEnabled, createTopic_Should_returnStatusBadRequest_When_calledWithInvalidCreateParamsButValidAuthority, updateTopic_Should_returnStatusOk_When_calledWithValidCreateParamsAndValidAuthority, updateTopic_Should_returnStatusOk_When_featureToggleIsDisabled, createTopic_Should_returnBadRequest_When_calledWithValidCreateParamsAndValidAuthorityButContentNotValid, createTopic_Should_returnUnauthorized_When_calledWithValidCreateParamsButAsUnauthenticatedUser, createTopic_Should_returnForbidden_When_calledWithValidCreateParamsButWithoutTopicAdminRole, createTopic_Should_returnStatusOk_When_calledWithValidCreateParamsAndValidAuthority, createTopic_Should_returnStatusOk_When_payloadCarriesFieldOutsideTheTopicContract, createTopic_Should_returnStatusForbidden_When_topicToggleIsDisabled, save_Should_ReturnForbidden_IfUserIsAuthenticatedButDoesNotHavePermission, getAllTopics_Should_ReturnTopicsList_When_UserIsAuthenticated, getAllTopics_Should_ReturnForbiddenIfTopicFeatureIsDisabled, getTopicWithTranslationById_Should_ReturnTopic_When_UserIsAuthenticated, getTopicList_Should_ReturnUnauthorized_When_UserIsNotAuthenticated, givenMockAuthentication, translateableMapWithGermanEntryFor, TopicAdminControllerIT, setup, givenTopicFeatureEnabled, getTopicList_Should_ReturnTopicsList_When_UserIsAuthenticated, getAllActiveTopics_Should_returnActiveTopicsList, getAllActiveTopics_Should_returnActiveTopicsListWithOrWithoutFallbackAgencyId, getTopicList_Should_ReturnUnauthorized_When_UserIsNotAuthenticated, getAllActiveTopics_Should_returnActiveTopicsListWithOrWithoutFallbackUrl, getAllActiveTopics_Should_returnActiveTopicsListWithOrWithoutWelcomeMessage, TopicControllerIT, setup, getAllTopicGroups_Should_ReturnTopicGroupsDTO_When_UserIsAuthenticated, TopicGroupsControllerIT, setup, tearDown, actuatorHealthRequest_Should_produceARecordedSpan, TracingSmokeIT, toEntity_should_convertToEntityAndBackToMultilingualDTO, translateableMapWithGermanEntryFor, toDTOList_Should_convertCollectionOfTopicEntitiesToListOfTopicDTOsWithCorrectLang, toDTOList_Should_convertCollectionOfTopicEntitiesToListOfTopicDTOsWithDE_When_languageIsNotProvided, toMultilingualDTOList_Should_convertCollectionOfTopicEntitiesToListOfTopicMultilingualDTOs, TopicConverterTest, should_ResolveNameForGivenLang_When_TopicGroupConverterIsCalled, TopicGroupConverterTest, mapConsultingType_Should_MapAllBasicProperties, BasicConsultingTypeMapperTest, mapWhiteSpot_Should_InitializeDefaultObjectIfNull, mapGroupChat_Should_InitializeDefaultObjectIfNull, mapWelcomeMessage_Should_InitializeDefaultObjectIfNull, mapNotifications_Should_InitializeDefaultObjectIfNull, mapSessionDataInitializing_Should_InitializeDefaultObjectIfNull, ConsultingTypeMapperTest, mapConsultingType_Should_MapAllExtendedProperties, ExtendedConsultingTypeMapperTest, mapConsultingType_Should_MapAllProperties, FullConsultingTypeMapperTest, mapConsultingTypeCoreDtoList_Should_MapIdAndDefaultTitle, ConsultingTypeGroupMapperTest, mapConsultingType_Should_MapAllProperties, ConsultingTypeGroupResponseMapperTest, setup, topicGroupRepositoryReturnsEmptyListForNoTopicGroups, topicGroupRepositoryReturnsSomeMeaningfulData, deletingTopicGroupKeepsTopicsUntouched, deletingTopicGetsItRemovedFromGroup, topicGroupShouldContainTopics, getTopicGroupEntityByName, TopicGroupRepositoryIT, findById_Should_findTopicById, findAll_Should_findAllTopics, findAllActive_Should_findAllActiveTopics, save_Should_saveNewTopic, TopicRepositoryIT, findByIdForTenant_Should_findTopicByIdAndTenantId, findByIdForTenant_Should_notFindTopicByIdWhenTenantDoesNotMatch, findAllForTenant_Should_findAllTopicsForTenantId, findAllActiveForTenant_Should_findAllActiveTopicsForTenantId, TopicRepositoryTenantAwareIT, toDTO_Should_NotExposeSmtpCredentials_When_EntityContainsCredentials, toDTO_Should_ConvertToDTEmptySettings, toDTO_Should_ConvertToDTOAllSettings, giveApplicationSettings, ApplicationSettingsConverterTest, patchApplicationSettings_Should_EncryptSmtpPasswordBeforeSaving, patchApplicationSettings_Should_NotEncrypt_When_SmtpPasswordNotPatched, getGlobalSmtpCredentials_Should_DecryptPasswordAndReturnUsername, ApplicationSettingsServiceFacadeTest, getApplicationSettings_Should_ReturnSettingsFromDatabase, getApplicationSettings_Should_ReturnOptionalEmpty_When_NoSettingsFoundInDatabase, getApplicationSettings_Should_ThrowException_When_MoreThanOneSettingsFoundInDatabase, ApplicationSettingsServiceTest, fetchConsultingTypeGroupList_Should_ReturnListOfConsultingTypeGroupResponseDTO, ConsultingTypeGroupServiceTest, setUp, send_validDpaRequest_usesStoredCredentialsWithoutExposingThem, send_transportFailure_propagatesErrorInsteadOfSilentSuccess, send_foreignOrigin_rejectsBeforeReadingCredentials, configuredSettings, DpaSigningEmailServiceTest, buildSessionProperties_Should_requireStartTls_When_settingsNotSecure, buildSessionProperties_Should_checkServerIdentity_When_settingsNotSecure, buildSessionProperties_Should_enableImplicitTlsAndCheckServerIdentity_When_settingsSecure, buildSessionProperties_Should_keepConnectionBasicsAndTimeouts, send_transportFailure_throwsSmtpSendExceptionInsteadOfSilentSuccess, send_malformedRecipient_throwsBadRequestInsteadOfSmtpSendException, send_serverWithoutStartTls_failsInsteadOfDowngradingToPlaintext, insecureSettings, secureSettings, JakartaDpaMailTransportTest, encrypt_Should_ReturnPlaintext_When_SecretNotConfigured, encrypt_Should_ReturnEncryptedValue_When_SecretConfigured, decrypt_Should_RoundTripEncryptedValue, encrypt_Should_ReturnEmptyString_When_PasswordIsEmpty, encrypt_Should_NotDoubleEncrypt_When_ValueAlreadyEncrypted, SmtpPasswordEncryptionServiceTest, bindTenantServiceApi, getRestrictedTenantDataBySubdomain_Should_IgnoreFieldsNotInOurVendoredContract_When_TenantServiceAddsResponseFields, getRestrictedTenantDataByTenantId_Should_IgnoreFieldsNotInOurVendoredContract_When_TenantServiceAddsResponseFields, TenantServiceResponseToleranceIT, getAllTopicGroups_Should_returnAllTopicGroups, newTopicEntity, TopicGroupsServiceIT, getAllTopics_Should_CallServiceAndConvertResults, getAllActiveTopics_Should_CallServiceAndConvertResults, createTopic_Should_CallServiceAndPerformConversions, updateTopic_Should_CallServiceAndPerformConversions, TopicServiceFacadeTest, getAllTopics_Should_returnAllTopics, getAllActiveTopics_Should_returnAllActiveTopics, findTopicById_Should_returnRequestedTopic, findTopicById_Should_notBePresent_When_theTopicNotExists, TopicServiceIT, setup, cleanUp, getAllTopics_Should_returnAllTopicsForTheCurrentTenant, getAllActiveTopics_Should_returnAllActiveTopicsForTheCurrentTenant, findTopicById_Should_returnRequestedTopicForTheCurrentTenant, findTopicById_Should_notBePresent_When_theTopicIsNotOwnedByTheCurrentTenant, findTopicById_Should_notBePresent_When_theTopicNotExists, TopicServiceTenantAwareIT, tearDown, getAllTopics_Should_CallRepository, getAllActiveTopics_Should_callRepository, createTopics_Should_TakeTopicStatusFromRequest, updateTopics_Should_UpdateUpdateDateAndCallRepository, TopicServiceTest, givenSubdomainResolvesToTenant, resolve_Should_ThrowAccessDenied_When_HeaderTenantContradictsSubdomainTenant, resolve_Should_ReturnHeaderTenant_When_HeaderMatchesSubdomainTenant, resolve_Should_ReturnHeaderTenant_When_NoSubdomainPresent, resolve_Should_ReturnSubdomainTenant_When_NoHeaderPresent, resolve_Should_ThrowAccessDenied_When_NeitherHeaderNorSubdomainPresent, TenantResolverTest, convertToJson_Should_returnCorrectJson, convertMapFromJson_Should_returnCorrectMap, convertMapFromJson_Should_returnEmptyMap_When_jsonIsNull, convertMapFromJson_Should_returnResult_When_jsonContainsNewLineOrTabulation, JsonConverterTest, shouldResolveProperLanguageValue_When_LanguageKeyIsFound, shouldFallbackToGerman_When_LanguageNotFound, shouldReturnEmptyString_When_GermanFallbackNotFound, shouldThrowException_When_GivenStringNotInJsonFormat, TranslationUtilsTest, sanitize_Should_sanitizeTopicDTO, TopicInputSanitizerTest, validate_Should_ThrowBadRequestException_IfStatusIsNotValid, validate_Should_ThrowBadRequestException_IfStatusIsNull, callValidationMethod, validate_Should_NotThrowBadRequestException_IfStatusIsValid, validate_Should_NotThrowBadRequestException_IfStatusIsValidLowercase, validate_Should_ThrowTopicValidationException_IfNameTranslationKeyIsInvalid, validate_Should_ThrowTopicValidationException_IfDescriptionTranslationKeyIsInvalid, validate_Should_NotThrowTopicValidationException_IfNameAndDescTranslationKeysAreValid, TopicValidationServiceTest, liquibaseAutoConfigurationShouldBeOnTheClasspath, liquibaseAutoConfigurationShouldBeRegisteredAsAutoConfigurationCandidate, autoConfigurationCandidates, LiquibaseAutoConfigurationPresenceTest, springBoot4Key_targetsConfiguredHost, configMapEnvVar_throughPlaceholder_targetsConfiguredHost, legacyKey_isIgnoredAndFallsBackToLocalhost, MongoUriBindingTest, handleError_Should_throwExpectedResponseStatusException, CustomResponseErrorHandlerTest, doFilterInternal_Should_NotApply_When_RequestBelongsToTenancyWhiteList, doFilterInternal_Should_Apply_When_DoesNotBelongBelongsToTenancyWhiteList, HttpTenantFilterTest, setup, doFilterInternal_Should_executeFilterChain_When_requestMethodIsAllowed, doFilterInternal_Should_executeFilterChain_When_requestCsrfHeaderAndCookieAreEqual, doFilterInternal_Should_callAccessDeniedHandler_When_csrfHeaderIsNull, doFilterInternal_Should_callAccessDeniedHandler_When_cookiesAreNull, doFilterInternal_Should_callAccessDeniedHandler_When_csrfHeaderIsNotEqualToCookieToken, StatelessCsrfFilterTest, PathConstants, TestConstants, topic, topic_group, topic_group_x_topic, row, CoverageSummaryTest, job_block, RequiredCiContractTest, OpenApiContractGateTest, getApplicationSettings, patchApplicationSettings, getGlobalSmtpCredentials, toSmtpCredentialsDTO, convertPatchedValues, ApplicationSettingsServiceFacade, assertTopicFeatureIsEnabled, determineIfTopicIsEnabled, isTopicFeatureEnabledForSingleDomainMultitenancy, isTopicFeatureEnabledForMultitenancy, isTopicFeatureEnabled, TopicFeatureAuthorisationService, getAllTopics, getAllActiveTopics, createTopic, updateTopic, getAllTopicsMultilingual, getTopicMultilingualById, TopicServiceFacade, toTopicGroupsDTO, itemsOf, resolveNameForGivenLanguageOrFallbackToGerman, topicIdsOf, TopicGroupConverter, KeycloakException, KeycloakException, getListOfConsultingTypes, getConsultingTypeById, getConsultingTypeBySlug, getConsultingTypeByTenantId, addConsultingType, getNextId, update, slugIsNotValid, nonSingleDomainMode, isConsultingTypeWithGivenIdPresent, isConsultingTypeWithGivenSlugPresent, ConsultingTypeMongoRepositoryService, withUserRole, withTenantId, build, AuthenticationMockBuilder, ConsultingTypeRepository, UnexpectedErrorException, UnexpectedErrorException, fetchConsultingTypeGroupList, mapEntryToPair, ConsultingTypeGroupService, fetchBasicConsultingTypesList, fetchFullConsultingTypeSettingsById, fetchFullConsultingTypeSettingsBySlug, fetchFullConsultingTypeSettingsByTenantId, fetchExtendedConsultingTypeSettingsById, fetchBasicConsultingTypeSettingsById, createConsultingType, updateConsultingType, assertChangesAreAllowedForUsersWithLimitedPatchPermission, isChanged, nullAsFalse, hasOnlyLimitedPatchPriviliges, ConsultingTypeService, handleCustomBadRequest, handleBadRequest, handleHttpMessageNotReadable, handleMethodArgumentNotValid, handleConflict, handleSmtpSendFailure, handleInternal, ApiResponseEntityExceptionHandler, DpaMailSendReceipt, DpaSigningEmailService, send, toMailSettings, buildHtml, parsePort, parseUri, hasSameOrigin, effectivePort, DpaSigningEmailService, TopicPathConstants, getAllTopicGroups, TopicGroupService, getConsultingType, getConsultingTypeList, getConsultingTypeSettingsAsJsonString, loadConsultingType, loadConsultingTypeGroupResponse, loadConsultingTypeGroupResponseAsJsonString, HelperMethods, deserializeMapFromJsonString, serializeToJsonString, JsonConverter, ApplicationSettingsRepository, getConsultingTypesGroupMap, addConsultingType, ConsultingTypeGroupRepositoryImpl, main, ConsultingTypeServiceApplication, TopicRepository, topicDTO, withId, withStatus, withInternalIdentifier, withTitles, withName, withDescription, withSlug, build, translations, jsonify, MultilingualTopicTestDataBuilder, TopicAccessDeniedException, TopicAccessDeniedException, toTitlesDTO, toDTO, toMultilingualDTO, toMultilingualTitlesDTO, toMultilingualDTOList, toDTOList, titlesToEntity, nullifyTitleAttributes, toEntity, TopicConverter, TopicNotFoundException, TopicNotFoundException, sanitize, copyNotSanitizedAttributes, TopicInputSanitizer, validate, validateStatus, validateTranslations, getLanguageLowercaseKeys, validateTranslationKeys, TopicValidationService, TranslationUtils, TranslationUtils, ConsultingTypeGroupRepository, ConsultingTypeGroupMapper, mapConsultingType, mapConsultingTypeCoreDtoList, ConsultingTypeGroupMapper, mapConsultingType, ConsultingTypeGroupResponseMapper, isTopicAdmin, AuthenticatedUser, convertList, copyToConsultingType, convert, ConsultingTypeConverter, mapConsultingType, BasicConsultingTypeMapper, mapConsultingType, FullConsultingTypeMapper, SmtpSendException, SmtpSendException, InternalServerErrorException, InternalServerErrorException, NotFoundException, NotFoundException, TopicGroupRepository, getId, setId, setReleaseToggles, getReleaseToggles, ApplicationSettingsEntity, addConsultingType, TopicEntity, getTranslatedStringFromMap, toDTO, convertToJson, getCurrentLanguageContext, findLanguageCookie, TranslationService, TopicValidationException, TopicValidationException, BadRequestException, BadRequestException, mapConsultingType, ConsultingTypeCoreMapper, TopicGroupEntity, TenantAware, convertMapFromJson, LogService, logWarning, logInternalServerError, logError, logJsonSchemaValidationException, LogService, getRoot, getConsultingTypes, ConsultingTypeAdminController, ConsultingTypePaginationLinksBuilder, getInstance, withPage, withPerPage, withPagedListHolder, buildPaginationLinks, ensureNonNullPaginationParams, buildSelfLink, buildHalLinkForParams, buildNextLink, buildPreviousLink, ConsultingTypePaginationLinksBuilder, buildRootDTO, buildSelfLink, buildConsultingTypesLink, RootDTOBuilder, findConsultingTypes, fullSortedExtendedConsultingTypeResponseList, currentPage, buildPaginationLinks, ConsultingTypeAdminService, mapAuthorities, normalizeRoleName, RoleAuthorizationAuthorityMapper, ConsultingTypeRepositoryService, getRoleNames, addRoleNames, Consultant, ConsultingTypeMapper, mapFurtherInformation, mapUrls, mapRegistration, mapMandatoryFields, mapNotes, mapWhiteSpot, getWhiteSpotAgencyIdNullSafe, mapGroupChat, mapWelcomeMessage, mapSessionDataInitializing, getSessionDataInitializingOrIfNullWithDefaults, mapRoles, mapNotifications, createDefaultNotifications, mapTeamSessions, mapNewMessage, mapWelcomeScreen, mapAnonymousScreen, mapConsultingType, ConsultingTypeMapper, mapConsultingType, ExtendedConsultingTypeMapper, ConsultingTypeEntity, getTenantFromHeader, TenantHeaderSupplier, getRestrictedTenantDataBySubdomain, getRestrictedTenantDataBySubdomainNoCache, getRestrictedTenantDTO, getRestrictedTenantData, getRestrictedTenantDataNoCache, TenantService, TenantContext, getCurrentTenant, setCurrentTenant, clear, TenantContext, resolve, resolveForNonAuthenticatedUser, resolveTenantFromHttpRequest, getTenantIdBySubdomain, TenantResolver, cacheManager, ehCacheManager, buildTenantCacheConfiguration, buildConsultingTypeGroupsCacheConfiguration, CacheManagerConfig, filterChain, jwtAuthenticationConverter, enableTenantFilterIfMultitenancyEnabled, grantedAuthorities, extractKeycloakRoles, addRoles, principalName, SecurityConfig, createControllerApi, TenantServiceApiControllerFactory, doFilterInternal, HttpTenantFilter, StatelessCsrfFilter, doFilterInternal, StatelessCsrfFilter, getCurrentSubdomain, getSubdomain, SubdomainExtractor.",
       "nodeIds": [
