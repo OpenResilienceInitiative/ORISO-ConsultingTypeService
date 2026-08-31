@@ -233,6 +233,42 @@ class TopicAdminControllerIT {
         .andExpect(jsonPath("$.createDate").exists());
   }
 
+  /**
+   * Strictness about unsupported fields belongs to the application-settings PATCH body alone (see
+   * {@code StrictRequestBodyConfig}). Enforcing it with the global {@code
+   * spring.jackson.deserialization.fail-on-unknown-properties} property would silently extend it to
+   * every other body the service accepts, including this one.
+   *
+   * <p>{@code external} is the concrete case: the Admin panel hardcodes it into every topic create
+   * and update (ORISO-Admin {@code src/hooks/useAddOrUpdateTopicAdmin.hook.ts}), and {@code
+   * TopicMultilingualDTO} does not declare it. Rejecting it here would break topic administration.
+   */
+  @Test
+  void createTopic_Should_returnStatusOk_When_payloadCarriesFieldOutsideTheTopicContract()
+      throws Exception {
+    final EasyRandom easyRandom = new EasyRandom();
+    final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setStatus(TopicStatus.INACTIVE.toString());
+    topicDTO.setSlug("slug");
+    topicDTO.setTitles(
+        new TitlesMultilingualDTO()
+            ._short(translateableMapWithGermanEntryFor("short"))
+            ._long(translateableMapWithGermanEntryFor("long"))
+            .welcome("welcome")
+            .registrationDropdown("dd"));
+    final String payload =
+        JsonConverter.convertToJson(topicDTO).replaceFirst("\\{", "{\"external\":false,");
+    final Authentication authentication = givenMockAuthentication(UserRole.TOPIC_ADMIN);
+    mockMvc
+        .perform(
+            post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(authentication(authentication))
+                .contentType(APPLICATION_JSON)
+                .content(payload))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").exists());
+  }
+
   @Test
   void createTopic_Should_returnStatusForbidden_When_topicToggleIsDisabled() throws Exception {
     givenTopicFeatureEnabled(false);

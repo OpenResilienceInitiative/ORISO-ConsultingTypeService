@@ -12,3 +12,6 @@ if [[ ! -e "${reports[0]}" ]]; then
 fi
 
 echo "Required integration suite produced ${#reports[@]} report(s)."
+
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+python3 "${script_dir}/assert-required-test-reports.py" .

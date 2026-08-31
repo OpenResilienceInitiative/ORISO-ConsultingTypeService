@@ -229,11 +229,8 @@ class ConsultingTypeControllerE2EIT {
       patchConsultingType_Should_returnForbidden_When_userInDifferentRoleThanTenantAdminOrTenantSuperadmin()
           throws Exception {
     // given
-    ConsultingTypeDTO consultingTypeDTO =
-        easyRandom.nextObject(ConsultingTypeDTO.class).tenantId(4).slug("test-slug");
-    consultingTypeDTO.getRoles().getConsultant().addRoleNames("test", Arrays.asList("test"));
-
-    objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+    ConsultingTypePatchDTO consultingTypePatchDTO =
+        new ConsultingTypePatchDTO().isVideoCallAllowed(true);
     Authentication authentication =
         new AuthenticationMockBuilder().withUserRole(TOPIC_ADMIN.getValue()).build();
 
@@ -245,7 +242,7 @@ class ConsultingTypeControllerE2EIT {
                 .cookie(CSRF_COOKIE)
                 .header(CSRF_HEADER, CSRF_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(consultingTypeDTO)))
+                .content(objectMapper.writeValueAsString(consultingTypePatchDTO)))
         // then
         .andExpect(status().isForbidden());
   }
