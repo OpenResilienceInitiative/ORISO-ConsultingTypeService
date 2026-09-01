@@ -1,29 +1,80 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.apache.commons.lang3.StringUtils.isBlank;
+import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
+import jakarta.annotation.PostConstruct;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
+/**
+ * Builds and sends the DPA signing email through the ORISO e-mail design system.
+ *
+ * <p>{@code src/main/resources/emails/avv-unterschrift.{html,txt}} is generated in ORISO-Frontend
+ * (`src/emails/`, `npm run emails:build`) and copied in by hand — this service has no
+ * `sync-email-templates.sh` yet, unlike UserService (see ADR-020 there). They are never edited in
+ * this repository; the wording is reviewed in Storybook, next to every other ORISO mail.
+ *
+ * <p>Single tone, single locale: unlike UserService's occasions, this mail has no Du/Sie or
+ * language switch — it always goes to a Träger admin, formally, in German — so this class reads one
+ * template pair rather than porting the full multi-tone renderer.
+ */
 @Service
 public class DpaSigningEmailService {
 
   private static final DateTimeFormatter EXPIRY_FORMAT =
       DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMAN);
+  private static final Pattern PLACEHOLDER = Pattern.compile("\\{\\{(\\w+)}}");
+  private static final String TEMPLATE_ID = "avv-unterschrift";
+
+  // From the catalogue's de-sie tone — this mail has no other tone, so the subject is not read
+  // dynamically the way UserService's multi-tone OrisoEmailRenderer does.
+  private static final String SUBJECT = "Auftragsverarbeitungsvertrag zur Unterschrift";
+
+  // ADR-021's ORISO default. No per-tenant override here: unlike UserService's tenant SMTP
+  // settings, ConsultingTypeService's global application settings carry no per-tenant theme
+  // colour for this admin-facing mail.
+  private static final String PRIMARY_COLOR = "#a5000a";
+  private static final String ACCENT_COLOR = "#cc1e1c";
 
   private final ApplicationSettingsService applicationSettingsService;
   private final SmtpPasswordEncryptionService smtpPasswordEncryptionService;
   private final DpaMailTransport dpaMailTransport;
   private final URI permittedAppOrigin;
+
+  @Value("${email.brand.platform-name:Online-Beratung}")
+  private String platformName;
+
+  @Value("${email.brand.org-name:ORISO}")
+  private String orgName;
+
+  @Value("${email.brand.org-address:}")
+  private String orgAddress;
+
+  @Value("${email.brand.contact-line:}")
+  private String contactLine;
+
+  @Value("${email.brand.logo-url:}")
+  private String logoUrl;
+
+  private String htmlTemplate;
+  private String textTemplate;
 
   public DpaSigningEmailService(
       @NonNull ApplicationSettingsService applicationSettingsService,
@@ -34,6 +85,12 @@ public class DpaSigningEmailService {
     this.smtpPasswordEncryptionService = smtpPasswordEncryptionService;
     this.dpaMailTransport = dpaMailTransport;
     this.permittedAppOrigin = parseUri(appBaseUrl, "appBaseUrl");
+  }
+
+  @PostConstruct
+  void loadTemplates() {
+    htmlTemplate = readResource(TEMPLATE_ID + ".html");
+    textTemplate = readResource(TEMPLATE_ID + ".txt");
   }
 
   /**
@@ -63,12 +120,79 @@ public class DpaSigningEmailService {
             .getApplicationSettings()
             .orElseThrow(() -> new IllegalStateException("Global SMTP settings are unavailable"));
     DpaMailSettings mailSettings = toMailSettings(entity);
-    String tenantName = command.getTenantName().trim();
+
+    Map<String, String> values = brandValues();
+    values.put("tenantName", command.getTenantName().trim());
+    // The command carries no "provided at" timestamp — approximated as send time, which is when
+    // the sign link actually becomes usable.
+    values.put("dpaProvidedAt", EXPIRY_FORMAT.format(LocalDateTime.now()));
+    values.put("dpaExpiresAt", EXPIRY_FORMAT.format(command.getExpiresAt()));
+    values.put("dpaUrl", signLink.toString());
+
     return dpaMailTransport.send(
         mailSettings,
         command.getRecipientEmail().trim(),
-        "ORISO: AVV für " + tenantName,
-        buildHtml(tenantName, signLink.toString(), command.getExpiresAt()));
+        SUBJECT,
+        substitute(htmlTemplate, values, true),
+        substitute(textTemplate, values, false));
+  }
+
+  private Map<String, String> brandValues() {
+    String base = trimTrailingSlash(permittedAppOrigin.toString());
+    Map<String, String> values = new LinkedHashMap<>();
+    values.put("platformName", platformName);
+    values.put("orgName", orgName);
+    values.put("orgAddress", orgAddress);
+    values.put("contactLine", contactLine);
+    values.put("logoUrl", logoUrl);
+    values.put("primaryColor", PRIMARY_COLOR);
+    values.put("accentColor", ACCENT_COLOR);
+    values.put("privacyUrl", base + "/datenschutz");
+    values.put("imprintUrl", base + "/impressum");
+    return values;
+  }
+
+  /**
+   * Substitutes {@code {{placeholders}}}. The HTML part escapes markup-significant characters — the
+   * tenant name is user-controlled input written into a document, not a log line.
+   */
+  private static String substitute(String source, Map<String, String> values, boolean escape) {
+    Matcher matcher = PLACEHOLDER.matcher(source);
+    StringBuilder out = new StringBuilder();
+    while (matcher.find()) {
+      String replacement = values.get(matcher.group(1));
+      if (replacement == null) {
+        matcher.appendReplacement(out, Matcher.quoteReplacement(matcher.group()));
+        continue;
+      }
+      matcher.appendReplacement(
+          out,
+          Matcher.quoteReplacement(
+              escape
+                  ? HtmlUtils.htmlEscape(replacement, StandardCharsets.UTF_8.name())
+                  : replacement));
+    }
+    matcher.appendTail(out);
+    return out.toString();
+  }
+
+  private static String readResource(String fileName) {
+    String path = "/emails/" + fileName;
+    try (InputStream in = DpaSigningEmailService.class.getResourceAsStream(path)) {
+      if (in == null) {
+        throw new IllegalStateException("e-mail template " + path + " is missing");
+      }
+      return new String(in.readAllBytes(), StandardCharsets.UTF_8);
+    } catch (IOException exception) {
+      throw new IllegalStateException("could not read e-mail template " + path, exception);
+    }
+  }
+
+  private static String trimTrailingSlash(String url) {
+    if (!isNotBlank(url)) {
+      return "";
+    }
+    return url.endsWith("/") ? url.substring(0, url.length() - 1) : url;
   }
 
   private DpaMailSettings toMailSettings(ApplicationSettingsEntity entity) {
@@ -105,31 +229,6 @@ public class DpaSigningEmailService {
         entity.getGlobalSmtpSecure() != null
             && Boolean.TRUE.equals(entity.getGlobalSmtpSecure().getValue());
     return new DpaMailSettings(host, port, secure, username, password, from);
-  }
-
-  private String buildHtml(String tenantName, String signLink, LocalDateTime expiresAt) {
-    String safeTenantName = HtmlUtils.htmlEscape(tenantName);
-    String safeLink = HtmlUtils.htmlEscape(signLink);
-    String safeExpiry = HtmlUtils.htmlEscape(EXPIRY_FORMAT.format(expiresAt));
-    return "<!doctype html><html lang=\"de\"><body style=\"margin:0;padding:0;background:#f3f2f2;font-family:Arial,sans-serif;color:#202020;\">"
-        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:32px 16px;\"><tr><td align=\"center\">"
-        + "<table role=\"presentation\" width=\"620\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:620px;background:#ffffff;border:1px solid #cbc8c8;border-radius:12px;overflow:hidden;\">"
-        + "<tr><td style=\"padding:20px 28px;background:#e7e5e5;color:#4a0000;font-size:20px;font-weight:700;\">ORISO</td></tr>"
-        + "<tr><td style=\"padding:30px 28px 10px;font-size:24px;line-height:32px;font-weight:700;\">Auftragsverarbeitungsvereinbarung prüfen</td></tr>"
-        + "<tr><td style=\"padding:0 28px 16px;font-size:16px;line-height:25px;\">Für <strong>"
-        + safeTenantName
-        + "</strong> wurde eine Auftragsverarbeitungsvereinbarung bereitgestellt. Über den folgenden Einmal-Link können Sie den vollständigen Vertrag lesen und verbindlich bestätigen.</td></tr>"
-        + "<tr><td style=\"padding:4px 28px 22px;\"><a href=\""
-        + safeLink
-        + "\" style=\"display:inline-block;background:#b90013;color:#ffffff;text-decoration:none;padding:13px 20px;border-radius:24px;font-weight:700;\">Vereinbarung ansehen und bestätigen</a></td></tr>"
-        + "<tr><td style=\"padding:0 28px 12px;color:#5f5c5c;font-size:14px;line-height:22px;\">Der Link ist einmalig verwendbar und gültig bis "
-        + safeExpiry
-        + ".</td></tr>"
-        + "<tr><td style=\"padding:0 28px 28px;color:#5f5c5c;font-size:13px;line-height:20px;word-break:break-all;\">Falls die Schaltfläche nicht funktioniert: <a href=\""
-        + safeLink
-        + "\">"
-        + safeLink
-        + "</a></td></tr></table></td></tr></table></body></html>";
   }
 
   private static Integer parsePort(String value) {
