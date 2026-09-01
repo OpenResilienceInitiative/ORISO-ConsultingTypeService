@@ -2,8 +2,6 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 
-import com.github.jknack.handlebars.internal.text.TextStringBuilder;
-import org.everit.json.schema.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -79,25 +77,5 @@ public class LogService {
   public static void logError(Exception exception, String message) {
     LOGGER.error(
         "{}:{}:{}", MESSAGE_CONSULTING_TYPE_SERVICE_API, message, getStackTrace(exception));
-  }
-
-  /**
-   * Logs an json schema {@link ValidationException} with all violations.
-   *
-   * @param message an error message
-   * @param filename the name of the invalid file
-   * @param validationException the {@link ValidationException}
-   */
-  public static void logJsonSchemaValidationException(
-      String message, String filename, ValidationException validationException) {
-    var textStringBuilder = new TextStringBuilder();
-    textStringBuilder.appendNewLine();
-    textStringBuilder.appendln(message);
-    textStringBuilder.appendln(
-        String.format("%s in file %s", validationException.getMessage(), filename));
-    validationException.getCausingExceptions().stream()
-        .map(ValidationException::getMessage)
-        .forEach(textStringBuilder::appendln);
-    LOGGER.error("{}{}", MESSAGE_CONSULTING_TYPE_SERVICE_API, textStringBuilder);
   }
 }
