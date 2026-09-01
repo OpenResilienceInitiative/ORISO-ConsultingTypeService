@@ -106,13 +106,13 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getGlobalSmtpSecure().setValue(settingsPatchDTO.getGlobalSmtpSecure());
     }
-    if (settingsPatchDTO.getGlobalSmtpUsername() != null) {
+    if (isRealCredentialValue(settingsPatchDTO.getGlobalSmtpUsername())) {
       if (entity.getGlobalSmtpUsername() == null) {
         entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
       }
       entity.getGlobalSmtpUsername().setValue(settingsPatchDTO.getGlobalSmtpUsername());
     }
-    if (settingsPatchDTO.getGlobalSmtpPassword() != null) {
+    if (isRealCredentialValue(settingsPatchDTO.getGlobalSmtpPassword())) {
       if (entity.getGlobalSmtpPassword() == null) {
         entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
       }
@@ -136,5 +136,16 @@ public class ApplicationSettingsServiceFacade {
           .getGlobalSmtpEmailThemeColor()
           .setValue(settingsPatchDTO.getGlobalSmtpEmailThemeColor());
     }
+  }
+
+  /**
+   * Credentials are write-only: since CTS-C01 they are no longer returned by GET /settings, so the
+   * admin form renders them empty and echoes blank (or masked) values back on every save. Such
+   * values must never overwrite the stored credentials - only a real new value does.
+   */
+  private static boolean isRealCredentialValue(String value) {
+    return value != null
+        && !value.isBlank()
+        && !value.chars().allMatch(c -> c == '*' || c == '\u2022');
   }
 }
