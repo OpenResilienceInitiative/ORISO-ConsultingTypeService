@@ -20,6 +20,8 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
+import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.RestrictedTenantDTO;
+import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.Theming;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -36,6 +38,7 @@ class DpaSigningEmailServiceTest {
   @Mock private ApplicationSettingsService applicationSettingsService;
   @Mock private SmtpPasswordEncryptionService smtpPasswordEncryptionService;
   @Mock private DpaMailTransport dpaMailTransport;
+  @Mock private TenantService tenantService;
 
   private DpaSigningEmailService service;
 
@@ -46,6 +49,7 @@ class DpaSigningEmailServiceTest {
             applicationSettingsService,
             smtpPasswordEncryptionService,
             dpaMailTransport,
+            tenantService,
             "https://app.oriso-dev.site");
     org.springframework.test.util.ReflectionTestUtils.setField(
         service, "platformName", "Online-Beratung");
@@ -140,10 +144,101 @@ class DpaSigningEmailServiceTest {
         applicationSettingsService, smtpPasswordEncryptionService, dpaMailTransport);
   }
 
+  @Test
+  void send_withoutLogo_omitsImageCellAndUnresolvedTokens() {
+    String html = renderBrandMail();
+    assertThat(html).doesNotContain("<img", "src=\"\"", "{{");
+  }
+
+  @Test
+  void send_platformBrandIsIndependentOfRecipientTenant() {
+    var platform = new RestrictedTenantDTO();
+    platform.setId(7L);
+    platform.setName("Platform Brand");
+    var theming = new Theming();
+    theming.setLogo("data:image/png;base64,aGVsbG8=");
+    theming.setPrimaryColor("#123456");
+    platform.setTheming(theming);
+    when(tenantService.getPlatformTenantData("app")).thenReturn(platform);
+    de.caritas.cob.consultingtypeservice.api.tenant.TenantContext.setCurrentTenant(40L);
+    try {
+      assertThat(renderBrandMail())
+          .contains("Platform Brand", "/service/tenant/public/branding/7/logo", "#123456")
+          .contains("zwischen ORISO und Recipient Tenant")
+          .doesNotContain("data:image", "/branding/40/", "{{");
+    } finally {
+      de.caritas.cob.consultingtypeservice.api.tenant.TenantContext.clear();
+    }
+  }
+
+  @Test
+  void send_foreignLogoDoesNotLeaveFirstPartyOrigin() {
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        service, "logoUrl", "https://external.example/track.png");
+    assertThat(renderBrandMail()).doesNotContain("<img", "external.example");
+  }
+
+  @Test
+  void send_sameOriginHttpsLogoIsEscapedAndIncluded() {
+    org.springframework.test.util.ReflectionTestUtils.setField(
+        service, "logoUrl", "https://app.oriso-dev.site/assets/oriso.png");
+    assertThat(renderBrandMail()).contains("<img", "https://app.oriso-dev.site/assets/oriso.png");
+  }
+
+  @Test
+  void send_missingPlatformIdDoesNotInventImageEndpoint() {
+    var platform = new RestrictedTenantDTO();
+    var theming = new Theming();
+    theming.setLogo("data:image/png;base64,aGVsbG8=");
+    theming.setPrimaryColor("#ffffff");
+    platform.setTheming(theming);
+    when(tenantService.getPlatformTenantData("app")).thenReturn(platform);
+    assertThat(renderBrandMail())
+        .doesNotContain("<img", "/branding/null/")
+        .contains("bgcolor=\"#a5000a\"");
+  }
+
+  @Test
+  void send_legacyStoredBase64UsesReturnedPlatformId() {
+    var platform = new RestrictedTenantDTO();
+    platform.setId(7L);
+    var theming = new Theming();
+    theming.setLogo("aGVsbG8=");
+    platform.setTheming(theming);
+    when(tenantService.getPlatformTenantData("app")).thenReturn(platform);
+    assertThat(renderBrandMail()).contains("/service/tenant/public/branding/7/logo");
+  }
+
+  @Test
+  void send_platformLookupUnavailableRetainsConfiguredBrand() {
+    when(tenantService.getPlatformTenantData("app"))
+        .thenThrow(new IllegalStateException("owner unavailable"));
+    assertThat(renderBrandMail()).contains("Online-Beratung", "ORISO").doesNotContain("{{", "<img");
+  }
+
+  private String renderBrandMail() {
+    when(applicationSettingsService.getApplicationSettings())
+        .thenReturn(Optional.of(configuredSettings()));
+    when(smtpPasswordEncryptionService.decrypt("encrypted-password")).thenReturn("secret");
+    service.send(
+        new DpaSigningEmailService.DpaSigningEmailCommand(
+            "bart.simpson@oriso.org",
+            "Recipient Tenant",
+            "https://app.oriso-dev.site/dpa-sign/synthetic-token",
+            LocalDateTime.parse("2026-08-03T13:27:28")));
+    ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
+    verify(dpaMailTransport).send(any(), anyString(), anyString(), html.capture(), anyString());
+    return html.getValue();
+  }
+
   private ApplicationSettingsEntity configuredSettings() {
     var settings = new ApplicationSettingsEntity();
     settings.setGlobalFeatureSystemNotificationEmailsEnabled(
         new GlobalFeatureSystemNotificationEmailsEnabled().withValue(true).withReadOnly(false));
+    settings.setMainTenantSubdomainForSingleDomainMultitenancy(
+        new de.caritas.cob.consultingtypeservice.schemas.model
+                .MainTenantSubdomainForSingleDomainMultitenancy()
+            .withValue("app"));
     settings.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(true).withReadOnly(false));
     settings.setGlobalSmtpHost(
         new GlobalSmtpHost().withValue("smtp.dreambau.com").withReadOnly(false));
