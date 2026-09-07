@@ -4,12 +4,15 @@ import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import jakarta.mail.Authenticator;
 import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
 import jakarta.mail.PasswordAuthentication;
 import jakarta.mail.Session;
 import jakarta.mail.Transport;
 import jakarta.mail.internet.AddressException;
 import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
 import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
 import java.time.Instant;
 import java.util.Properties;
 import org.springframework.stereotype.Component;
@@ -19,7 +22,11 @@ public class JakartaDpaMailTransport implements DpaMailTransport {
 
   @Override
   public DpaMailSendReceipt send(
-      DpaMailSettings settings, String recipient, String subject, String htmlBody) {
+      DpaMailSettings settings,
+      String recipient,
+      String subject,
+      String htmlBody,
+      String textBody) {
     // parse the recipient before anything touches the transport: an unparseable address is a
     // client error (400), not an upstream SMTP failure (502) - the broad catch below must
     // never reclassify it (U5 verify finding)
@@ -39,16 +46,31 @@ public class JakartaDpaMailTransport implements DpaMailTransport {
                   return new PasswordAuthentication(settings.getUsername(), settings.getPassword());
                 }
               });
-      Message message = new MimeMessage(session);
+      MimeMessage message = new MimeMessage(session);
       message.setFrom(new InternetAddress(settings.getFrom()));
       message.setRecipients(Message.RecipientType.TO, recipients);
-      message.setSubject(subject);
-      message.setContent(htmlBody, "text/html; charset=UTF-8");
+      message.setSubject(subject, "UTF-8");
+      message.setContent(alternative(htmlBody, textBody));
       Transport.send(message);
       return new DpaMailSendReceipt(recipient, Instant.now());
     } catch (Exception exception) {
       throw new SmtpSendException("DPA signing email could not be sent", exception);
     }
+  }
+
+  /** Least-preferred part first, so a client that understands HTML picks the second. */
+  private static MimeMultipart alternative(String htmlBody, String textBody)
+      throws MessagingException {
+    MimeBodyPart textPart = new MimeBodyPart();
+    textPart.setText(textBody, "UTF-8");
+
+    MimeBodyPart htmlPart = new MimeBodyPart();
+    htmlPart.setContent(htmlBody, "text/html; charset=UTF-8");
+
+    MimeMultipart multipart = new MimeMultipart("alternative");
+    multipart.addBodyPart(textPart);
+    multipart.addBodyPart(htmlPart);
+    return multipart;
   }
 
   /**
