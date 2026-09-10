@@ -4,6 +4,8 @@ import static org.apache.commons.lang3.StringUtils.isBlank;
 
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
+import de.caritas.cob.consultingtypeservice.api.service.email.DpaMailContent;
+import de.caritas.cob.consultingtypeservice.api.service.email.DpaMailTemplateRenderer;
 import java.net.URI;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -12,7 +14,6 @@ import java.util.Objects;
 import lombok.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.util.HtmlUtils;
 
 @Service
 public class DpaSigningEmailService {
@@ -23,16 +24,19 @@ public class DpaSigningEmailService {
   private final ApplicationSettingsService applicationSettingsService;
   private final SmtpPasswordEncryptionService smtpPasswordEncryptionService;
   private final DpaMailTransport dpaMailTransport;
+  private final DpaMailTemplateRenderer templateRenderer;
   private final URI permittedAppOrigin;
 
   public DpaSigningEmailService(
       @NonNull ApplicationSettingsService applicationSettingsService,
       @NonNull SmtpPasswordEncryptionService smtpPasswordEncryptionService,
       @NonNull DpaMailTransport dpaMailTransport,
+      @NonNull DpaMailTemplateRenderer templateRenderer,
       @Value("${dpa.sign.frontend.base-url:https://app.oriso.org}") String appBaseUrl) {
     this.applicationSettingsService = applicationSettingsService;
     this.smtpPasswordEncryptionService = smtpPasswordEncryptionService;
     this.dpaMailTransport = dpaMailTransport;
+    this.templateRenderer = templateRenderer;
     this.permittedAppOrigin = parseUri(appBaseUrl, "appBaseUrl");
   }
 
@@ -64,11 +68,14 @@ public class DpaSigningEmailService {
             .orElseThrow(() -> new IllegalStateException("Global SMTP settings are unavailable"));
     DpaMailSettings mailSettings = toMailSettings(entity);
     String tenantName = command.getTenantName().trim();
+    DpaMailContent content =
+        new DpaMailContent(
+            tenantName, null, EXPIRY_FORMAT.format(command.getExpiresAt()), signLink.toString());
     return dpaMailTransport.send(
         mailSettings,
         command.getRecipientEmail().trim(),
-        "ORISO: AVV für " + tenantName,
-        buildHtml(tenantName, signLink.toString(), command.getExpiresAt()));
+        templateRenderer.subject(),
+        templateRenderer.renderHtml(content));
   }
 
   private DpaMailSettings toMailSettings(ApplicationSettingsEntity entity) {
@@ -105,31 +112,6 @@ public class DpaSigningEmailService {
         entity.getGlobalSmtpSecure() != null
             && Boolean.TRUE.equals(entity.getGlobalSmtpSecure().getValue());
     return new DpaMailSettings(host, port, secure, username, password, from);
-  }
-
-  private String buildHtml(String tenantName, String signLink, LocalDateTime expiresAt) {
-    String safeTenantName = HtmlUtils.htmlEscape(tenantName);
-    String safeLink = HtmlUtils.htmlEscape(signLink);
-    String safeExpiry = HtmlUtils.htmlEscape(EXPIRY_FORMAT.format(expiresAt));
-    return "<!doctype html><html lang=\"de\"><body style=\"margin:0;padding:0;background:#f3f2f2;font-family:Arial,sans-serif;color:#202020;\">"
-        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:32px 16px;\"><tr><td align=\"center\">"
-        + "<table role=\"presentation\" width=\"620\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:620px;background:#ffffff;border:1px solid #cbc8c8;border-radius:12px;overflow:hidden;\">"
-        + "<tr><td style=\"padding:20px 28px;background:#e7e5e5;color:#4a0000;font-size:20px;font-weight:700;\">ORISO</td></tr>"
-        + "<tr><td style=\"padding:30px 28px 10px;font-size:24px;line-height:32px;font-weight:700;\">Auftragsverarbeitungsvereinbarung prüfen</td></tr>"
-        + "<tr><td style=\"padding:0 28px 16px;font-size:16px;line-height:25px;\">Für <strong>"
-        + safeTenantName
-        + "</strong> wurde eine Auftragsverarbeitungsvereinbarung bereitgestellt. Über den folgenden Einmal-Link können Sie den vollständigen Vertrag lesen und verbindlich bestätigen.</td></tr>"
-        + "<tr><td style=\"padding:4px 28px 22px;\"><a href=\""
-        + safeLink
-        + "\" style=\"display:inline-block;background:#b90013;color:#ffffff;text-decoration:none;padding:13px 20px;border-radius:24px;font-weight:700;\">Vereinbarung ansehen und bestätigen</a></td></tr>"
-        + "<tr><td style=\"padding:0 28px 12px;color:#5f5c5c;font-size:14px;line-height:22px;\">Der Link ist einmalig verwendbar und gültig bis "
-        + safeExpiry
-        + ".</td></tr>"
-        + "<tr><td style=\"padding:0 28px 28px;color:#5f5c5c;font-size:13px;line-height:20px;word-break:break-all;\">Falls die Schaltfläche nicht funktioniert: <a href=\""
-        + safeLink
-        + "\">"
-        + safeLink
-        + "</a></td></tr></table></td></tr></table></body></html>";
   }
 
   private static Integer parsePort(String value) {

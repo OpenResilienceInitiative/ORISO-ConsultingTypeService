@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
+import de.caritas.cob.consultingtypeservice.api.service.email.DpaMailTemplateRenderer;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
@@ -46,6 +47,15 @@ class DpaSigningEmailServiceTest {
             applicationSettingsService,
             smtpPasswordEncryptionService,
             dpaMailTransport,
+            new DpaMailTemplateRenderer(
+                "ORISO",
+                "Sunflower Care gGmbH",
+                "Musterweg 1, 28195 Bremen",
+                "kontakt@oriso.org",
+                "https://app.oriso-dev.site/datenschutz",
+                "https://app.oriso-dev.site/impressum",
+                "#b90013",
+                "#b90013"),
             "https://app.oriso-dev.site");
   }
 
@@ -83,12 +93,63 @@ class DpaSigningEmailServiceTest {
             eq("bart.simpson@oriso.org"),
             subject.capture(),
             html.capture());
-    assertThat(subject.getValue()).contains("AVV", "E2E Full Gate 202607191747");
+    assertThat(subject.getValue()).isEqualTo("Auftragsverarbeitungsvertrag zur Unterschrift");
     assertThat(html.getValue())
-        .contains("vollständigen Vertrag lesen")
+        .contains("Bitte prüfen Sie den Vertrag")
         .contains("https://app.oriso-dev.site/dpa-sign/single-use-token")
         .contains("03.08.2026")
         .doesNotContain("secret");
+  }
+
+  /**
+   * The AVV mail is the design system's `avv-unterschrift` page, not an HTML string concatenated in
+   * Java (owner report 2026-09-10). Three defects the hand-written version shipped and this pins
+   * shut:
+   *
+   * <ul>
+   *   <li>the Träger name sat in the subject as "AVV für " + name, so the generic fallback of the
+   *       forwarding service produced the ungrammatical "AVV für Ihrer Organisation" — the kit
+   *       subject carries no name at all and cannot decline anything wrongly;
+   *   <li>the frame was a second, older design than every other platform mail;
+   *   <li>it advertised an "Einmal-Link", wording that appears nowhere else in the product.
+   * </ul>
+   */
+  @Test
+  void send_Should_renderTheDesignSystemAvvTemplate_NotAHandWrittenHtmlString() {
+    when(applicationSettingsService.getApplicationSettings())
+        .thenReturn(Optional.of(configuredSettings()));
+    when(smtpPasswordEncryptionService.decrypt("encrypted-password")).thenReturn("secret");
+    when(dpaMailTransport.send(any(), anyString(), anyString(), anyString()))
+        .thenReturn(new DpaMailSendReceipt("bart.simpson@oriso.org", Instant.now()));
+
+    service.send(
+        new DpaSigningEmailService.DpaSigningEmailCommand(
+            "bart.simpson@oriso.org",
+            "Sep10Träger",
+            "https://app.oriso-dev.site/dpa-sign/single-use-token",
+            LocalDateTime.parse("2026-09-24T07:18:00")));
+
+    ArgumentCaptor<String> subject = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> html = ArgumentCaptor.forClass(String.class);
+    verify(dpaMailTransport)
+        .send(any(), eq("bart.simpson@oriso.org"), subject.capture(), html.capture());
+
+    assertThat(subject.getValue())
+        .as("no tenant name in the subject — that is what produced the broken declension")
+        .isEqualTo("Auftragsverarbeitungsvertrag zur Unterschrift");
+    assertThat(html.getValue())
+        .as("the kit frame")
+        .contains("background-color:#f2efef")
+        .contains("border-radius:24px")
+        .contains("font-family:Inter,");
+    assertThat(html.getValue())
+        .as("the kit copy, with the name in a slot that reads grammatically")
+        .contains("Für Sep10Träger wurde ein Auftragsverarbeitungsvertrag erstellt.");
+    assertThat(html.getValue())
+        .as("no invented wording, and a footer that exists at all")
+        .doesNotContain("Einmal-Link")
+        .doesNotContain("einmalig verwendbar")
+        .contains("Impressum");
   }
 
   @Test
