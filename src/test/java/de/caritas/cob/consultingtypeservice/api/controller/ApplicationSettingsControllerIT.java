@@ -305,6 +305,52 @@ class ApplicationSettingsControllerIT {
     applicationSettingsRepository.save(entity);
   }
 
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnCredentials_When_UserIsTechnicalUser()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("technical-smtp-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("technical-smtp-pass").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(authentication(builder.withUserRole("technical").build())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.globalSmtpUsername").value("technical-smtp-user"))
+        .andExpect(jsonPath("$.globalSmtpPassword").value("technical-smtp-pass"));
+
+    entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnForbidden_When_TenantAdminHasNoTenantIdClaim()
+      throws Exception {
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(authentication(builder.withUserRole(TENANT_ADMIN.getValue()).build())))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnUnauthorized_When_RequestIsAnonymous()
+      throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials").accept(APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
   private void giveApplicationSettingEntityWithDynamicReleaseToggles() {
     ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
     entity.setReleaseToggles("featureToggleTenantCreationEnabled", true);
