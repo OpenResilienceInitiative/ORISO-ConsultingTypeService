@@ -10,7 +10,6 @@ import java.time.LocalDateTime;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
@@ -72,7 +71,12 @@ class DpaSigningEmailServiceOriginBindingTest {
         LocalDateTime.parse("2026-08-03T13:27:28"));
   }
 
-  @Configuration
+  /**
+   * Deliberately NOT a {@code @Configuration}: the real {@code @SpringBootTest} ITs component-scan
+   * this package and would otherwise pick these mock beans up, producing duplicate {@code
+   * DpaMailTransport} beans (CI run 105014992109). {@code @Bean} methods on a plain class are
+   * registered only through {@code withUserConfiguration}.
+   */
   static class Collaborators {
     @Bean
     ApplicationSettingsService applicationSettingsService() {
