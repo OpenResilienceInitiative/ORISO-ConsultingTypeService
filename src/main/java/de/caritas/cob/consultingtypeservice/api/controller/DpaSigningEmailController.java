@@ -3,6 +3,7 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 import de.caritas.cob.consultingtypeservice.api.service.DpaMailSendReceipt;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailCommand;
+import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailPreview;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -48,6 +49,19 @@ public class DpaSigningEmailController {
             "SENT", receipt.getRecipientEmail(), receipt.getSentAt().toString()));
   }
 
+  /** Renders the exact DPA signing mail without accessing SMTP settings or sending it. */
+  @PostMapping("/preview")
+  @PreAuthorize("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')")
+  public ResponseEntity<DpaSigningEmailPreviewResponse> preview(
+      @Valid @RequestBody DpaSigningEmailRequest request) {
+    DpaSigningEmailPreview preview =
+        dpaSigningEmailService.preview(
+            new DpaSigningEmailCommand(
+                request.recipientEmail, request.tenantName, request.signLink, request.expiresAt));
+    return ResponseEntity.ok(
+        new DpaSigningEmailPreviewResponse(preview.getSubject(), preview.getHtml()));
+  }
+
   @Data
   public static class DpaSigningEmailRequest {
     @NotBlank @Email private String recipientEmail;
@@ -62,5 +76,12 @@ public class DpaSigningEmailController {
     String status;
     String recipientEmail;
     String sentAt;
+  }
+
+  /** Rendered content only; this response contains no SMTP configuration or delivery receipt. */
+  @lombok.Value
+  public static class DpaSigningEmailPreviewResponse {
+    String subject;
+    String html;
   }
 }
