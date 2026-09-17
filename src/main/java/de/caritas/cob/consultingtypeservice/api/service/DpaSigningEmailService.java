@@ -44,6 +44,30 @@ public class DpaSigningEmailService {
    *     - this method never reports success without a confirmed handover
    */
   public DpaMailSendReceipt send(DpaSigningEmailCommand command) {
+    DpaSigningEmailPreview preview = preview(command);
+    ApplicationSettingsEntity entity =
+        applicationSettingsService
+            .getApplicationSettings()
+            .orElseThrow(() -> new IllegalStateException("Global SMTP settings are unavailable"));
+    DpaMailSettings mailSettings = toMailSettings(entity);
+    return dpaMailTransport.send(
+        mailSettings, command.getRecipientEmail().trim(), preview.getSubject(), preview.getHtml());
+  }
+
+  /**
+   * Renders the signing mail without loading SMTP settings or handing a message to the transport.
+   * The preview and the actual send therefore share the same subject, escaping and sign-link
+   * validation.
+   */
+  public DpaSigningEmailPreview preview(DpaSigningEmailCommand command) {
+    validateCommand(command);
+    URI signLink = parseUri(command.getSignLink(), "signLink");
+    return new DpaSigningEmailPreview(
+        "ORISO: Vertragsunterlagen für " + command.getTenantName().trim(),
+        buildHtml(command.getTenantName().trim(), signLink.toString(), command.getExpiresAt()));
+  }
+
+  private void validateCommand(DpaSigningEmailCommand command) {
     if (command == null
         || isBlank(command.getRecipientEmail())
         || isBlank(command.getTenantName())
@@ -57,18 +81,6 @@ public class DpaSigningEmailService {
         || !signLink.getPath().startsWith("/dpa-sign/")) {
       throw new BadRequestException("signLink must use the configured ORISO App origin");
     }
-
-    ApplicationSettingsEntity entity =
-        applicationSettingsService
-            .getApplicationSettings()
-            .orElseThrow(() -> new IllegalStateException("Global SMTP settings are unavailable"));
-    DpaMailSettings mailSettings = toMailSettings(entity);
-    String tenantName = command.getTenantName().trim();
-    return dpaMailTransport.send(
-        mailSettings,
-        command.getRecipientEmail().trim(),
-        "ORISO: AVV für " + tenantName,
-        buildHtml(tenantName, signLink.toString(), command.getExpiresAt()));
   }
 
   private DpaMailSettings toMailSettings(ApplicationSettingsEntity entity) {
@@ -115,14 +127,14 @@ public class DpaSigningEmailService {
         + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:32px 16px;\"><tr><td align=\"center\">"
         + "<table role=\"presentation\" width=\"620\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:620px;background:#ffffff;border:1px solid #cbc8c8;border-radius:12px;overflow:hidden;\">"
         + "<tr><td style=\"padding:20px 28px;background:#e7e5e5;color:#4a0000;font-size:20px;font-weight:700;\">ORISO</td></tr>"
-        + "<tr><td style=\"padding:30px 28px 10px;font-size:24px;line-height:32px;font-weight:700;\">Auftragsverarbeitungsvereinbarung prüfen</td></tr>"
+        + "<tr><td style=\"padding:30px 28px 10px;font-size:24px;line-height:32px;font-weight:700;\">Vertragsunterlagen</td></tr>"
         + "<tr><td style=\"padding:0 28px 16px;font-size:16px;line-height:25px;\">Für <strong>"
         + safeTenantName
-        + "</strong> wurde eine Auftragsverarbeitungsvereinbarung bereitgestellt. Über den folgenden Einmal-Link können Sie den vollständigen Vertrag lesen und verbindlich bestätigen.</td></tr>"
+        + "</strong> wurden Vertragsunterlagen zur Nutzung der Online-Beratungsplattform bereitgestellt. Über den folgenden Link können Sie die Unterlagen vollständig lesen und verbindlich bestätigen.</td></tr>"
         + "<tr><td style=\"padding:4px 28px 22px;\"><a href=\""
         + safeLink
-        + "\" style=\"display:inline-block;background:#b90013;color:#ffffff;text-decoration:none;padding:13px 20px;border-radius:24px;font-weight:700;\">Vereinbarung ansehen und bestätigen</a></td></tr>"
-        + "<tr><td style=\"padding:0 28px 12px;color:#5f5c5c;font-size:14px;line-height:22px;\">Der Link ist einmalig verwendbar und gültig bis "
+        + "\" style=\"display:inline-block;background:#b90013;color:#ffffff;text-decoration:none;padding:13px 20px;border-radius:24px;font-weight:700;\">Unterlagen ansehen und bestätigen</a></td></tr>"
+        + "<tr><td style=\"padding:0 28px 12px;color:#5f5c5c;font-size:14px;line-height:22px;\">Die Unterlagen können bis zur Bestätigung oder bis zum Ablauf des Links erneut geöffnet werden. Die Bestätigung kann nur einmal abgegeben werden. Der Link ist gültig bis "
         + safeExpiry
         + ".</td></tr>"
         + "<tr><td style=\"padding:0 28px 28px;color:#5f5c5c;font-size:13px;line-height:20px;word-break:break-all;\">Falls die Schaltfläche nicht funktioniert: <a href=\""
@@ -175,5 +187,11 @@ public class DpaSigningEmailService {
     String tenantName;
     String signLink;
     LocalDateTime expiresAt;
+  }
+
+  @lombok.Value
+  public static class DpaSigningEmailPreview {
+    String subject;
+    String html;
   }
 }

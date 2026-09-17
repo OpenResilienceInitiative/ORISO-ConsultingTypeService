@@ -51,6 +51,16 @@ class DpaSigningEmailServiceTest {
 
   @Test
   void send_validDpaRequest_usesStoredCredentialsWithoutExposingThem() {
+    var command =
+        new DpaSigningEmailService.DpaSigningEmailCommand(
+            "bart.simpson@oriso.org",
+            "E2E Full Gate 202607191747",
+            "https://app.oriso-dev.site/dpa-sign/single-use-token",
+            LocalDateTime.parse("2026-08-03T13:27:28.243207790"));
+    final DpaSigningEmailService.DpaSigningEmailPreview preview = service.preview(command);
+    verifyNoInteractions(
+        applicationSettingsService, smtpPasswordEncryptionService, dpaMailTransport);
+
     when(applicationSettingsService.getApplicationSettings())
         .thenReturn(Optional.of(configuredSettings()));
     when(smtpPasswordEncryptionService.decrypt("encrypted-password")).thenReturn("secret");
@@ -59,13 +69,7 @@ class DpaSigningEmailServiceTest {
     when(dpaMailTransport.send(any(), anyString(), anyString(), anyString()))
         .thenReturn(transportReceipt);
 
-    DpaMailSendReceipt receipt =
-        service.send(
-            new DpaSigningEmailService.DpaSigningEmailCommand(
-                "bart.simpson@oriso.org",
-                "E2E Full Gate 202607191747",
-                "https://app.oriso-dev.site/dpa-sign/single-use-token",
-                LocalDateTime.parse("2026-08-03T13:27:28.243207790")));
+    DpaMailSendReceipt receipt = service.send(command);
 
     assertThat(receipt).isSameAs(transportReceipt);
     ArgumentCaptor<String> subject = ArgumentCaptor.forClass(String.class);
@@ -83,11 +87,22 @@ class DpaSigningEmailServiceTest {
             eq("bart.simpson@oriso.org"),
             subject.capture(),
             html.capture());
-    assertThat(subject.getValue()).contains("AVV", "E2E Full Gate 202607191747");
-    assertThat(html.getValue())
-        .contains("vollständigen Vertrag lesen")
+    assertThat(subject.getValue()).isEqualTo(preview.getSubject());
+    assertThat(html.getValue()).isEqualTo(preview.getHtml());
+    assertThat(preview.getSubject())
+        .isEqualTo("ORISO: Vertragsunterlagen für E2E Full Gate 202607191747");
+    assertThat(preview.getHtml())
+        .contains("Vertragsunterlagen")
+        .contains(
+            "wurden Vertragsunterlagen zur Nutzung der Online-Beratungsplattform bereitgestellt")
+        .contains("Unterlagen ansehen und bestätigen")
+        .contains(
+            "Die Unterlagen können bis zur Bestätigung oder bis zum Ablauf des Links erneut geöffnet werden")
+        .contains("Die Bestätigung kann nur einmal abgegeben werden")
         .contains("https://app.oriso-dev.site/dpa-sign/single-use-token")
         .contains("03.08.2026")
+        .doesNotContain("Auftragsverarbeitungsvereinbarung prüfen")
+        .doesNotContain("Vereinbarung ansehen und bestätigen")
         .doesNotContain("secret");
   }
 
@@ -119,6 +134,22 @@ class DpaSigningEmailServiceTest {
             LocalDateTime.parse("2026-08-03T13:27:28.243207790"));
 
     assertThatThrownBy(() -> service.send(command))
+        .isInstanceOf(BadRequestException.class)
+        .hasMessageContaining("signLink");
+    verifyNoInteractions(
+        applicationSettingsService, smtpPasswordEncryptionService, dpaMailTransport);
+  }
+
+  @Test
+  void preview_foreignOrigin_rejectsWithoutReadingSettingsOrSending() {
+    var command =
+        new DpaSigningEmailService.DpaSigningEmailCommand(
+            "bart.simpson@oriso.org",
+            "E2E Full Gate 202607191747",
+            "https://attacker.example/dpa-sign/stolen-token",
+            LocalDateTime.parse("2026-08-03T13:27:28.243207790"));
+
+    assertThatThrownBy(() -> service.preview(command))
         .isInstanceOf(BadRequestException.class)
         .hasMessageContaining("signLink");
     verifyNoInteractions(
