@@ -125,7 +125,7 @@ public class DpaSigningEmailService {
     String safeExpiry = HtmlUtils.htmlEscape(EXPIRY_FORMAT.format(expiresAt));
     return "<!doctype html><html lang=\"de\"><body style=\"margin:0;padding:0;background:#f3f2f2;font-family:Arial,sans-serif;color:#202020;\">"
         + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:32px 16px;\"><tr><td align=\"center\">"
-        + "<table role=\"presentation\" width=\"620\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:620px;background:#ffffff;border:1px solid #cbc8c8;border-radius:12px;overflow:hidden;\">"
+        + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:620px;background:#ffffff;border:1px solid #cbc8c8;border-radius:12px;overflow:hidden;\">"
         + "<tr><td style=\"padding:20px 28px;background:#e7e5e5;color:#4a0000;font-size:20px;font-weight:700;\">ORISO</td></tr>"
         + "<tr><td style=\"padding:30px 28px 10px;font-size:24px;line-height:32px;font-weight:700;\">Vertragsunterlagen</td></tr>"
         + "<tr><td style=\"padding:0 28px 16px;font-size:16px;line-height:25px;\">Für <strong>"
