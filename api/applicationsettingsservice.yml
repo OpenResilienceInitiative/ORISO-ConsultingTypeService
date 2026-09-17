@@ -59,7 +59,7 @@ paths:
     get:
       tags:
         - applicationsettings-controller
-      summary: 'Get global SMTP credentials (super admin only)'
+      summary: 'Get global SMTP credentials (super admin or technical service user only)'
       operationId: getGlobalSmtpCredentials
       responses:
         200:

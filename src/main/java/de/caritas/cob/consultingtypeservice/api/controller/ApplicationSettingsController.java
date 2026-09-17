@@ -59,7 +59,9 @@ public class ApplicationSettingsController implements SettingsApi, Settingsadmin
   }
 
   @Override
-  @PreAuthorize("@authorisationService.isSuperAdmin()")
+  @PreAuthorize(
+      "@authorisationService.isSuperAdmin() "
+          + "or hasAuthority('AUTHORIZATION_TECHNICAL_DEFAULT')")
   public ResponseEntity<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
     var credentials = applicationSettingsServiceFacade.getGlobalSmtpCredentials();
     return credentials.isPresent()

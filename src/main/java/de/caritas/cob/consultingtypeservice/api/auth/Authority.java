@@ -28,7 +28,9 @@ public enum Authority {
           AuthorityValue.CREATE_TOPIC,
           AuthorityValue.UPDATE_TOPIC,
           AuthorityValue.GET_ALL_TOPICS,
-          AuthorityValue.GET_TOPICS_TRANSLATION_BY_ID));
+          AuthorityValue.GET_TOPICS_TRANSLATION_BY_ID)),
+
+  TECHNICAL(UserRole.TECHNICAL, Lists.newArrayList(AuthorityValue.TECHNICAL_DEFAULT));
 
   private final UserRole userRole;
   private final List<String> grantedAuthorities;
@@ -58,5 +60,6 @@ public enum Authority {
     public static final String GET_ALL_TOPICS = PREFIX + "GET_ALL_TOPICS";
     public static final String GET_TOPICS_TRANSLATION_BY_ID =
         PREFIX + "GET_TOPICS_TRANSLATION_BY_ID";
+    public static final String TECHNICAL_DEFAULT = PREFIX + "TECHNICAL_DEFAULT";
   }
 }
