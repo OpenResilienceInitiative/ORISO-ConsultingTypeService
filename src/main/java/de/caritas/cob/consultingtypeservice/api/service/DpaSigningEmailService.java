@@ -29,7 +29,7 @@ public class DpaSigningEmailService {
       @NonNull ApplicationSettingsService applicationSettingsService,
       @NonNull SmtpPasswordEncryptionService smtpPasswordEncryptionService,
       @NonNull DpaMailTransport dpaMailTransport,
-      @Value("${dpa.sign.frontend.base-url:https://app.oriso.org}") String appBaseUrl) {
+      @Value("${dpa.sign.frontend.base-url:${app.base.url}}") String appBaseUrl) {
     this.applicationSettingsService = applicationSettingsService;
     this.smtpPasswordEncryptionService = smtpPasswordEncryptionService;
     this.dpaMailTransport = dpaMailTransport;
