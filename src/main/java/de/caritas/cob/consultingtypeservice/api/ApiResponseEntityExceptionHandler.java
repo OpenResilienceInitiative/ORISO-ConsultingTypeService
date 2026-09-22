@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api;
 
 import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
@@ -48,6 +49,21 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
     LogService.logWarning(ex);
 
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+  }
+
+  /**
+   * Custom Conflict exception.
+   *
+   * @param ex the thrown exception
+   * @param request web request
+   * @return response entity
+   */
+  @ExceptionHandler({ConflictException.class})
+  public ResponseEntity<Object> handleCustomConflict(
+      final ConflictException ex, final WebRequest request) {
+    LogService.logWarning(ex);
+
+    return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.CONFLICT, request);
   }
 
   /**
