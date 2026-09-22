@@ -33,7 +33,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import org.jeasy.random.EasyRandom;
 import org.junit.jupiter.api.Test;
-import org.keycloak.admin.client.Keycloak;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,8 +65,6 @@ class ConsultingTypeControllerE2EIT {
   @Autowired private ConsultingTypeConverter consultingTypeConverter;
 
   @Autowired private ConsultingTypeRepository consultingTypeRepository;
-
-  @MockitoBean private Keycloak keycloak;
 
   @MockitoBean AuthenticatedUser authenticatedUser;
 
