@@ -26,7 +26,9 @@ public class DpaSigningEmailController implements DpaSigningEmailControllerApi {
   private final @NonNull DpaSigningEmailService dpaSigningEmailService;
 
   @Override
-  @PreAuthorize("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')")
+  @PreAuthorize(
+      "hasAnyAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS',"
+          + " 'AUTHORIZATION_TECHNICAL_SEND_DPA_SIGNING_EMAIL')")
   public ResponseEntity<DpaSigningEmailResponse> sendDpaSigningEmail(
       @Valid DpaSigningEmailRequest request) {
     DpaMailSendReceipt receipt = dpaSigningEmailService.send(toCommand(request));
@@ -39,7 +41,9 @@ public class DpaSigningEmailController implements DpaSigningEmailControllerApi {
 
   /** Renders the exact DPA signing mail without accessing SMTP settings or sending it. */
   @Override
-  @PreAuthorize("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')")
+  @PreAuthorize(
+      "hasAnyAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS',"
+          + " 'AUTHORIZATION_TECHNICAL_SEND_DPA_SIGNING_EMAIL')")
   public ResponseEntity<DpaSigningEmailPreviewResponse> previewDpaSigningEmail(
       @Valid DpaSigningEmailRequest request) {
     DpaSigningEmailPreview preview = dpaSigningEmailService.preview(toCommand(request));

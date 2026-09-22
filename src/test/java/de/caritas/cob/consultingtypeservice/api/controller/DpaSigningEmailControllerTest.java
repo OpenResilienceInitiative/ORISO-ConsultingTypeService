@@ -107,21 +107,25 @@ class DpaSigningEmailControllerTest {
     verify(dpaSigningEmailService, never()).send(any(DpaSigningEmailCommand.class));
   }
 
+  private static final String TENANT_SETTINGS_OR_TECHNICAL_DPA_MAIL =
+      "hasAnyAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS',"
+          + " 'AUTHORIZATION_TECHNICAL_SEND_DPA_SIGNING_EMAIL')";
+
   @Test
-  void send_isRestrictedToTenantSettingsAuthority() throws Exception {
+  void send_isRestrictedToTenantSettingsOrTechnicalDpaMailAuthority() throws Exception {
     Method method =
         DpaSigningEmailController.class.getMethod(
             "sendDpaSigningEmail", DpaSigningEmailRequest.class);
     assertThat(method.getAnnotation(PreAuthorize.class).value())
-        .isEqualTo("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')");
+        .isEqualTo(TENANT_SETTINGS_OR_TECHNICAL_DPA_MAIL);
   }
 
   @Test
-  void preview_isRestrictedToTenantSettingsAuthority() throws Exception {
+  void preview_isRestrictedToTenantSettingsOrTechnicalDpaMailAuthority() throws Exception {
     Method method =
         DpaSigningEmailController.class.getMethod(
             "previewDpaSigningEmail", DpaSigningEmailRequest.class);
     assertThat(method.getAnnotation(PreAuthorize.class).value())
-        .isEqualTo("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')");
+        .isEqualTo(TENANT_SETTINGS_OR_TECHNICAL_DPA_MAIL);
   }
 }

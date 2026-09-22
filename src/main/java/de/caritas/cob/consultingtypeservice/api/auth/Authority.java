@@ -34,7 +34,8 @@ public enum Authority {
       UserRole.TECHNICAL,
       Lists.newArrayList(
           AuthorityValue.TECHNICAL_DEFAULT,
-          AuthorityValue.TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES));
+          AuthorityValue.TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES,
+          AuthorityValue.TECHNICAL_SEND_DPA_SIGNING_EMAIL));
 
   private final UserRole userRole;
   private final List<String> grantedAuthorities;
@@ -73,5 +74,13 @@ public enum Authority {
      */
     public static final String TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES =
         PREFIX + "TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES";
+
+    /**
+     * Lets the service identity preview and send the DPA signing mail during public onboarding
+     * (ORISO-Helm#367). Accepted by exactly those two operations; the configured sign-link origin
+     * check in DpaSigningEmailService still applies.
+     */
+    public static final String TECHNICAL_SEND_DPA_SIGNING_EMAIL =
+        PREFIX + "TECHNICAL_SEND_DPA_SIGNING_EMAIL";
   }
 }
