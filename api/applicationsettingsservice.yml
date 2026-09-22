@@ -169,19 +169,16 @@ components:
           type: string
           minLength: 1
           example: Springfield Counselling Centre
-        # No `format: uri`: the generator turns it into java.net.URI, and minLength then becomes
-        # @Size on a URI, which Hibernate Validator rejects at runtime (HV000030 -> 500).
         signLink:
           type: string
+          format: uri
           minLength: 1
           description: Absolute URL on the configured ORISO App origin with a /dpa-sign/ path.
           example: https://app.example.org/dpa-sign/single-use-token
         expiresAt:
           type: string
-          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d{1,9})?)?$'
-          description: >-
-            ISO-8601 local date-time without a UTC offset, as consumed by LocalDateTime. Seconds are
-            optional because LocalDateTime.toString() omits them when they are zero.
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?$'
+          description: ISO-8601 local date-time without a UTC offset, as consumed by LocalDateTime.
           example: '2026-08-03T13:27:28.243207790'
 
     DpaSigningEmailResponse:

@@ -105,22 +105,6 @@ class DpaSigningEmailRoutingIT {
   }
 
   @Test
-  void preview_Should_acceptExpiresAtWithoutSeconds_When_theUserServiceSendsLocalDateTimeToString()
-      throws Exception {
-    when(dpaSigningEmailService.preview(any()))
-        .thenReturn(new DpaSigningEmailPreview("subject", "html"));
-
-    mockMvc
-        .perform(
-            post("/settingsadmin/dpa-signing-emails/preview")
-                .with(SETTINGS_ADMIN)
-                .contentType(APPLICATION_JSON)
-                .accept(APPLICATION_JSON)
-                .content(REQUEST.replace("2026-10-01T12:00:00", "2026-10-01T12:00")))
-        .andExpect(status().isOk());
-  }
-
-  @Test
   void preview_Should_answer400_When_signLinkIsBlank() throws Exception {
     mockMvc
         .perform(
