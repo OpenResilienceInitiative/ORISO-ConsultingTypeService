@@ -1,78 +1,57 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
+import de.caritas.cob.consultingtypeservice.api.model.DpaSigningEmailPreviewResponse;
+import de.caritas.cob.consultingtypeservice.api.model.DpaSigningEmailRequest;
+import de.caritas.cob.consultingtypeservice.api.model.DpaSigningEmailResponse;
+import de.caritas.cob.consultingtypeservice.api.model.DpaSigningEmailResponse.StatusEnum;
 import de.caritas.cob.consultingtypeservice.api.service.DpaMailSendReceipt;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailCommand;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailPreview;
+import de.caritas.cob.consultingtypeservice.generated.api.controller.DpaSigningEmailControllerApi;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import java.time.LocalDateTime;
-import lombok.Data;
+import java.time.ZoneOffset;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /** Sends and previews DPA signing emails (TEN-INV-U5). */
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/settingsadmin/dpa-signing-emails")
-public class DpaSigningEmailController {
+public class DpaSigningEmailController implements DpaSigningEmailControllerApi {
 
   private final @NonNull DpaSigningEmailService dpaSigningEmailService;
 
-  @PostMapping
+  @Override
   @PreAuthorize("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')")
-  public ResponseEntity<DpaSigningEmailResponse> send(
-      @Valid @RequestBody DpaSigningEmailRequest request) {
-    DpaMailSendReceipt receipt =
-        dpaSigningEmailService.send(
-            new DpaSigningEmailCommand(
-                request.recipientEmail, request.tenantName, request.signLink, request.expiresAt));
+  public ResponseEntity<DpaSigningEmailResponse> sendDpaSigningEmail(
+      @Valid DpaSigningEmailRequest request) {
+    DpaMailSendReceipt receipt = dpaSigningEmailService.send(toCommand(request));
     return ResponseEntity.ok(
         new DpaSigningEmailResponse(
-            "SENT", receipt.getRecipientEmail(), receipt.getSentAt().toString()));
+            StatusEnum.SENT,
+            receipt.getRecipientEmail(),
+            receipt.getSentAt().atOffset(ZoneOffset.UTC)));
   }
 
   /** Renders the exact DPA signing mail without accessing SMTP settings or sending it. */
-  @PostMapping("/preview")
+  @Override
   @PreAuthorize("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')")
-  public ResponseEntity<DpaSigningEmailPreviewResponse> preview(
-      @Valid @RequestBody DpaSigningEmailRequest request) {
-    DpaSigningEmailPreview preview =
-        dpaSigningEmailService.preview(
-            new DpaSigningEmailCommand(
-                request.recipientEmail, request.tenantName, request.signLink, request.expiresAt));
+  public ResponseEntity<DpaSigningEmailPreviewResponse> previewDpaSigningEmail(
+      @Valid DpaSigningEmailRequest request) {
+    DpaSigningEmailPreview preview = dpaSigningEmailService.preview(toCommand(request));
     return ResponseEntity.ok(
         new DpaSigningEmailPreviewResponse(preview.getSubject(), preview.getHtml()));
   }
 
-  @Data
-  public static class DpaSigningEmailRequest {
-    @NotBlank @Email private String recipientEmail;
-    @NotBlank private String tenantName;
-    @NotBlank private String signLink;
-    @NotNull private LocalDateTime expiresAt;
-  }
-
-  /** Returned only after the SMTP server accepted the message - callers may set SENT on it. */
-  @lombok.Value
-  public static class DpaSigningEmailResponse {
-    String status;
-    String recipientEmail;
-    String sentAt;
-  }
-
-  /** Rendered content only; this response contains no SMTP configuration or delivery receipt. */
-  @lombok.Value
-  public static class DpaSigningEmailPreviewResponse {
-    String subject;
-    String html;
+  private static DpaSigningEmailCommand toCommand(DpaSigningEmailRequest request) {
+    return new DpaSigningEmailCommand(
+        request.getRecipientEmail(),
+        request.getTenantName(),
+        request.getSignLink(),
+        LocalDateTime.parse(request.getExpiresAt()));
   }
 }

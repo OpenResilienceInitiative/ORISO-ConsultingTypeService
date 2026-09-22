@@ -661,6 +661,9 @@
                 <sourceFolder>/</sourceFolder>
                 <useJakartaEe>true</useJakartaEe>
                 <useSpringBoot3>true</useSpringBoot3>
+                <!-- One interface per tag, so the DPA mail paths are not default-implemented
+                     (501) inside the settings controller, shadowing their real controller. -->
+                <useTags>true</useTags>
               </configOptions>
               <inputSpec>${project.basedir}/api/applicationsettingsservice.yml</inputSpec>
               <generatorName>spring</generatorName>

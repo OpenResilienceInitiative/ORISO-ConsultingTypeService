@@ -4,8 +4,7 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
 import de.caritas.cob.consultingtypeservice.api.service.ApplicationSettingsServiceFacade;
-import de.caritas.cob.consultingtypeservice.generated.api.controller.SettingsApi;
-import de.caritas.cob.consultingtypeservice.generated.api.controller.SettingsadminApi;
+import de.caritas.cob.consultingtypeservice.generated.api.controller.ApplicationsettingsControllerApi;
 import io.swagger.annotations.Api;
 import java.util.Optional;
 import lombok.NonNull;
@@ -22,13 +21,13 @@ import org.springframework.web.context.request.NativeWebRequest;
 @RequiredArgsConstructor
 @Api(tags = "applicationsettings-controller")
 @Slf4j
-public class ApplicationSettingsController implements SettingsApi, SettingsadminApi {
+public class ApplicationSettingsController implements ApplicationsettingsControllerApi {
 
   private final @NonNull ApplicationSettingsServiceFacade applicationSettingsServiceFacade;
 
   @Override
   public Optional<NativeWebRequest> getRequest() {
-    return SettingsApi.super.getRequest();
+    return ApplicationsettingsControllerApi.super.getRequest();
   }
 
   /**
