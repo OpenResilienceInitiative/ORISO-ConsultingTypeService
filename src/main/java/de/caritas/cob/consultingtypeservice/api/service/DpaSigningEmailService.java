@@ -6,6 +6,8 @@ import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadReque
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import java.net.URI;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Objects;
@@ -19,6 +21,9 @@ public class DpaSigningEmailService {
 
   private static final DateTimeFormatter EXPIRY_FORMAT =
       DateTimeFormatter.ofPattern("dd.MM.yyyy, HH:mm 'Uhr'", Locale.GERMAN);
+
+  // expiresAt arrives as zoneless UTC; the German contract mail must show German wall-clock time.
+  private static final ZoneId MAIL_ZONE = ZoneId.of("Europe/Berlin");
 
   private final ApplicationSettingsService applicationSettingsService;
   private final SmtpPasswordEncryptionService smtpPasswordEncryptionService;
@@ -122,7 +127,9 @@ public class DpaSigningEmailService {
   private String buildHtml(String tenantName, String signLink, LocalDateTime expiresAt) {
     String safeTenantName = HtmlUtils.htmlEscape(tenantName);
     String safeLink = HtmlUtils.htmlEscape(signLink);
-    String safeExpiry = HtmlUtils.htmlEscape(EXPIRY_FORMAT.format(expiresAt));
+    String safeExpiry =
+        HtmlUtils.htmlEscape(
+            EXPIRY_FORMAT.format(expiresAt.atOffset(ZoneOffset.UTC).atZoneSameInstant(MAIL_ZONE)));
     return "<!doctype html><html lang=\"de\"><body style=\"margin:0;padding:0;background:#f3f2f2;font-family:Arial,sans-serif;color:#202020;\">"
         + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"padding:32px 16px;\"><tr><td align=\"center\">"
         + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" style=\"max-width:620px;background:#ffffff;border:1px solid #cbc8c8;border-radius:12px;overflow:hidden;\">"
