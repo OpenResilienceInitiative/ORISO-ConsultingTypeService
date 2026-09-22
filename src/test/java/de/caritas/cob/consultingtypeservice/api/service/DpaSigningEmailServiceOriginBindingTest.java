@@ -13,23 +13,47 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
- * Drives {@link DpaSigningEmailService} through Spring's real {@code @Value} resolution. The
- * constructor tests pass the origin directly and would stay green if the fallback silently went
- * back to a production host; this test pins the contract that a missing {@code
- * dpa.sign.frontend.base-url} resolves to this environment's own {@code app.base.url}
- * (ORISO-Helm#349).
+ * Drives the real {@link DpaSigningEmailService} constructor through Spring's {@code @Value}
+ * resolution. A missing origin must stop the service from starting, never fall back to any host.
  */
 class DpaSigningEmailServiceOriginBindingTest {
 
   private static final String OWN_ORIGIN = "https://self.example.org";
 
   private final ApplicationContextRunner contextRunner =
-      new ApplicationContextRunner().withUserConfiguration(Collaborators.class);
+      new ApplicationContextRunner()
+          .withUserConfiguration(Collaborators.class, DpaSigningEmailService.class);
 
   @Test
-  void missingDpaSignBaseUrl_fallsBackToOwnAppBaseUrl_neverToProduction() {
+  void missingDpaSignBaseUrl_failsStartup_evenWhenAppBaseUrlIsSet() {
     contextRunner
         .withPropertyValues("app.base.url=" + OWN_ORIGIN)
+        .run(
+            context ->
+                assertThat(context)
+                    .hasFailed()
+                    .getFailure()
+                    .rootCause()
+                    .hasMessageContaining("DPA_SIGN_FRONTEND_BASE_URL"));
+  }
+
+  @Test
+  void blankDpaSignBaseUrl_failsStartup_withTheEnvVarNamed() {
+    contextRunner
+        .withPropertyValues("dpa.sign.frontend.base-url= ")
+        .run(
+            context ->
+                assertThat(context)
+                    .hasFailed()
+                    .getFailure()
+                    .rootCause()
+                    .hasMessageContaining("DPA_SIGN_FRONTEND_BASE_URL"));
+  }
+
+  @Test
+  void configuredDpaSignBaseUrl_isTheOnlyAcceptedOrigin() {
+    contextRunner
+        .withPropertyValues("dpa.sign.frontend.base-url=" + OWN_ORIGIN)
         .run(
             context -> {
               assertThat(context).hasNotFailed();
@@ -37,35 +61,16 @@ class DpaSigningEmailServiceOriginBindingTest {
 
               assertThat(ReflectionTestUtils.getField(service, "permittedAppOrigin"))
                   .isEqualTo(URI.create(OWN_ORIGIN));
-
               assertThatThrownBy(
-                      () -> service.send(command("https://app.oriso.org/dpa-sign/token")))
-                  .as("the former production default must no longer be an accepted origin")
+                      () -> service.send(command("https://other.example.org/dpa-sign/token")))
                   .isInstanceOf(BadRequestException.class)
                   .hasMessageContaining("signLink");
-              assertThatThrownBy(() -> service.send(command(OWN_ORIGIN + "/dpa-sign/token")))
-                  .as("a link on the own origin passes the origin check")
-                  .isNotInstanceOf(BadRequestException.class);
-            });
-  }
-
-  @Test
-  void explicitDpaSignBaseUrl_winsOverAppBaseUrl() {
-    contextRunner
-        .withPropertyValues(
-            "app.base.url=" + OWN_ORIGIN, "dpa.sign.frontend.base-url=https://dpa.example.org")
-        .run(
-            context -> {
-              assertThat(context).hasNotFailed();
-              DpaSigningEmailService service = context.getBean(DpaSigningEmailService.class);
-              assertThat(ReflectionTestUtils.getField(service, "permittedAppOrigin"))
-                  .isEqualTo(URI.create("https://dpa.example.org"));
             });
   }
 
   private static DpaSigningEmailService.DpaSigningEmailCommand command(String signLink) {
     return new DpaSigningEmailService.DpaSigningEmailCommand(
-        "bart.simpson@oriso.org",
+        "bart.simpson@example.org",
         "Springfield Beratung",
         signLink,
         LocalDateTime.parse("2026-08-03T13:27:28"));
@@ -73,9 +78,7 @@ class DpaSigningEmailServiceOriginBindingTest {
 
   /**
    * Deliberately NOT a {@code @Configuration}: the real {@code @SpringBootTest} ITs component-scan
-   * this package and would otherwise pick these mock beans up, producing duplicate {@code
-   * DpaMailTransport} beans (CI run 105014992109). {@code @Bean} methods on a plain class are
-   * registered only through {@code withUserConfiguration}.
+   * this package and would otherwise pick these mock beans up (CI run 105014992109).
    */
   static class Collaborators {
     @Bean
@@ -91,17 +94,6 @@ class DpaSigningEmailServiceOriginBindingTest {
     @Bean
     DpaMailTransport dpaMailTransport() {
       return mock(DpaMailTransport.class);
-    }
-
-    @Bean
-    DpaSigningEmailService dpaSigningEmailService(
-        ApplicationSettingsService settings,
-        SmtpPasswordEncryptionService encryption,
-        DpaMailTransport transport,
-        @org.springframework.beans.factory.annotation.Value(
-                "${dpa.sign.frontend.base-url:${app.base.url}}")
-            String appBaseUrl) {
-      return new DpaSigningEmailService(settings, encryption, transport, appBaseUrl);
     }
   }
 }
