@@ -661,8 +661,16 @@
                 <sourceFolder>/</sourceFolder>
                 <useJakartaEe>true</useJakartaEe>
                 <useSpringBoot3>true</useSpringBoot3>
+                <!-- One interface per tag, so the DPA mail paths are not default-implemented
+                     (501) inside the settings controller, shadowing their real controller. -->
+                <useTags>true</useTags>
               </configOptions>
               <inputSpec>${project.basedir}/api/applicationsettingsservice.yml</inputSpec>
+              <!-- format: uri would become java.net.URI, and minLength then @Size on a URI,
+                   which Hibernate Validator cannot check (HV000030 -> 500). -->
+              <typeMappings>
+                <typeMapping>URI=String</typeMapping>
+              </typeMappings>
               <generatorName>spring</generatorName>
               <apiPackage>${project.groupId}.${project.artifactId}.generated.api.controller
               </apiPackage>

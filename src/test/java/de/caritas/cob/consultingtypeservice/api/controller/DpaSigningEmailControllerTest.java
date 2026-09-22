@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import de.caritas.cob.consultingtypeservice.api.ApiResponseEntityExceptionHandler;
 import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
+import de.caritas.cob.consultingtypeservice.api.model.DpaSigningEmailRequest;
 import de.caritas.cob.consultingtypeservice.api.service.DpaMailSendReceipt;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailCommand;
@@ -110,7 +111,7 @@ class DpaSigningEmailControllerTest {
   void send_isRestrictedToTenantSettingsAuthority() throws Exception {
     Method method =
         DpaSigningEmailController.class.getMethod(
-            "send", DpaSigningEmailController.DpaSigningEmailRequest.class);
+            "sendDpaSigningEmail", DpaSigningEmailRequest.class);
     assertThat(method.getAnnotation(PreAuthorize.class).value())
         .isEqualTo("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')");
   }
@@ -119,7 +120,7 @@ class DpaSigningEmailControllerTest {
   void preview_isRestrictedToTenantSettingsAuthority() throws Exception {
     Method method =
         DpaSigningEmailController.class.getMethod(
-            "preview", DpaSigningEmailController.DpaSigningEmailRequest.class);
+            "previewDpaSigningEmail", DpaSigningEmailRequest.class);
     assertThat(method.getAnnotation(PreAuthorize.class).value())
         .isEqualTo("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')");
   }
