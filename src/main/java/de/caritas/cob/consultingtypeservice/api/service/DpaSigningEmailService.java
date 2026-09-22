@@ -29,11 +29,11 @@ public class DpaSigningEmailService {
       @NonNull ApplicationSettingsService applicationSettingsService,
       @NonNull SmtpPasswordEncryptionService smtpPasswordEncryptionService,
       @NonNull DpaMailTransport dpaMailTransport,
-      @Value("${dpa.sign.frontend.base-url:${app.base.url}}") String appBaseUrl) {
+      @Value("${dpa.sign.frontend.base-url}") String appBaseUrl) {
     this.applicationSettingsService = applicationSettingsService;
     this.smtpPasswordEncryptionService = smtpPasswordEncryptionService;
     this.dpaMailTransport = dpaMailTransport;
-    this.permittedAppOrigin = parseUri(appBaseUrl, "appBaseUrl");
+    this.permittedAppOrigin = requireAbsoluteOrigin(appBaseUrl);
   }
 
   /**
@@ -151,6 +151,24 @@ public class DpaSigningEmailService {
     } catch (Exception exception) {
       return null;
     }
+  }
+
+  private static URI requireAbsoluteOrigin(String configured) {
+    try {
+      URI origin = URI.create(configured == null ? "" : configured.trim());
+      if ("http".equals(origin.getScheme()) || "https".equals(origin.getScheme())) {
+        if (!isBlank(origin.getHost())) {
+          return origin;
+        }
+      }
+    } catch (IllegalArgumentException ignored) {
+      // reported below with the variable name, which is what an operator needs
+    }
+    throw new IllegalStateException(
+        "DPA_SIGN_FRONTEND_BASE_URL (dpa.sign.frontend.base-url) must be this environment's"
+            + " absolute app origin, got: '"
+            + configured
+            + "'");
   }
 
   private static URI parseUri(String value, String field) {
