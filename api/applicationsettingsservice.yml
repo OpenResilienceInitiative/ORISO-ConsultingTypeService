@@ -76,8 +76,142 @@ paths:
           description: FORBIDDEN - insufficient permissions
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+  /settingsadmin/dpa-signing-emails:
+    post:
+      tags:
+        - dpa-signing-email-controller
+      summary: 'Send a DPA signing email'
+      description: >-
+        Renders and sends the DPA signing email through the configured global SMTP transport.
+        Requires the AUTHORIZATION_PATCH_APPLICATION_SETTINGS authority.
+      operationId: sendDpaSigningEmail
+      security:
+        - bearerAuth: []
+      x-required-authority: AUTHORIZATION_PATCH_APPLICATION_SETTINGS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DpaSigningEmailRequest'
+      responses:
+        '200':
+          description: OK - SMTP server accepted the message
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DpaSigningEmailResponse'
+        '400':
+          description: BAD REQUEST - invalid request or signing link
+        '401':
+          description: UNAUTHORIZED - no or invalid Keycloak token
+        '403':
+          description: FORBIDDEN - required application-settings authority is missing
+        '500':
+          description: INTERNAL SERVER ERROR - SMTP configuration is unavailable or incomplete
+        '502':
+          description: BAD GATEWAY - SMTP server did not accept the message
+  /settingsadmin/dpa-signing-emails/preview:
+    post:
+      tags:
+        - dpa-signing-email-controller
+      summary: 'Preview a DPA signing email without sending it'
+      description: >-
+        Returns the same subject and HTML used by the send operation without reading SMTP settings
+        or contacting the SMTP transport. Requires the AUTHORIZATION_PATCH_APPLICATION_SETTINGS
+        authority.
+      operationId: previewDpaSigningEmail
+      security:
+        - bearerAuth: []
+      x-required-authority: AUTHORIZATION_PATCH_APPLICATION_SETTINGS
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DpaSigningEmailRequest'
+      responses:
+        '200':
+          description: OK - rendered email content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DpaSigningEmailPreviewResponse'
+        '400':
+          description: BAD REQUEST - invalid request or signing link
+        '401':
+          description: UNAUTHORIZED - no or invalid Keycloak token
+        '403':
+          description: FORBIDDEN - required application-settings authority is missing
+        '500':
+          description: INTERNAL SERVER ERROR - server encountered an unexpected condition
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
+    DpaSigningEmailRequest:
+      type: object
+      required:
+        - recipientEmail
+        - tenantName
+        - signLink
+        - expiresAt
+      properties:
+        recipientEmail:
+          type: string
+          format: email
+          minLength: 1
+          example: bart.simpson@oriso.org
+        tenantName:
+          type: string
+          minLength: 1
+          example: Springfield Counselling Centre
+        signLink:
+          type: string
+          format: uri
+          minLength: 1
+          description: Absolute URL on the configured ORISO App origin with a /dpa-sign/ path.
+          example: https://app.oriso.org/dpa-sign/single-use-token
+        expiresAt:
+          type: string
+          pattern: '^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?$'
+          description: ISO-8601 local date-time without a UTC offset, as consumed by LocalDateTime.
+          example: '2026-08-03T13:27:28.243207790'
+
+    DpaSigningEmailResponse:
+      type: object
+      required:
+        - status
+        - recipientEmail
+        - sentAt
+      properties:
+        status:
+          type: string
+          enum:
+            - SENT
+        recipientEmail:
+          type: string
+          format: email
+        sentAt:
+          type: string
+          format: date-time
+          description: Instant at which the SMTP server accepted the message.
+
+    DpaSigningEmailPreviewResponse:
+      type: object
+      required:
+        - subject
+        - html
+      properties:
+        subject:
+          type: string
+        html:
+          type: string
+          description: Complete HTML email body rendered by the send path.
+
     ApplicationSettingsDTO:
       type: object
       required:

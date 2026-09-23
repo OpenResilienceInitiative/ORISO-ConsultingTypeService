@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -13,6 +14,7 @@ import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import de.caritas.cob.consultingtypeservice.api.service.DpaMailSendReceipt;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService;
 import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailCommand;
+import de.caritas.cob.consultingtypeservice.api.service.DpaSigningEmailService.DpaSigningEmailPreview;
 import java.lang.reflect.Method;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -87,10 +89,37 @@ class DpaSigningEmailControllerTest {
   }
 
   @Test
+  void preview_returnsRenderedContentWithoutCallingSend() throws Exception {
+    when(dpaSigningEmailService.preview(any(DpaSigningEmailCommand.class)))
+        .thenReturn(new DpaSigningEmailPreview("A subject", "<html>mail</html>"));
+
+    mockMvc
+        .perform(
+            post("/settingsadmin/dpa-signing-emails/preview")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(VALID_REQUEST))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.subject").value("A subject"))
+        .andExpect(jsonPath("$.html").value("<html>mail</html>"));
+
+    verify(dpaSigningEmailService).preview(any(DpaSigningEmailCommand.class));
+    verify(dpaSigningEmailService, never()).send(any(DpaSigningEmailCommand.class));
+  }
+
+  @Test
   void send_isRestrictedToTenantSettingsAuthority() throws Exception {
     Method method =
         DpaSigningEmailController.class.getMethod(
             "send", DpaSigningEmailController.DpaSigningEmailRequest.class);
+    assertThat(method.getAnnotation(PreAuthorize.class).value())
+        .isEqualTo("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')");
+  }
+
+  @Test
+  void preview_isRestrictedToTenantSettingsAuthority() throws Exception {
+    Method method =
+        DpaSigningEmailController.class.getMethod(
+            "preview", DpaSigningEmailController.DpaSigningEmailRequest.class);
     assertThat(method.getAnnotation(PreAuthorize.class).value())
         .isEqualTo("hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS')");
   }
