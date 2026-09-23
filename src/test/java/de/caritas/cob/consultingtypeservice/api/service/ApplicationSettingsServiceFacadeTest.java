@@ -1,13 +1,16 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
@@ -66,6 +69,52 @@ class ApplicationSettingsServiceFacadeTest {
     verify(applicationSettingsService)
         .saveApplicationSettings(any(ApplicationSettingsEntity.class));
     verify(smtpPasswordEncryptionService, never()).encrypt(any());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_SetWalkthrough_When_ToggleIsWritable() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setEnableWalkthrough(false);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    assertThat(captor.getValue().getEnableWalkthrough().getValue()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_CreateWalkthroughToggle_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setEnableWalkthrough(true);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    assertThat(captor.getValue().getEnableWalkthrough().getValue()).isTrue();
+    assertThat(captor.getValue().getEnableWalkthrough().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_WalkthroughToggleIsReadOnly() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(true));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setEnableWalkthrough(false);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).saveApplicationSettings(any());
+    assertThat(entity.getEnableWalkthrough().getValue()).isTrue();
   }
 
   @Test
