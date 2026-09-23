@@ -106,6 +106,33 @@ class DpaSigningEmailServiceTest {
         .doesNotContain("secret");
   }
 
+  /** Measured on dev 2026-09-23: 22:43 UTC was mailed as "22:43 Uhr" instead of 00:43. */
+  @Test
+  void preview_summerExpiry_rendersUtcValueAsGermanLocalTime() {
+    var preview = service.preview(commandExpiringAt("2026-10-06T22:43:00"));
+
+    assertThat(preview.getHtml())
+        .contains("Der Link ist gültig bis 07.10.2026, 00:43 Uhr.")
+        .doesNotContain("22:43");
+  }
+
+  @Test
+  void preview_winterExpiry_rendersUtcValueAsGermanLocalTime() {
+    var preview = service.preview(commandExpiringAt("2027-01-15T22:43:00"));
+
+    assertThat(preview.getHtml())
+        .contains("Der Link ist gültig bis 15.01.2027, 23:43 Uhr.")
+        .doesNotContain("22:43");
+  }
+
+  private static DpaSigningEmailService.DpaSigningEmailCommand commandExpiringAt(String utc) {
+    return new DpaSigningEmailService.DpaSigningEmailCommand(
+        "bart.simpson@oriso.org",
+        "E2E Full Gate 202607191747",
+        "https://app.oriso-dev.site/dpa-sign/single-use-token",
+        LocalDateTime.parse(utc));
+  }
+
   @Test
   void send_transportFailure_propagatesErrorInsteadOfSilentSuccess() {
     when(applicationSettingsService.getApplicationSettings())
