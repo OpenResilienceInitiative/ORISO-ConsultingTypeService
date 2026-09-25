@@ -1,9 +1,11 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
@@ -65,6 +67,16 @@ public class ApplicationSettingsServiceFacade {
       entity
           .getLegalContentChangesBySingleTenantAdminsAllowed()
           .setValue(settingsPatchDTO.getLegalContentChangesBySingleTenantAdminsAllowed());
+    }
+    if (settingsPatchDTO.getEnableWalkthrough() != null) {
+      if (entity.getEnableWalkthrough() == null) {
+        entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+      }
+      // readOnly is the operator's lock on the master switch; the admin API must not bypass it.
+      if (Boolean.TRUE.equals(entity.getEnableWalkthrough().getReadOnly())) {
+        throw new BadRequestException("enableWalkthrough is read-only");
+      }
+      entity.getEnableWalkthrough().setValue(settingsPatchDTO.getEnableWalkthrough());
     }
     if (settingsPatchDTO.getMainTenantSubdomainForSingleDomainMultitenancy() != null) {
       entity

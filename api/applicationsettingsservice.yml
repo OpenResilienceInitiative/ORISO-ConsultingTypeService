@@ -292,6 +292,9 @@ components:
       properties:
         legalContentChangesBySingleTenantAdminsAllowed:
           type: boolean
+        enableWalkthrough:
+          type: boolean
+          description: Platform-wide master switch for product tours. Omit to leave unchanged.
         mainTenantSubdomainForSingleDomainMultitenancy:
           type: string
         globalFeatureSystemNotificationEmailsEnabled:
