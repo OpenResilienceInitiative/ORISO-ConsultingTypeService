@@ -331,6 +331,20 @@ class ApplicationSettingsControllerIT {
   }
 
   @Test
+  void getGlobalSmtpCredentials_Should_ReturnForbidden_When_TenantIdIsZeroWithoutTenantAdminRole()
+      throws Exception {
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(
+                    authentication(
+                        builder.withUserRole(TOPIC_ADMIN.getValue()).withTenantId("0").build())))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
   void getGlobalSmtpCredentials_Should_ReturnForbidden_When_TenantAdminHasNoTenantIdClaim()
       throws Exception {
     AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
