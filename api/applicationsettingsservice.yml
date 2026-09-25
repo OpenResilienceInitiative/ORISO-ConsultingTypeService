@@ -263,6 +263,12 @@ components:
         globalFeatureSystemNotificationEmailsEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
+        oneTopicPerAgencyEnabled:
+          description: >-
+            Platform policy (ADR-014 amendment 2026-09-25): when true, an agency may hold at
+            most one topic. Defaults to false.
+          allOf:
+            - $ref: '#/components/schemas/FeatureToggleDTO'
         globalSmtpEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
@@ -295,6 +301,8 @@ components:
         mainTenantSubdomainForSingleDomainMultitenancy:
           type: string
         globalFeatureSystemNotificationEmailsEnabled:
+          type: boolean
+        oneTopicPerAgencyEnabled:
           type: boolean
         globalSmtpEnabled:
           type: boolean
