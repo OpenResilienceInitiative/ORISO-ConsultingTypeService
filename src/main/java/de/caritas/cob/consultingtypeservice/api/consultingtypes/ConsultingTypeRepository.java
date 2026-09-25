@@ -15,4 +15,6 @@ public interface ConsultingTypeRepository extends MongoRepository<ConsultingType
   ConsultingTypeEntity findFirstByOrderByIdDesc();
 
   ConsultingTypeEntity findByTenantId(Integer tenantId);
+
+  boolean existsByTenantId(Integer tenantId);
 }

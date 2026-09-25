@@ -145,6 +145,11 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
     return consultingTypeMongoTenantAwareRepository.findByTenantId(tenantId);
   }
 
+  @Override
+  public boolean hasConsultingTypesForTenant(Integer tenantId) {
+    return consultingTypeMongoTenantAwareRepository.existsByTenantId(tenantId);
+  }
+
   private boolean isConsultingTypeWithGivenIdPresent(ConsultingType consultingType) {
     return findById(consultingType.getId()).isPresent();
   }
