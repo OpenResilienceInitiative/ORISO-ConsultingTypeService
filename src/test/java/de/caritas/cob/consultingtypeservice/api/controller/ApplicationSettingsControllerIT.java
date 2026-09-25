@@ -219,6 +219,53 @@ class ApplicationSettingsControllerIT {
         .andExpect(status().isBadRequest());
   }
 
+  @Test
+  void getApplicationSettings_Should_ReturnOneTopicPerAgencyOff_When_SettingWasNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-UserService#1264 do not carry the field
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setOneTopicPerAgencyEnabled(null);
+    applicationSettingsRepository.save(entity);
+
+    // when / then
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreOneTopicPerAgency_When_TenantAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    patchOneTopicPerAgency(authentication, true)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+
+    // clean up
+    patchOneTopicPerAgency(authentication, false)
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
+  private org.springframework.test.web.servlet.ResultActions patchOneTopicPerAgency(
+      Authentication authentication, boolean enabled) throws Exception {
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setOneTopicPerAgencyEnabled(enabled);
+    return mockMvc.perform(
+        patch("/settingsadmin")
+            .with(authentication(authentication))
+            .header("csrfHeader", "csrfToken")
+            .cookie(new Cookie("csrfCookie", "csrfToken"))
+            .contentType(APPLICATION_JSON)
+            .content(JsonConverter.convertToJson(patchDTO)));
+  }
+
   private void resetSettingsToPreviousState(Authentication authentication) throws Exception {
     var patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(true);
