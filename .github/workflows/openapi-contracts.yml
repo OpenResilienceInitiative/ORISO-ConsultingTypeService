@@ -71,6 +71,7 @@ jobs:
         contract-artifacts/base
         contract-artifacts/provider
         contracts/topic-format-correction-96.md
+        contracts/dpa-signing-mail-removal.md
 
     - name: Verify TenantService consumer compatibility
       run: >-

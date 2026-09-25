@@ -78,57 +78,6 @@ class OpenApiContractGateTest(unittest.TestCase):
         self.assertNotIn("format", schemas["WelcomeMessage"])
         self.assertNotIn("format", schemas["FallBackUrl"])
 
-    def test_dpa_signing_email_provider_contract_matches_its_consumer(self):
-        provider = yaml.safe_load(
-            (ROOT / "api/applicationsettingsservice.yml").read_text()
-        )
-        paths = provider["paths"]
-        schemas = provider["components"]["schemas"]
-
-        send = paths["/settingsadmin/dpa-signing-emails"]["post"]
-        preview = paths["/settingsadmin/dpa-signing-emails/preview"]["post"]
-        required_authority = "AUTHORIZATION_PATCH_APPLICATION_SETTINGS"
-
-        for operation in (send, preview):
-            self.assertEqual([{"bearerAuth": []}], operation["security"])
-            self.assertEqual(required_authority, operation["x-required-authority"])
-            self.assertEqual(
-                "#/components/schemas/DpaSigningEmailRequest",
-                operation["requestBody"]["content"]["application/json"]["schema"]["$ref"],
-            )
-            self.assertTrue(operation["requestBody"]["required"])
-
-        self.assertEqual({"200", "400", "401", "403", "500", "502"}, set(send["responses"]))
-        self.assertEqual({"200", "400", "401", "403", "500"}, set(preview["responses"]))
-        self.assertEqual(
-            "#/components/schemas/DpaSigningEmailResponse",
-            send["responses"]["200"]["content"]["application/json"]["schema"]["$ref"],
-        )
-        self.assertEqual(
-            "#/components/schemas/DpaSigningEmailPreviewResponse",
-            preview["responses"]["200"]["content"]["application/json"]["schema"]["$ref"],
-        )
-
-        request = schemas["DpaSigningEmailRequest"]
-        self.assertEqual(
-            {"recipientEmail", "tenantName", "signLink", "expiresAt"},
-            set(request["required"]),
-        )
-        self.assertEqual("email", request["properties"]["recipientEmail"]["format"])
-        self.assertEqual("uri", request["properties"]["signLink"]["format"])
-        self.assertNotIn("format", request["properties"]["expiresAt"])
-
-        self.assertEqual(["SENT"], schemas["DpaSigningEmailResponse"]["properties"]["status"]["enum"])
-        self.assertEqual(
-            {"subject", "html"},
-            set(schemas["DpaSigningEmailPreviewResponse"]["required"]),
-        )
-
-        bearer = provider["components"]["securitySchemes"]["bearerAuth"]
-        self.assertEqual("http", bearer["type"])
-        self.assertEqual("bearer", bearer["scheme"])
-        self.assertEqual("JWT", bearer["bearerFormat"])
-
     def test_reviewed_contract_correction_uses_a_narrow_err_allowlist(self):
         gate = (
             ROOT / "scripts/contracts/verify-provider-compatibility.sh"
@@ -152,6 +101,68 @@ class OpenApiContractGateTest(unittest.TestCase):
             "ORISO-ConsultingTypeService/issues/96",
             allowlist,
         )
+
+    def test_dpa_signing_mail_removal_is_allowlisted_exactly_once(self):
+        workflow = (
+            ROOT / ".github/workflows/openapi-contracts.yml"
+        ).read_text()
+        allowlist = (ROOT / "contracts/dpa-signing-mail-removal.md").read_text()
+        provider = yaml.safe_load(
+            (ROOT / "api/applicationsettingsservice.yml").read_text()
+        )
+
+        self.assertIn("contracts/dpa-signing-mail-removal.md", workflow)
+        entries = [line for line in allowlist.splitlines() if line.startswith("POST ")]
+        self.assertEqual(
+            [
+                "POST /settingsadmin/dpa-signing-emails"
+                " api path removed without deprecation",
+                "POST /settingsadmin/dpa-signing-emails/preview"
+                " api path removed without deprecation",
+            ],
+            entries,
+        )
+        self.assertFalse(
+            [path for path in provider["paths"] if "dpa-signing" in path]
+        )
+
+    def test_provider_gate_merges_every_allowlist(self):
+        gate = ROOT / "scripts/contracts/verify-provider-compatibility.sh"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp = Path(temp_dir)
+            for side in ("base", "head"):
+                (temp / side).mkdir()
+                (temp / side / "provider.yaml").write_text("openapi: 3.0.3\n")
+            first = temp / "first.md"
+            first.write_text("GET /first reviewed\n")
+            second = temp / "second.md"
+            second.write_text("POST /second reviewed\n")
+            captured = temp / "captured.txt"
+
+            fake_oasdiff = temp / "oasdiff"
+            fake_oasdiff.write_text(
+                "#!/usr/bin/env bash\n"
+                'while [[ "$#" -gt 0 ]]; do\n'
+                '  if [[ "$1" == "--err-ignore" ]]; then cat "$2" > "' + "${CAPTURE}" + '"; fi\n'
+                "  shift\n"
+                "done\n"
+            )
+            fake_oasdiff.chmod(0o755)
+
+            env = os.environ.copy()
+            env["OASDIFF_BIN"] = str(fake_oasdiff)
+            env["CAPTURE"] = str(captured)
+            result = subprocess.run(
+                [gate, temp / "base", temp / "head", first, second],
+                cwd=ROOT,
+                env=env,
+                check=False,
+            )
+
+            self.assertEqual(0, result.returncode)
+            merged = captured.read_text()
+        self.assertIn("GET /first reviewed", merged)
+        self.assertIn("POST /second reviewed", merged)
 
     def test_contract_gate_tests_are_executed_by_ci(self):
         # A gate assertion that never runs protects nothing. Without a job that
