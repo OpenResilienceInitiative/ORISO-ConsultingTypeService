@@ -34,11 +34,7 @@ public class TopicGroupEntity {
   @Column(name = "update_date")
   private LocalDateTime updateDate;
 
-  /**
-   * Topic groups are platform-wide, their topics are not. An entity-level filter never reaches a
-   * many-to-many collection, so the tenant filter is declared here as well; on a many-to-many it
-   * applies to the target table, {@code topic}.
-   */
+  // Groups are platform-wide, their topics are not; an entity filter never reaches this join.
   @ManyToMany(targetEntity = TopicEntity.class)
   @Filter(name = TenantFilter.NAME, condition = TenantFilter.CONDITION)
   @JoinTable(

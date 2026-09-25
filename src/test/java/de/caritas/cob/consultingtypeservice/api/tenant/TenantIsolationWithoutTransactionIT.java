@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import de.caritas.cob.consultingtypeservice.ConsultingTypeServiceApplication;
 import de.caritas.cob.consultingtypeservice.api.auth.UserRole;
 import de.caritas.cob.consultingtypeservice.api.controller.AuthenticationMockBuilder;
+import de.caritas.cob.consultingtypeservice.api.controller.TopicGroupsController;
 import de.caritas.cob.consultingtypeservice.api.service.TenantService;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.RestrictedTenantDTO;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.Settings;
@@ -28,20 +29,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * Tenant isolation of topics must not depend on how an endpoint reads them.
- *
- * <p>Deliberately <b>not</b> {@code @Transactional}: in production the controllers run without a
- * caller transaction ({@code spring.jpa.open-in-view=false}). Seeded rows are committed through
- * JDBC and removed after each test. Requests go through the full filter chain, so {@code
- * HttpTenantFilter} resolves the tenant from the {@code tenantId} header exactly as for a
- * service-to-service call.
- *
- * <ul>
- *   <li>{@code GET /topicadmin} and {@code GET /topicadmin/{id}} read through repository queries
- *       with an explicit tenant predicate.
- *   <li>{@code GET /topic-groups} reads the platform-wide topic groups and their topics through the
- *       association. Only the Hibernate tenant filter can keep another Träger's topics out of it.
- * </ul>
+ * Not {@code @Transactional} and through the full filter chain, because production reads topics
+ * without a caller transaction; only the Hibernate filter keeps other tenants out of topic groups.
  */
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
 @AutoConfigureMockMvc
@@ -60,6 +49,8 @@ class TenantIsolationWithoutTransactionIT {
 
   @Autowired private MockMvc mockMvc;
   @Autowired private JdbcTemplate jdbcTemplate;
+
+  @Autowired private TopicGroupsController topicGroupsController;
 
   @MockitoBean TenantService tenantService;
 
@@ -123,6 +114,30 @@ class TenantIsolationWithoutTransactionIT {
     var body = result.getResponse().getContentAsString();
     assertThat(body).contains(String.valueOf(OWN_TOPIC));
     assertThat(body).doesNotContain(String.valueOf(FOREIGN_TOPIC));
+  }
+
+  @Test
+  void getAllTopicGroups_Should_ReferenceTopicsOfEveryTenant_When_TenantIsTheTechnicalTenantZero()
+      throws Exception {
+    var result = mockMvc.perform(asTopicAdminOf(0L, get("/topic-groups"))).andReturn();
+
+    assertStatus(result, 200);
+    var body = result.getResponse().getContentAsString();
+    assertThat(body).contains(String.valueOf(OWN_TOPIC));
+    assertThat(body).contains(String.valueOf(FOREIGN_TOPIC));
+  }
+
+  @Test
+  void getAllTopicGroups_Should_ReferenceNoTopic_When_NoTenantIsSet() {
+    TenantContext.clear();
+
+    var groups = topicGroupsController.getAllTopicGroups().getBody();
+
+    assertThat(groups).isNotNull();
+    assertThat(groups.getData().getItems())
+        .filteredOn(group -> group.getId() == SHARED_GROUP)
+        .singleElement()
+        .satisfies(group -> assertThat(group.getTopicIds()).isEmpty());
   }
 
   private static MockHttpServletRequestBuilder asTopicAdminOf(

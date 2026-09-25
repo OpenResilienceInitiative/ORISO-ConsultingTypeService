@@ -8,29 +8,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Supplies the {@code tenantId} argument of the auto-enabled {@link TenantFilter}. Hibernate calls
- * it whenever a filtered query or a load by id runs, in whatever session that happens, so the
- * argument is always the tenant of the current thread at that moment.
- *
- * <p>Returns {@code 0} (no restriction) when
- *
- * <ul>
- *   <li>multitenancy is switched off — the single-tenant deployments never filtered;
- *   <li>the current tenant is the technical tenant {@code 0};
- *   <li>no tenant is set: system threads and the routes that {@code HttpTenantFilter} deliberately
- *       skips ({@code /settings}, {@code /settingsadmin}, actuator). Every other request passes
- *       {@code HttpTenantFilter}, which either sets a tenant or rejects the request.
- * </ul>
- *
- * <p>Hibernate obtains this bean through Spring's bean container, so each application context uses
- * its own {@code multitenancy.enabled} value. The field default keeps the filter active should
- * Hibernate ever instantiate the class without Spring.
+ * Hibernate asks this for the {@link TenantFilter} argument on every query, so it always follows
+ * the current thread. Fail-closed: without a tenant nothing matches, like the UserService.
  */
 @Component
 public class TenantFilterParameterResolver implements Supplier<Long> {
 
   static final Long UNRESTRICTED = TECHNICAL_TENANT_ID;
+  static final Long NO_TENANT = -1L;
 
+  // Field default: the filter stays active should Hibernate ever build this without Spring.
   @Value("${multitenancy.enabled:true}")
   private boolean multitenancyEnabled = true;
 
@@ -40,6 +27,6 @@ public class TenantFilterParameterResolver implements Supplier<Long> {
       return UNRESTRICTED;
     }
     var currentTenant = TenantContext.getCurrentTenant();
-    return currentTenant == null ? UNRESTRICTED : currentTenant;
+    return currentTenant == null ? NO_TENANT : currentTenant;
   }
 }
