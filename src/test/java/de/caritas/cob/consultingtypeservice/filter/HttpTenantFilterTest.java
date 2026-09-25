@@ -1,5 +1,9 @@
 package de.caritas.cob.consultingtypeservice.filter;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -51,5 +55,22 @@ class HttpTenantFilterTest {
 
     // then
     Mockito.verify(tenantResolver).resolve();
+  }
+
+  @Test
+  void doFilterInternal_Should_ClearTheTenant_When_TheChainThrows()
+      throws ServletException, IOException {
+    Mockito.when(request.getRequestURI()).thenReturn("/topic-groups");
+    Mockito.when(tenantResolver.resolve()).thenReturn(7L);
+    Mockito.doThrow(new ServletException("boom")).when(filterChain).doFilter(request, response);
+
+    try {
+      assertThatThrownBy(() -> httpTenantFilter.doFilterInternal(request, response, filterChain))
+          .isInstanceOf(ServletException.class);
+
+      assertThat(TenantContext.getCurrentTenant()).isNull();
+    } finally {
+      TenantContext.clear();
+    }
   }
 }
