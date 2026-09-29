@@ -10,6 +10,7 @@ import java.util.Optional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -64,7 +65,7 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
   public ResponseEntity<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
     var credentials = applicationSettingsServiceFacade.getGlobalSmtpCredentials();
     return credentials.isPresent()
-        ? new ResponseEntity<>(credentials.get(), HttpStatus.OK)
-        : new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        ? ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(credentials.get())
+        : ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
   }
 }

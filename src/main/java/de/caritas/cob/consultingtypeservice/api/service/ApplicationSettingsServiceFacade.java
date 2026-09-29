@@ -39,7 +39,18 @@ public class ApplicationSettingsServiceFacade {
     var applicationSettings = applicationSettingsService.getApplicationSettings();
     if (applicationSettings.isPresent()) {
       ApplicationSettingsEntity entity = applicationSettings.get();
+      String storedPassword =
+          entity.getGlobalSmtpPassword() != null ? entity.getGlobalSmtpPassword().getValue() : null;
       convertPatchedValues(settingsPatchDTO, entity);
+      if (!isRealCredentialValue(settingsPatchDTO.getGlobalSmtpPassword())
+          && isRealCredentialValue(storedPassword)
+          && !storedPassword.startsWith(SmtpPasswordEncryptionService.ENCRYPTED_PREFIX)) {
+        // Existing installs may have saved plaintext before the encryption key was configured.
+        // Rewrite it during the next admin update without requiring the password in the form.
+        entity
+            .getGlobalSmtpPassword()
+            .setValue(smtpPasswordEncryptionService.encrypt(storedPassword));
+      }
       applicationSettingsService.saveApplicationSettings(entity);
     }
   }
@@ -51,6 +62,26 @@ public class ApplicationSettingsServiceFacade {
   private ApplicationSettingsSmtpCredentialsDTO toSmtpCredentialsDTO(
       ApplicationSettingsEntity entity) {
     var credentials = new ApplicationSettingsSmtpCredentialsDTO();
+    credentials.setGlobalFeatureSystemNotificationEmailsEnabled(
+        entity.getGlobalFeatureSystemNotificationEmailsEnabled() != null
+            && Boolean.TRUE.equals(
+                entity.getGlobalFeatureSystemNotificationEmailsEnabled().getValue()));
+    credentials.setGlobalSmtpEnabled(
+        entity.getGlobalSmtpEnabled() != null
+            && Boolean.TRUE.equals(entity.getGlobalSmtpEnabled().getValue()));
+    credentials.setGlobalSmtpHost(
+        entity.getGlobalSmtpHost() != null ? entity.getGlobalSmtpHost().getValue() : "");
+    credentials.setGlobalSmtpPort(
+        entity.getGlobalSmtpPort() != null ? entity.getGlobalSmtpPort().getValue() : "");
+    credentials.setGlobalSmtpSecure(
+        entity.getGlobalSmtpSecure() != null
+            && Boolean.TRUE.equals(entity.getGlobalSmtpSecure().getValue()));
+    credentials.setGlobalSmtpFrom(
+        entity.getGlobalSmtpFrom() != null ? entity.getGlobalSmtpFrom().getValue() : "");
+    credentials.setGlobalSmtpEmailThemeColor(
+        entity.getGlobalSmtpEmailThemeColor() != null
+            ? entity.getGlobalSmtpEmailThemeColor().getValue()
+            : "");
     credentials.setGlobalSmtpUsername(
         entity.getGlobalSmtpUsername() != null ? entity.getGlobalSmtpUsername().getValue() : "");
     String storedPassword =

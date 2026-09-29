@@ -6,6 +6,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -34,6 +35,7 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
 @TestPropertySource(properties = "spring.profiles.active=testing")
 @TestPropertySource(properties = "feature.multitenancy.with.single.domain.enabled=true")
+@TestPropertySource(properties = "settings.smtp.password.encryption.secret=test-only-smtp-secret")
 @AutoConfigureMockMvc(addFilters = false)
 class ApplicationSettingsControllerIT {
 
@@ -297,6 +299,7 @@ class ApplicationSettingsControllerIT {
                     authentication(
                         builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build())))
         .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(jsonPath("$.globalSmtpUsername").value("admin-smtp-user"))
         .andExpect(jsonPath("$.globalSmtpPassword").value("admin-smtp-pass"));
 

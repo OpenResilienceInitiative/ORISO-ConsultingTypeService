@@ -21,7 +21,6 @@ public class ApplicationSettingsService {
   }
 
   public void saveApplicationSettings(ApplicationSettingsEntity entity) {
-    applicationSettingsRepository.deleteAll();
     applicationSettingsRepository.save(entity);
   }
 
