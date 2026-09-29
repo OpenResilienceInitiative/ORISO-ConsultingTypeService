@@ -59,8 +59,14 @@ paths:
     get:
       tags:
         - applicationsettings-controller
-      summary: 'Get global SMTP credentials (super admin or technical service user only)'
+      summary: 'Get one current global SMTP transport snapshot'
+      description: >-
+        Returns the platform SMTP switches, transport fields, sender and decrypted credentials
+        from one application-settings document. Only a platform super admin or an authorized
+        technical service identity may read this response. Responses must not be cached.
       operationId: getGlobalSmtpCredentials
+      security:
+        - bearerAuth: []
       responses:
         200:
           description: OK - successful operation
@@ -316,6 +322,20 @@ components:
     ApplicationSettingsSmtpCredentialsDTO:
       type: object
       properties:
+        globalFeatureSystemNotificationEmailsEnabled:
+          type: boolean
+        globalSmtpEnabled:
+          type: boolean
+        globalSmtpHost:
+          type: string
+        globalSmtpPort:
+          type: string
+        globalSmtpSecure:
+          type: boolean
+        globalSmtpFrom:
+          type: string
+        globalSmtpEmailThemeColor:
+          type: string
         globalSmtpUsername:
           type: string
         globalSmtpPassword:

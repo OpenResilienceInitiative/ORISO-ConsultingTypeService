@@ -8,8 +8,14 @@ import static org.mockito.Mockito.when;
 
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -51,6 +57,24 @@ class ApplicationSettingsServiceFacadeTest {
   }
 
   @Test
+  void patchApplicationSettings_Should_MigrateLegacyPlaintextOnNextAdminUpdate() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("legacy-pass").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    when(smtpPasswordEncryptionService.encrypt("legacy-pass")).thenReturn("ENC:migrated");
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpHost("smtp.example.net");
+    patchDTO.setGlobalSmtpPassword("");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getGlobalSmtpPassword().getValue()).isEqualTo("ENC:migrated");
+    verify(applicationSettingsService).saveApplicationSettings(entity);
+  }
+
+  @Test
   void patchApplicationSettings_Should_NotEncrypt_When_SmtpPasswordNotPatched() {
     // given
     var entity = new ApplicationSettingsEntity();
@@ -76,6 +100,17 @@ class ApplicationSettingsServiceFacadeTest {
         new GlobalSmtpUsername().withValue("smtp-user").withReadOnly(false));
     entity.setGlobalSmtpPassword(
         new GlobalSmtpPassword().withValue("ENC:stored").withReadOnly(false));
+    entity.setGlobalSmtpHost(
+        new GlobalSmtpHost().withValue("smtp.example.net").withReadOnly(false));
+    entity.setGlobalSmtpPort(new GlobalSmtpPort().withValue("587").withReadOnly(false));
+    entity.setGlobalSmtpSecure(new GlobalSmtpSecure().withValue(false).withReadOnly(false));
+    entity.setGlobalSmtpFrom(
+        new GlobalSmtpFrom().withValue("sender@example.net").withReadOnly(false));
+    entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(true).withReadOnly(false));
+    entity.setGlobalFeatureSystemNotificationEmailsEnabled(
+        new GlobalFeatureSystemNotificationEmailsEnabled().withValue(true).withReadOnly(false));
+    entity.setGlobalSmtpEmailThemeColor(
+        new GlobalSmtpEmailThemeColor().withValue("#123456").withReadOnly(false));
     when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
     when(smtpPasswordEncryptionService.decrypt("ENC:stored")).thenReturn("plain-pass");
 
@@ -86,6 +121,13 @@ class ApplicationSettingsServiceFacadeTest {
     assertThat(credentials).isPresent();
     assertThat(credentials.get().getGlobalSmtpUsername()).isEqualTo("smtp-user");
     assertThat(credentials.get().getGlobalSmtpPassword()).isEqualTo("plain-pass");
+    assertThat(credentials.get().getGlobalSmtpHost()).isEqualTo("smtp.example.net");
+    assertThat(credentials.get().getGlobalSmtpPort()).isEqualTo("587");
+    assertThat(credentials.get().getGlobalSmtpSecure()).isFalse();
+    assertThat(credentials.get().getGlobalSmtpFrom()).isEqualTo("sender@example.net");
+    assertThat(credentials.get().getGlobalSmtpEnabled()).isTrue();
+    assertThat(credentials.get().getGlobalFeatureSystemNotificationEmailsEnabled()).isTrue();
+    assertThat(credentials.get().getGlobalSmtpEmailThemeColor()).isEqualTo("#123456");
     verify(smtpPasswordEncryptionService).decrypt("ENC:stored");
   }
 
