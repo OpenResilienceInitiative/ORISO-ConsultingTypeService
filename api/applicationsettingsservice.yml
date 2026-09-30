@@ -41,7 +41,12 @@ paths:
               $ref: '#/components/schemas/ApplicationSettingsPatchDTO'
       responses:
         200:
-          description: OK - successful operation
+          description: OK - settings saved; synchronization may remain pending
+          headers:
+            X-Smtp-Revision:
+              schema: {type: integer, format: int64, minimum: 0}
+            X-Smtp-Sync-Status:
+              schema: {type: string, enum: [UNKNOWN, SMTP_SYNC_PENDING, APPLIED, DISABLED_OR_INCOMPLETE]}
 
           content:
             application/json:
@@ -55,6 +60,25 @@ paths:
           description: UNAUTHORIZED - no/invalid Keycloak token
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+  /settingsadmin/smtp-sync-status:
+    get:
+      tags:
+        - applicationsettings-controller
+      summary: 'Read credential-free synchronization proof for saved SMTP settings'
+      operationId: getSmtpSyncStatus
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Current metadata; UNKNOWN means no successful apply has been proved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpSynchronizationStatusDTO'
+        401:
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        403:
+          description: FORBIDDEN - platform super admin required
   /settingsadmin/smtp-credentials:
     get:
       tags:
@@ -70,12 +94,19 @@ paths:
       responses:
         200:
           description: OK - successful operation
+          headers:
+            X-Smtp-Revision:
+              description: Revision from the same saved document as the credential snapshot
+              schema: {type: integer, format: int64, minimum: 0}
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApplicationSettingsSmtpCredentialsDTO'
         204:
           description: NO CONTENT - no content found
+          headers:
+            X-Smtp-Revision:
+              schema: {type: integer, format: int64, enum: [0]}
         401:
           description: UNAUTHORIZED - no/invalid Keycloak token
         403:
@@ -340,6 +371,25 @@ components:
           type: string
         globalSmtpPassword:
           type: string
+
+    SmtpSynchronizationStatusDTO:
+      type: object
+      required:
+        - revision
+        - status
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        appliedRevision:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        status:
+          type: string
+          enum: [UNKNOWN, SMTP_SYNC_PENDING, APPLIED, DISABLED_OR_INCOMPLETE]
 
     FeatureToggleDTO:
       type: object

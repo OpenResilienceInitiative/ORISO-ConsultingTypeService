@@ -2,6 +2,8 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +20,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -31,6 +34,12 @@ class ApplicationSettingsServiceFacadeTest {
   @Mock ApplicationSettingsService applicationSettingsService;
   @Mock ApplicationSettingsConverter applicationSettingsConverter;
   @Mock SmtpPasswordEncryptionService smtpPasswordEncryptionService;
+  @Mock SmtpSynchronizationService smtpSynchronizationService;
+
+  @BeforeEach
+  void successfulCas() {
+    lenient().when(applicationSettingsService.compareAndSave(any(), isNull())).thenReturn(true);
+  }
 
   @InjectMocks ApplicationSettingsServiceFacade applicationSettingsServiceFacade;
 
@@ -52,7 +61,7 @@ class ApplicationSettingsServiceFacadeTest {
     verify(smtpPasswordEncryptionService).encrypt("plain-pass");
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:cipher");
   }
 
@@ -71,7 +80,7 @@ class ApplicationSettingsServiceFacadeTest {
     applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
 
     assertThat(entity.getGlobalSmtpPassword().getValue()).isEqualTo("ENC:migrated");
-    verify(applicationSettingsService).saveApplicationSettings(entity);
+    verify(applicationSettingsService).compareAndSave(entity, null);
   }
 
   @Test
@@ -88,7 +97,7 @@ class ApplicationSettingsServiceFacadeTest {
 
     // then
     verify(applicationSettingsService)
-        .saveApplicationSettings(any(ApplicationSettingsEntity.class));
+        .compareAndSave(any(ApplicationSettingsEntity.class), isNull());
     verify(smtpPasswordEncryptionService, never()).encrypt(any());
   }
 
@@ -148,7 +157,7 @@ class ApplicationSettingsServiceFacadeTest {
     // then
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
   }
 
@@ -169,7 +178,7 @@ class ApplicationSettingsServiceFacadeTest {
     // then
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:stored");
     verify(smtpPasswordEncryptionService, never()).encrypt(any());
   }
@@ -195,7 +204,7 @@ class ApplicationSettingsServiceFacadeTest {
     // then
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
     assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:stored");
     verify(smtpPasswordEncryptionService, never()).encrypt(any());
@@ -221,7 +230,7 @@ class ApplicationSettingsServiceFacadeTest {
     // then
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
     assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:stored");
     verify(smtpPasswordEncryptionService, never()).encrypt(any());
@@ -244,7 +253,7 @@ class ApplicationSettingsServiceFacadeTest {
     // then
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("new-user");
   }
 
@@ -271,7 +280,7 @@ class ApplicationSettingsServiceFacadeTest {
     // then
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpHost().getValue()).isEqualTo("smtp.new-host.example");
     assertThat(captor.getValue().getGlobalSmtpPort().getValue()).isEqualTo("2525");
     assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
