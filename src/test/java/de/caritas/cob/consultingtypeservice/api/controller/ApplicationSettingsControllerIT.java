@@ -161,6 +161,10 @@ class ApplicationSettingsControllerIT {
                 .content(jsonRequest)
                 .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Smtp-Sync-Status", "SMTP_SYNC_PENDING"))
+        .andExpect(header().exists("X-Smtp-Revision"))
+        .andExpect(
+            header().string("Access-Control-Expose-Headers", "X-Smtp-Revision, X-Smtp-Sync-Status"))
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.value").value(true))
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.readOnly").value(true))
         .andExpect(jsonPath("$.multitenancyEnabled.value").value(false))
@@ -373,6 +377,89 @@ class ApplicationSettingsControllerIT {
     entity.setReleaseToggles("featureToggleTenantCreationEnabled", true);
     applicationSettingsRepository.deleteAll();
     applicationSettingsRepository.save(entity);
+  }
+
+  @Test
+  void smtpSyncStatusRequiresPlatformAdminAndDoesNotExposeCredentials() throws Exception {
+    var entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSmtpRevision(0);
+    entity.setSmtpPendingRevision(null);
+    entity.setSmtpAppliedRevision(null);
+    entity.setSmtpSyncStatus(null);
+    applicationSettingsRepository.save(entity);
+    var platform =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    var response =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                    .with(authentication(platform))
+                    .accept(APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.revision").value(0))
+            .andExpect(jsonPath("$.status").value("UNKNOWN"))
+            .andExpect(jsonPath("$.globalSmtpUsername").doesNotExist())
+            .andExpect(jsonPath("$.globalSmtpPassword").doesNotExist())
+            .andReturn();
+    org.assertj.core.api.Assertions.assertThat(response.getResponse().getContentAsString())
+        .doesNotContain("password", "username", "private");
+  }
+
+  @Test
+  void smtpSyncStatusDeniesUnauthenticatedCaller() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status").accept(APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTenantAdminOutsidePlatformTenant() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTechnicalCaller() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(UserRole.TECHNICAL.getValue())
+            .withTenantId("0")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTopicAdmin() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(TOPIC_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
   }
 
   private Authentication givenMockAuthentication(final UserRole authority) {
