@@ -22,6 +22,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.LegalContentChangesByS
 import de.caritas.cob.consultingtypeservice.schemas.model.MainTenantSubdomainForSingleDomainMultitenancy;
 import de.caritas.cob.consultingtypeservice.schemas.model.MultitenancyEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.MultitenancyWithSingleDomainEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.UseConsultingTypesForAgencies;
 import de.caritas.cob.consultingtypeservice.schemas.model.UseOverviewPage;
 import de.caritas.cob.consultingtypeservice.schemas.model.UseTenantService;
@@ -89,6 +90,8 @@ public class DefaultApplicationSettingsInitializer {
     entity.setDocumentationEnabled(new DocumentationEnabled().withValue(false).withReadOnly(true));
     entity.setGlobalFeatureSystemNotificationEmailsEnabled(
         new GlobalFeatureSystemNotificationEmailsEnabled().withValue(false).withReadOnly(false));
+    entity.setOneTopicPerAgencyEnabled(
+        new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false));
     entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
     entity.setGlobalSmtpHost(new GlobalSmtpHost().withValue("").withReadOnly(false));
     entity.setGlobalSmtpPort(new GlobalSmtpPort().withValue("587").withReadOnly(false));
