@@ -3,6 +3,7 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
+import de.caritas.cob.consultingtypeservice.api.model.SmtpSynchronizationStatusDTO;
 import de.caritas.cob.consultingtypeservice.api.service.ApplicationSettingsServiceFacade;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.ApplicationsettingsControllerApi;
 import io.swagger.annotations.Api;
@@ -10,6 +11,7 @@ import java.util.Optional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -50,11 +52,16 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
           + "or hasAuthority('tenant-admin')")
   public ResponseEntity<ApplicationSettingsDTO> patchApplicationSettings(
       ApplicationSettingsPatchDTO settingsPatchDTO) {
-    applicationSettingsServiceFacade.patchApplicationSettings(settingsPatchDTO);
-    var settings = applicationSettingsServiceFacade.getApplicationSettings();
-    return settings.isPresent()
-        ? new ResponseEntity<>(settings.get(), HttpStatus.OK)
-        : new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    var saved = applicationSettingsServiceFacade.patchApplicationSettings(settingsPatchDTO);
+    return saved.isPresent()
+        ? ResponseEntity.ok()
+            .cacheControl(CacheControl.noStore())
+            .header(
+                "X-Smtp-Revision", Long.toString(saved.get().getSynchronization().getRevision()))
+            .header("X-Smtp-Sync-Status", saved.get().getSynchronization().getStatus())
+            .header("Access-Control-Expose-Headers", "X-Smtp-Revision, X-Smtp-Sync-Status")
+            .body(saved.get().getSettings())
+        : ResponseEntity.noContent().build();
   }
 
   @Override
@@ -62,9 +69,27 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
       "@authorisationService.isSuperAdmin() "
           + "or hasAuthority('AUTHORIZATION_TECHNICAL_DEFAULT')")
   public ResponseEntity<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
-    var credentials = applicationSettingsServiceFacade.getGlobalSmtpCredentials();
-    return credentials.isPresent()
-        ? new ResponseEntity<>(credentials.get(), HttpStatus.OK)
-        : new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    var snapshot = applicationSettingsServiceFacade.getGlobalSmtpSnapshot();
+    return snapshot.isPresent()
+        ? ResponseEntity.ok()
+            .cacheControl(CacheControl.noStore())
+            .header("X-Smtp-Revision", Long.toString(snapshot.get().getRevision()))
+            .body(snapshot.get().getCredentials())
+        : ResponseEntity.noContent()
+            .cacheControl(CacheControl.noStore())
+            .header("X-Smtp-Revision", "0")
+            .build();
+  }
+
+  @Override
+  @PreAuthorize("@authorisationService.isSuperAdmin()")
+  public ResponseEntity<SmtpSynchronizationStatusDTO> getSmtpSyncStatus() {
+    var status = applicationSettingsServiceFacade.getSmtpSynchronizationStatus();
+    var dto = new SmtpSynchronizationStatusDTO();
+    dto.setRevision(status.getRevision());
+    dto.setAppliedRevision(
+        org.openapitools.jackson.nullable.JsonNullable.of(status.getAppliedRevision()));
+    dto.setStatus(SmtpSynchronizationStatusDTO.StatusEnum.fromValue(status.getStatus()));
+    return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(dto);
   }
 }

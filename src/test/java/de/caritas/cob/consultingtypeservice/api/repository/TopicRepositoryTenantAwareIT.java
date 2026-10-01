@@ -3,7 +3,10 @@ package de.caritas.cob.consultingtypeservice.api.repository;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
+import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import java.util.Optional;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
@@ -17,6 +20,17 @@ import org.springframework.test.context.TestPropertySource;
 class TopicRepositoryTenantAwareIT {
 
   @Autowired private TopicRepository topicRepository;
+
+  // Every request runs with a tenant; without one the Hibernate tenant filter matches nothing.
+  @BeforeEach
+  void runAsTenantOne() {
+    TenantContext.setCurrentTenant(1L);
+  }
+
+  @AfterEach
+  void clearTenant() {
+    TenantContext.clear();
+  }
 
   @Test
   void findByIdForTenant_Should_findTopicByIdAndTenantId() {
