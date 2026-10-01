@@ -143,21 +143,17 @@ public class SecurityConfig {
     return authorities;
   }
 
+  /**
+   * Realm roles only. Client roles in {@code resource_access} belong to other clients (for example
+   * realm-management) and are not role grants for this service; the realm defines no client for
+   * this service either.
+   */
   @SuppressWarnings("unchecked")
   private Set<String> extractKeycloakRoles(Jwt jwt) {
     var roles = new HashSet<String>();
     Object realmAccess = jwt.getClaims().get("realm_access");
     if (realmAccess instanceof Map) {
       addRoles(roles, ((Map<String, Object>) realmAccess).get("roles"));
-    }
-
-    Object resourceAccess = jwt.getClaims().get("resource_access");
-    if (resourceAccess instanceof Map) {
-      Map<String, Object> resourceAccessMap = (Map<String, Object>) resourceAccess;
-      resourceAccessMap.values().stream()
-          .filter(Map.class::isInstance)
-          .map(value -> (Map<String, Object>) value)
-          .forEach(clientAccess -> addRoles(roles, clientAccess.get("roles")));
     }
     return roles;
   }
