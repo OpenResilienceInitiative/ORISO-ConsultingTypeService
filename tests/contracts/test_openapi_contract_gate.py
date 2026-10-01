@@ -102,6 +102,18 @@ class OpenApiContractGateTest(unittest.TestCase):
             allowlist,
         )
 
+    def test_settings_security_requirements_name_a_defined_scheme(self):
+        # The bundler does not lint, so a dangling scheme reference would ship unnoticed.
+        provider = yaml.safe_load(
+            (ROOT / "api/applicationsettingsservice.yml").read_text()
+        )
+        defined = set(provider["components"].get("securitySchemes", {}))
+        for path, operations in provider["paths"].items():
+            for method, operation in operations.items():
+                for requirement in operation.get("security", []):
+                    with self.subTest(path=path, method=method):
+                        self.assertLessEqual(set(requirement), defined)
+
     def test_dpa_signing_mail_removal_is_allowlisted_exactly_once(self):
         workflow = (
             ROOT / ".github/workflows/openapi-contracts.yml"
