@@ -228,10 +228,9 @@ class ApplicationSettingsControllerIT {
   }
 
   @Test
-  void patchApplicationSettings_Should_SwitchWalkthroughOffAndOn_When_TenantAdminPatchesIt()
+  void patchApplicationSettings_Should_SwitchWalkthroughOffAndOn_When_PlatformAdminPatchesIt()
       throws Exception {
-    Authentication authentication =
-        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+    Authentication authentication = platformAdmin();
 
     patchSettings(authentication, "{\"enableWalkthrough\":false}")
         .andExpect(status().isOk())
@@ -268,8 +267,7 @@ class ApplicationSettingsControllerIT {
     ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
     entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(true));
     applicationSettingsRepository.save(entity);
-    Authentication authentication =
-        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+    Authentication authentication = platformAdmin();
 
     try {
       patchSettings(authentication, "{\"enableWalkthrough\":false}")
@@ -283,6 +281,62 @@ class ApplicationSettingsControllerIT {
       current.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
       applicationSettingsRepository.save(current);
     }
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminOfRegularTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(
+            authentication,
+            "{\"enableWalkthrough\":false,\"mainTenantSubdomainForSingleDomainMultitenancy\":\"x\"}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
+        .andExpect(jsonPath("$.mainTenantSubdomainForSingleDomainMultitenancy.value").value("app"));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminWithoutTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    patchSettings(authentication, "{\"enableWalkthrough\":false}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_AllowOtherFields_When_TenantAdminOfRegularTenantOmitsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":true}")
+        .andExpect(status().isOk());
+  }
+
+  private static Authentication platformAdmin() {
+    return new AuthenticationMockBuilder()
+        .withUserRole(TENANT_ADMIN.getValue())
+        .withTenantId("0")
+        .build();
   }
 
   private ResultActions patchSettings(Authentication authentication, String body) throws Exception {
