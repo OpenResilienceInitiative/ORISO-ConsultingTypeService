@@ -1,7 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api;
 
-import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
@@ -48,6 +48,21 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
     LogService.logWarning(ex);
 
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+  }
+
+  /**
+   * Custom Conflict exception.
+   *
+   * @param ex the thrown exception
+   * @param request web request
+   * @return response entity
+   */
+  @ExceptionHandler({ConflictException.class})
+  public ResponseEntity<Object> handleCustomConflict(
+      final ConflictException ex, final WebRequest request) {
+    LogService.logWarning(ex);
+
+    return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.CONFLICT, request);
   }
 
   /**
@@ -102,24 +117,6 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
     LogService.logWarning(HttpStatus.CONFLICT, ex);
 
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.CONFLICT, request);
-  }
-
-  /**
-   * 502 - Bad Gateway: the upstream SMTP server rejected or never received the message. Mapped
-   * explicitly so an email transport failure is never masked as success and is distinguishable from
-   * generic internal errors.
-   *
-   * @param ex the thrown exception
-   * @param request web request
-   * @return response entity
-   */
-  @ExceptionHandler({SmtpSendException.class})
-  public ResponseEntity<Object> handleSmtpSendFailure(
-      final SmtpSendException ex, final WebRequest request) {
-    LogService.logError(ex);
-
-    return handleExceptionInternal(
-        EMPTY_EXCEPTION, null, new HttpHeaders(), HttpStatus.BAD_GATEWAY, request);
   }
 
   /**

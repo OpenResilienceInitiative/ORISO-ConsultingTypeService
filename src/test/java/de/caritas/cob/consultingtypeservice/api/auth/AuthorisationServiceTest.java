@@ -44,4 +44,27 @@ class AuthorisationServiceTest {
     assertThat(authorisationService.isSuperAdmin()).isFalse();
     assertThat(authorisationService.findTenantIdInAccessToken()).isEmpty();
   }
+
+  @Test
+  void isSuperAdmin_Should_ReturnFalse_When_TenantIdIsZeroButTenantAdminRoleIsMissing() {
+    var authentication =
+        new AuthenticationMockBuilder().withUserRole("topic-admin").withTenantId("0").build();
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+    assertThat(authorisationService.isSuperAdmin()).isFalse();
+  }
+
+  @Test
+  void isSuperAdmin_Should_ReturnFalse_When_TenantIdIsZeroForTheTechnicalUser() {
+    var authentication =
+        new AuthenticationMockBuilder().withUserRole("technical").withTenantId("0").build();
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+    assertThat(authorisationService.isSuperAdmin()).isFalse();
+  }
+
+  @Test
+  void isSuperAdmin_Should_ReturnFalse_When_NoAuthenticationIsPresent() {
+    assertThat(authorisationService.isSuperAdmin()).isFalse();
+  }
 }

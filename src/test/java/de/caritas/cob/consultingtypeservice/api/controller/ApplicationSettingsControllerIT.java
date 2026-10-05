@@ -6,6 +6,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -36,6 +37,7 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
 @TestPropertySource(properties = "spring.profiles.active=testing")
 @TestPropertySource(properties = "feature.multitenancy.with.single.domain.enabled=true")
+@TestPropertySource(properties = "settings.smtp.password.encryption.secret=test-only-smtp-secret")
 @AutoConfigureMockMvc(addFilters = false)
 class ApplicationSettingsControllerIT {
 
@@ -161,6 +163,10 @@ class ApplicationSettingsControllerIT {
                 .content(jsonRequest)
                 .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Smtp-Sync-Status", "SMTP_SYNC_PENDING"))
+        .andExpect(header().exists("X-Smtp-Revision"))
+        .andExpect(
+            header().string("Access-Control-Expose-Headers", "X-Smtp-Revision, X-Smtp-Sync-Status"))
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.value").value(true))
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.readOnly").value(true))
         .andExpect(jsonPath("$.multitenancyEnabled.value").value(false))
@@ -367,6 +373,7 @@ class ApplicationSettingsControllerIT {
                     authentication(
                         builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build())))
         .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(jsonPath("$.globalSmtpUsername").value("admin-smtp-user"))
         .andExpect(jsonPath("$.globalSmtpPassword").value("admin-smtp-pass"));
 
@@ -401,6 +408,20 @@ class ApplicationSettingsControllerIT {
   }
 
   @Test
+  void getGlobalSmtpCredentials_Should_ReturnForbidden_When_TenantIdIsZeroWithoutTenantAdminRole()
+      throws Exception {
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(
+                    authentication(
+                        builder.withUserRole(TOPIC_ADMIN.getValue()).withTenantId("0").build())))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
   void getGlobalSmtpCredentials_Should_ReturnForbidden_When_TenantAdminHasNoTenantIdClaim()
       throws Exception {
     AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
@@ -426,6 +447,89 @@ class ApplicationSettingsControllerIT {
     entity.setReleaseToggles("featureToggleTenantCreationEnabled", true);
     applicationSettingsRepository.deleteAll();
     applicationSettingsRepository.save(entity);
+  }
+
+  @Test
+  void smtpSyncStatusRequiresPlatformAdminAndDoesNotExposeCredentials() throws Exception {
+    var entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSmtpRevision(0);
+    entity.setSmtpPendingRevision(null);
+    entity.setSmtpAppliedRevision(null);
+    entity.setSmtpSyncStatus(null);
+    applicationSettingsRepository.save(entity);
+    var platform =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    var response =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                    .with(authentication(platform))
+                    .accept(APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.revision").value(0))
+            .andExpect(jsonPath("$.status").value("UNKNOWN"))
+            .andExpect(jsonPath("$.globalSmtpUsername").doesNotExist())
+            .andExpect(jsonPath("$.globalSmtpPassword").doesNotExist())
+            .andReturn();
+    org.assertj.core.api.Assertions.assertThat(response.getResponse().getContentAsString())
+        .doesNotContain("password", "username", "private");
+  }
+
+  @Test
+  void smtpSyncStatusDeniesUnauthenticatedCaller() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status").accept(APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTenantAdminOutsidePlatformTenant() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTechnicalCaller() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(UserRole.TECHNICAL.getValue())
+            .withTenantId("0")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTopicAdmin() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(TOPIC_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
   }
 
   private Authentication givenMockAuthentication(final UserRole authority) {

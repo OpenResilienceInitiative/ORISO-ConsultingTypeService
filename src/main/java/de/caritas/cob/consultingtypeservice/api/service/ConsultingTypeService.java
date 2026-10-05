@@ -4,6 +4,8 @@ import de.caritas.cob.consultingtypeservice.api.auth.AuthenticatedUser;
 import de.caritas.cob.consultingtypeservice.api.auth.Authority.AuthorityValue;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.mapper.BasicConsultingTypeMapper;
 import de.caritas.cob.consultingtypeservice.api.mapper.ConsultingTypeMapper;
@@ -115,6 +117,24 @@ public class ConsultingTypeService {
     return ConsultingTypeMapper.mapConsultingType(
         consultingTypeRepositoryService.getConsultingTypeById(consultingTypeId),
         BasicConsultingTypeMapper::mapConsultingType);
+  }
+
+  /**
+   * Creates the first (default) consulting type of a tenant. This is the path of the service
+   * identity during tenant creation (ORISO-Helm#367): it needs a target tenant and refuses a tenant
+   * that already has a consulting type, so it can never add to or change an existing setup.
+   */
+  public FullConsultingTypeResponseDTO createInitialConsultingTypeForTenant(
+      final ConsultingTypeDTO consultingTypeDTO) {
+    Integer tenantId = consultingTypeDTO.getTenantId();
+    if (tenantId == null || tenantId < 1) {
+      throw new BadRequestException("A tenant is required to create its default consulting type");
+    }
+    if (consultingTypeRepositoryService.hasConsultingTypesForTenant(tenantId)) {
+      throw new ConflictException(
+          String.format("Tenant %s already has a consulting type", tenantId));
+    }
+    return createConsultingType(consultingTypeDTO);
   }
 
   public FullConsultingTypeResponseDTO createConsultingType(

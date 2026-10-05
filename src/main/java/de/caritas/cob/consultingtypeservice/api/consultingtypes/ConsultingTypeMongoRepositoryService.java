@@ -77,6 +77,11 @@ public class ConsultingTypeMongoRepositoryService implements ConsultingTypeRepos
     return consultingTypeRepository.findByTenantId(tenantId);
   }
 
+  @Override
+  public boolean hasConsultingTypesForTenant(Integer tenantId) {
+    return consultingTypeRepository.existsByTenantId(tenantId);
+  }
+
   /**
    * Add a consulting type to the repository.
    *
