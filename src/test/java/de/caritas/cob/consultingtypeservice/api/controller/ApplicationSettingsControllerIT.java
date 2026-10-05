@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -22,6 +23,8 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -137,7 +140,8 @@ class ApplicationSettingsControllerIT {
     // given
     giveApplicationSettingEntityWithDynamicReleaseToggles();
     AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
-    Authentication authentication = builder.withUserRole(TENANT_ADMIN.getValue()).build();
+    Authentication authentication =
+        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build();
     ApplicationSettingsPatchDTO patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(false);
     patchDTO.setMainTenantSubdomainForSingleDomainMultitenancy("app2");
@@ -249,6 +253,73 @@ class ApplicationSettingsControllerIT {
                 .content(jsonRequest)
                 .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"legalContentChangesBySingleTenantAdminsAllowed\":false}",
+        "{\"mainTenantSubdomainForSingleDomainMultitenancy\":\"attacker\"}",
+        "{\"globalFeatureSystemNotificationEmailsEnabled\":true}",
+        "{\"globalSmtpEnabled\":true}",
+        "{\"globalSmtpHost\":\"smtp.attacker.example\"}",
+        "{\"globalSmtpPort\":\"2525\"}",
+        "{\"globalSmtpSecure\":true}",
+        "{\"globalSmtpUsername\":\"attacker\"}",
+        "{\"globalSmtpPassword\":\"attacker\"}",
+        "{\"globalSmtpFrom\":\"attacker@example.org\"}",
+        "{\"globalSmtpEmailThemeColor\":\"#000000\"}"
+      })
+  void patchApplicationSettings_Should_ReturnForbiddenAndStoreNothing_When_TenantScopedAdminPatches(
+      String platformWideChange) throws Exception {
+    var before = applicationSettingsRepository.findAll().get(0);
+    var hostBefore =
+        before.getGlobalSmtpHost() == null ? null : before.getGlobalSmtpHost().getValue();
+    var subdomainBefore = before.getMainTenantSubdomainForSingleDomainMultitenancy().getValue();
+    var legalBefore = before.getLegalContentChangesBySingleTenantAdminsAllowed().getValue();
+    var revisionBefore = before.getSmtpRevision();
+
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(TENANT_ADMIN.getValue())
+                            .withTenantId("1")
+                            .build()))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content(platformWideChange))
+        .andExpect(status().isForbidden());
+
+    var after = applicationSettingsRepository.findAll().get(0);
+    assertThat(after.getGlobalSmtpHost() == null ? null : after.getGlobalSmtpHost().getValue())
+        .isEqualTo(hostBefore);
+    assertThat(after.getMainTenantSubdomainForSingleDomainMultitenancy().getValue())
+        .isEqualTo(subdomainBefore);
+    assertThat(after.getLegalContentChangesBySingleTenantAdminsAllowed().getValue())
+        .isEqualTo(legalBefore);
+    assertThat(after.getSmtpRevision()).isEqualTo(revisionBefore);
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminHasNoTenantIdClaim()
+      throws Exception {
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(TENANT_ADMIN.getValue())
+                            .build()))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content("{\"globalSmtpHost\":\"smtp.attacker.example\"}"))
+        .andExpect(status().isForbidden());
   }
 
   @Test
