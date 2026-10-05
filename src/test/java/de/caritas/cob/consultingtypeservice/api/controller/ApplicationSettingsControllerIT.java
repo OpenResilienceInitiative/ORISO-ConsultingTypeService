@@ -242,10 +242,28 @@ class ApplicationSettingsControllerIT {
   }
 
   @Test
-  void patchApplicationSettings_Should_StoreOneTopicPerAgency_When_TenantAdminSwitchesItOn()
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesOneTopicPerAgency()
       throws Exception {
     Authentication authentication =
-        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchOneTopicPerAgency(authentication, true).andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreOneTopicPerAgency_When_PlatformAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
 
     patchOneTopicPerAgency(authentication, true)
         .andExpect(status().isOk())
