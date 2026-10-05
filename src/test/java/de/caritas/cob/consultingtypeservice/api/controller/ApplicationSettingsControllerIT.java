@@ -17,6 +17,7 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDT
 import de.caritas.cob.consultingtypeservice.api.repository.ApplicationSettingsRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.util.JsonConverter;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import jakarta.servlet.http.Cookie;
@@ -28,6 +29,7 @@ import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -90,7 +92,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.useTenantService.readOnly").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.value").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.readOnly").value(false))
-        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
         .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false))
         .andExpect(jsonPath("$.disableVideoAppointments.value").value(true))
         .andExpect(jsonPath("$.disableVideoAppointments.readOnly").value(false))
@@ -173,7 +175,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.useTenantService.readOnly").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.value").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.readOnly").value(false))
-        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
         .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false))
         .andExpect(jsonPath("$.disableVideoAppointments.value").value(true))
         .andExpect(jsonPath("$.disableVideoAppointments.readOnly").value(false))
@@ -221,8 +223,130 @@ class ApplicationSettingsControllerIT {
                 .header("csrfHeader", "csrfToken")
                 .cookie(new Cookie("csrfCookie", "csrfToken"))
                 .contentType(APPLICATION_JSON)
-                .content("{\"enableWalkthrough\":true}"))
+                .content("{\"useOverviewPage\":true}"))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_SwitchWalkthroughOffAndOn_When_PlatformAdminPatchesIt()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"enableWalkthrough\":false}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(false));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false));
+
+    patchSettings(authentication, "{\"enableWalkthrough\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_LeaveWalkthroughUntouched_When_PatchOmitsIt()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_WalkthroughToggleIsReadOnly()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(true));
+    applicationSettingsRepository.save(entity);
+    Authentication authentication = platformAdmin();
+
+    try {
+      patchSettings(authentication, "{\"enableWalkthrough\":false}")
+          .andExpect(status().isBadRequest());
+      mockMvc
+          .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+          .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
+          .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(true));
+    } finally {
+      ApplicationSettingsEntity current = applicationSettingsRepository.findAll().get(0);
+      current.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+      applicationSettingsRepository.save(current);
+    }
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminOfRegularTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(
+            authentication,
+            "{\"enableWalkthrough\":false,\"mainTenantSubdomainForSingleDomainMultitenancy\":\"x\"}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
+        .andExpect(jsonPath("$.mainTenantSubdomainForSingleDomainMultitenancy.value").value("app"));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminWithoutTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    patchSettings(authentication, "{\"enableWalkthrough\":false}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_AllowOtherFields_When_TenantAdminOfRegularTenantOmitsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":true}")
+        .andExpect(status().isOk());
+  }
+
+  private static Authentication platformAdmin() {
+    return new AuthenticationMockBuilder()
+        .withUserRole(TENANT_ADMIN.getValue())
+        .withTenantId("0")
+        .build();
+  }
+
+  private ResultActions patchSettings(Authentication authentication, String body) throws Exception {
+    return mockMvc.perform(
+        patch("/settingsadmin")
+            .with(authentication(authentication))
+            .header("csrfHeader", "csrfToken")
+            .cookie(new Cookie("csrfCookie", "csrfToken"))
+            .contentType(APPLICATION_JSON)
+            .content(body));
   }
 
   private void resetSettingsToPreviousState(Authentication authentication) throws Exception {

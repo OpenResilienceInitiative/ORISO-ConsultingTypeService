@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
@@ -14,6 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -26,6 +28,7 @@ import org.springframework.web.context.request.NativeWebRequest;
 public class ApplicationSettingsController implements ApplicationsettingsControllerApi {
 
   private final @NonNull ApplicationSettingsServiceFacade applicationSettingsServiceFacade;
+  private final @NonNull AuthorisationService authorisationService;
 
   @Override
   public Optional<NativeWebRequest> getRequest() {
@@ -52,6 +55,11 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
           + "or hasAuthority('tenant-admin')")
   public ResponseEntity<ApplicationSettingsDTO> patchApplicationSettings(
       ApplicationSettingsPatchDTO settingsPatchDTO) {
+    // enableWalkthrough is platform-wide; a tenant admin must not switch it for every tenant.
+    if (settingsPatchDTO.getEnableWalkthrough() != null && !authorisationService.isSuperAdmin()) {
+      throw new AccessDeniedException(
+          "enableWalkthrough can only be changed by the platform admin");
+    }
     var saved = applicationSettingsServiceFacade.patchApplicationSettings(settingsPatchDTO);
     return saved.isPresent()
         ? ResponseEntity.ok()
