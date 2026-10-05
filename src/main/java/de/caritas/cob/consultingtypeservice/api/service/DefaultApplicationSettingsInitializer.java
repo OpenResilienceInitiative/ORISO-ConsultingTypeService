@@ -50,6 +50,9 @@ public class DefaultApplicationSettingsInitializer {
   @Value("${setting.main.tenant.subdomain.for.single.domain.multitenancy}")
   private String mainTenantSubdomainForSingleDomainMultitenancy;
 
+  @Value("${feature.walkthrough.enabled}")
+  private boolean walkthroughEnabled;
+
   @PostConstruct
   private void init() {
     if (applicationSettingsRepository.findAll().isEmpty()) {
@@ -62,7 +65,8 @@ public class DefaultApplicationSettingsInitializer {
     ApplicationSettingsEntity entity = new ApplicationSettingsEntity();
     entity.setDisableVideoAppointments(
         new DisableVideoAppointments().withValue(true).withReadOnly(false));
-    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(false).withReadOnly(false));
+    entity.setEnableWalkthrough(
+        new EnableWalkthrough().withValue(walkthroughEnabled).withReadOnly(false));
     entity.setUseConsultingTypesForAgencies(
         new UseConsultingTypesForAgencies().withValue(false).withReadOnly(false));
     entity.setUseTenantService(

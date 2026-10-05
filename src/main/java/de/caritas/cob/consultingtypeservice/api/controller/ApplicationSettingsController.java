@@ -55,11 +55,15 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
           + "or hasAuthority('tenant-admin')")
   public ResponseEntity<ApplicationSettingsDTO> patchApplicationSettings(
       ApplicationSettingsPatchDTO settingsPatchDTO) {
-    // Platform-wide policy: a tenant admin must not flip it for every tenant.
+    // Platform-wide settings: a tenant admin must not switch them for every tenant.
     if (settingsPatchDTO.getOneTopicPerAgencyEnabled() != null
         && !authorisationService.isSuperAdmin()) {
       throw new AccessDeniedException(
           "Only the platform admin may change oneTopicPerAgencyEnabled");
+    }
+    if (settingsPatchDTO.getEnableWalkthrough() != null && !authorisationService.isSuperAdmin()) {
+      throw new AccessDeniedException(
+          "enableWalkthrough can only be changed by the platform admin");
     }
     var saved = applicationSettingsServiceFacade.patchApplicationSettings(settingsPatchDTO);
     return saved.isPresent()
