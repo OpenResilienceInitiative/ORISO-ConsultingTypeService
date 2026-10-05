@@ -13,6 +13,78 @@ public class ApplicationSettingsEntity extends ApplicationSettings {
 
   @Id private String id;
 
+  // Internal persistence metadata; never part of the public settings DTO.
+  private Long settingsVersion;
+  private long smtpRevision;
+  private Long smtpPendingRevision;
+  private Long smtpAppliedRevision;
+  private String smtpSyncStatus;
+  private int smtpSyncAttempts;
+  private java.time.Instant smtpNextAttemptAt;
+
+  @JsonIgnore
+  public Long getSettingsVersion() {
+    return settingsVersion;
+  }
+
+  public void setSettingsVersion(Long value) {
+    settingsVersion = value;
+  }
+
+  @JsonIgnore
+  public long getSmtpRevision() {
+    return smtpRevision;
+  }
+
+  public void setSmtpRevision(long value) {
+    smtpRevision = value;
+  }
+
+  @JsonIgnore
+  public Long getSmtpPendingRevision() {
+    return smtpPendingRevision;
+  }
+
+  public void setSmtpPendingRevision(Long value) {
+    smtpPendingRevision = value;
+  }
+
+  @JsonIgnore
+  public Long getSmtpAppliedRevision() {
+    return smtpAppliedRevision;
+  }
+
+  public void setSmtpAppliedRevision(Long value) {
+    smtpAppliedRevision = value;
+  }
+
+  @JsonIgnore
+  public String getSmtpSyncStatus() {
+    return smtpSyncStatus;
+  }
+
+  public void setSmtpSyncStatus(String value) {
+    smtpSyncStatus = value;
+  }
+
+  @JsonIgnore
+  public int getSmtpSyncAttempts() {
+    return smtpSyncAttempts;
+  }
+
+  public void setSmtpSyncAttempts(int value) {
+    smtpSyncAttempts = value;
+  }
+
+  @JsonIgnore
+  public java.time.Instant getSmtpNextAttemptAt() {
+    return smtpNextAttemptAt;
+  }
+
+  public void setSmtpNextAttemptAt(java.time.Instant value) {
+    smtpNextAttemptAt = value;
+  }
+
   Map<String, Object> releaseToggles = new LinkedHashMap<>();
 
   @JsonIgnore

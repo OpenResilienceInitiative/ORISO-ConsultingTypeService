@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
@@ -14,9 +15,11 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
+import java.time.Instant;
 import java.util.Optional;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +31,19 @@ public class ApplicationSettingsServiceFacade {
   private final @NonNull ApplicationSettingsService applicationSettingsService;
   private final @NonNull ApplicationSettingsConverter applicationSettingsConverter;
   private final @NonNull SmtpPasswordEncryptionService smtpPasswordEncryptionService;
+  private final @NonNull SmtpSynchronizationService smtpSynchronizationService;
+
+  @Value
+  public static class SavedSettings {
+    ApplicationSettingsDTO settings;
+    SmtpSynchronizationStatus synchronization;
+  }
+
+  @Value
+  public static class SmtpSnapshot {
+    long revision;
+    ApplicationSettingsSmtpCredentialsDTO credentials;
+  }
 
   public Optional<ApplicationSettingsDTO> getApplicationSettings() {
     var applicationSettings = applicationSettingsService.getApplicationSettings();
@@ -36,22 +52,92 @@ public class ApplicationSettingsServiceFacade {
         : Optional.empty();
   }
 
-  public void patchApplicationSettings(ApplicationSettingsPatchDTO settingsPatchDTO) {
-    var applicationSettings = applicationSettingsService.getApplicationSettings();
-    if (applicationSettings.isPresent()) {
-      ApplicationSettingsEntity entity = applicationSettings.get();
+  public Optional<SavedSettings> patchApplicationSettings(
+      ApplicationSettingsPatchDTO settingsPatchDTO) {
+    for (int attempt = 0; attempt < 3; attempt++) {
+      var current = applicationSettingsService.getApplicationSettings();
+      if (current.isEmpty()) return Optional.empty();
+      ApplicationSettingsEntity entity = current.get();
+      Long expectedVersion = entity.getSettingsVersion();
+      var before = SmtpSettingsFingerprint.from(entity, smtpPasswordEncryptionService);
+      String storedPassword =
+          entity.getGlobalSmtpPassword() != null ? entity.getGlobalSmtpPassword().getValue() : null;
       convertPatchedValues(settingsPatchDTO, entity);
-      applicationSettingsService.saveApplicationSettings(entity);
+      if (!isRealCredentialValue(settingsPatchDTO.getGlobalSmtpPassword())
+          && isRealCredentialValue(storedPassword)
+          && !storedPassword.startsWith(SmtpPasswordEncryptionService.ENCRYPTED_PREFIX)) {
+        // Migrate ciphertext without treating an unchanged effective password as a transport
+        // change.
+        entity
+            .getGlobalSmtpPassword()
+            .setValue(smtpPasswordEncryptionService.encrypt(storedPassword));
+      }
+      boolean changed =
+          !before.equals(SmtpSettingsFingerprint.from(entity, smtpPasswordEncryptionService));
+      if (changed) {
+        entity.setSmtpRevision(Math.addExact(entity.getSmtpRevision(), 1));
+        entity.setSmtpPendingRevision(entity.getSmtpRevision());
+        entity.setSmtpSyncStatus(SmtpSynchronizationStatus.PENDING);
+        entity.setSmtpSyncAttempts(0);
+        entity.setSmtpNextAttemptAt(Instant.now());
+      }
+      if (!applicationSettingsService.compareAndSave(entity, expectedVersion)) continue;
+      // Mongo single-document CAS has completed; failure before this point cannot dispatch.
+      if (changed)
+        smtpSynchronizationService.synchronizeAfterSave(entity.getId(), entity.getSmtpRevision());
+      ApplicationSettingsEntity latest = entity;
+      try {
+        latest = applicationSettingsService.getApplicationSettings().orElse(entity);
+      } catch (RuntimeException ignored) {
+        // The save committed. The original pending snapshot is conservative if readback is
+        // unavailable.
+      }
+      return Optional.of(
+          new SavedSettings(
+              applicationSettingsConverter.toDTO(latest), SmtpSynchronizationStatus.from(latest)));
     }
+    throw new ConflictException(
+        "Application settings changed concurrently. Please retry the save.");
+  }
+
+  public Optional<SmtpSnapshot> getGlobalSmtpSnapshot() {
+    return applicationSettingsService
+        .getApplicationSettings()
+        .map(entity -> new SmtpSnapshot(entity.getSmtpRevision(), toSmtpCredentialsDTO(entity)));
   }
 
   public Optional<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
-    return applicationSettingsService.getApplicationSettings().map(this::toSmtpCredentialsDTO);
+    return getGlobalSmtpSnapshot().map(SmtpSnapshot::getCredentials);
+  }
+
+  public SmtpSynchronizationStatus getSmtpSynchronizationStatus() {
+    return SmtpSynchronizationStatus.from(
+        applicationSettingsService.getApplicationSettings().orElse(null));
   }
 
   private ApplicationSettingsSmtpCredentialsDTO toSmtpCredentialsDTO(
       ApplicationSettingsEntity entity) {
     var credentials = new ApplicationSettingsSmtpCredentialsDTO();
+    credentials.setGlobalFeatureSystemNotificationEmailsEnabled(
+        entity.getGlobalFeatureSystemNotificationEmailsEnabled() != null
+            && Boolean.TRUE.equals(
+                entity.getGlobalFeatureSystemNotificationEmailsEnabled().getValue()));
+    credentials.setGlobalSmtpEnabled(
+        entity.getGlobalSmtpEnabled() != null
+            && Boolean.TRUE.equals(entity.getGlobalSmtpEnabled().getValue()));
+    credentials.setGlobalSmtpHost(
+        entity.getGlobalSmtpHost() != null ? entity.getGlobalSmtpHost().getValue() : "");
+    credentials.setGlobalSmtpPort(
+        entity.getGlobalSmtpPort() != null ? entity.getGlobalSmtpPort().getValue() : "");
+    credentials.setGlobalSmtpSecure(
+        entity.getGlobalSmtpSecure() != null
+            && Boolean.TRUE.equals(entity.getGlobalSmtpSecure().getValue()));
+    credentials.setGlobalSmtpFrom(
+        entity.getGlobalSmtpFrom() != null ? entity.getGlobalSmtpFrom().getValue() : "");
+    credentials.setGlobalSmtpEmailThemeColor(
+        entity.getGlobalSmtpEmailThemeColor() != null
+            ? entity.getGlobalSmtpEmailThemeColor().getValue()
+            : "");
     credentials.setGlobalSmtpUsername(
         entity.getGlobalSmtpUsername() != null ? entity.getGlobalSmtpUsername().getValue() : "");
     String storedPassword =
