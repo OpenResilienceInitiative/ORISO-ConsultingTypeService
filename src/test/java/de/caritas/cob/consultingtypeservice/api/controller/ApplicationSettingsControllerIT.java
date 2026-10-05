@@ -257,8 +257,7 @@ class ApplicationSettingsControllerIT {
   @Test
   void patchApplicationSettings_Should_LeaveWalkthroughUntouched_When_PatchOmitsIt()
       throws Exception {
-    Authentication authentication =
-        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+    Authentication authentication = platformAdmin();
 
     patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":true}")
         .andExpect(status().isOk())
@@ -324,16 +323,20 @@ class ApplicationSettingsControllerIT {
 
   @Test
   void
-      patchApplicationSettings_Should_AllowOtherFields_When_TenantAdminOfRegularTenantOmitsWalkthrough()
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminOfRegularTenantOmitsWalkthrough()
           throws Exception {
+    // Before CTS#168 only enableWalkthrough was platform-only; now every field of this PATCH is.
     Authentication authentication =
         new AuthenticationMockBuilder()
             .withUserRole(TENANT_ADMIN.getValue())
             .withTenantId("1")
             .build();
 
-    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":true}")
-        .andExpect(status().isOk());
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":false}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.value").value(true));
   }
 
   private static Authentication platformAdmin() {
