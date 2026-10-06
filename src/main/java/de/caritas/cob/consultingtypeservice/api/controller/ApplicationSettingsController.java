@@ -48,11 +48,10 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
         : new ResponseEntity<>(HttpStatus.NO_CONTENT);
   }
 
+  // Every field of this PATCH is platform-wide; the realm role alone also covers tenant-scoped
+  // admins, so only the platform admin (tenant 0) may write.
   @Override
-  @PreAuthorize(
-      "hasAuthority('AUTHORIZATION_PATCH_APPLICATION_SETTINGS') "
-          + "or hasAuthority('ROLE_tenant-admin') "
-          + "or hasAuthority('tenant-admin')")
+  @PreAuthorize("@authorisationService.isSuperAdmin()")
   public ResponseEntity<ApplicationSettingsDTO> patchApplicationSettings(
       ApplicationSettingsPatchDTO settingsPatchDTO) {
     // enableWalkthrough is platform-wide; a tenant admin must not switch it for every tenant.
