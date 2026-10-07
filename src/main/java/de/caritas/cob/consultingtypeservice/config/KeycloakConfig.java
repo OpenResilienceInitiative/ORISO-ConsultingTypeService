@@ -35,6 +35,8 @@ import org.springframework.web.context.WebApplicationContext;
 @Validated
 @ConfigurationProperties(prefix = "keycloak")
 public class KeycloakConfig {
+  @org.springframework.beans.factory.annotation.Autowired(required = false)
+  private de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity taskIdentity;
 
   @Bean
   @Scope(scopeName = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
@@ -71,6 +73,10 @@ public class KeycloakConfig {
 
   @SuppressWarnings("unchecked")
   private Set<String> extractRealmRoles(Jwt jwt) {
+    if (de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity.hasTaskRole(jwt)
+        || (taskIdentity != null && taskIdentity.isTaskToken(jwt))) {
+      return java.util.Set.of();
+    }
     Object realmAccess = jwt.getClaims().get("realm_access");
     if (realmAccess instanceof Map) {
       Object rolesClaim = ((Map<String, Object>) realmAccess).get("roles");
