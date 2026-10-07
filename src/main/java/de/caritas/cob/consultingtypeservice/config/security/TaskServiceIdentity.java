@@ -108,6 +108,17 @@ public class TaskServiceIdentity {
             .stream().anyMatch(FORBIDDEN::contains)) {
       return false;
     }
+    Collection<?> roles = (Collection<?>) ((Map<?, ?>) realm).get("roles");
+    Set<String> allowedRoles = Set.of(role);
+    if ("NOTIFICATION_DISPATCH".equals(task)) {
+      allowedRoles = Set.of("notification-dispatch", "notifications-technical");
+    } else if ("MATRIX_AGENCY".equals(task)) {
+      allowedRoles = Set.of("matrix-agency", "matrix-agency-provision");
+    }
+    Set<String> exactRoles = allowedRoles;
+    if (roles.stream().anyMatch(grant -> !exactRoles.contains(grant))) {
+      return false;
+    }
     Object resources = jwt.getClaims().get("resource_access");
     return !(resources instanceof Map) || !((Map<?, ?>) resources).containsKey("realm-management");
   }
