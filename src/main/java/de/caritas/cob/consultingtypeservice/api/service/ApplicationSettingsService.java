@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 public class ApplicationSettingsService {
 
   private @NonNull ApplicationSettingsRepository applicationSettingsRepository;
+  private final ApplicationSettingsAtomicStore atomicStore;
 
   public Optional<ApplicationSettingsEntity> getApplicationSettings() {
     var settings = applicationSettingsRepository.findAll();
@@ -21,8 +22,11 @@ public class ApplicationSettingsService {
   }
 
   public void saveApplicationSettings(ApplicationSettingsEntity entity) {
-    applicationSettingsRepository.deleteAll();
     applicationSettingsRepository.save(entity);
+  }
+
+  public boolean compareAndSave(ApplicationSettingsEntity entity, Long expectedVersion) {
+    return atomicStore.save(entity, expectedVersion);
   }
 
   private void assertExactlyOneEntryFound(List<ApplicationSettingsEntity> settings) {

@@ -30,7 +30,11 @@ public enum Authority {
           AuthorityValue.GET_ALL_TOPICS,
           AuthorityValue.GET_TOPICS_TRANSLATION_BY_ID)),
 
-  TECHNICAL(UserRole.TECHNICAL, Lists.newArrayList(AuthorityValue.TECHNICAL_DEFAULT));
+  TECHNICAL(
+      UserRole.TECHNICAL,
+      Lists.newArrayList(
+          AuthorityValue.TECHNICAL_DEFAULT,
+          AuthorityValue.TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES));
 
   private final UserRole userRole;
   private final List<String> grantedAuthorities;
@@ -61,5 +65,13 @@ public enum Authority {
     public static final String GET_TOPICS_TRANSLATION_BY_ID =
         PREFIX + "GET_TOPICS_TRANSLATION_BY_ID";
     public static final String TECHNICAL_DEFAULT = PREFIX + "TECHNICAL_DEFAULT";
+
+    /**
+     * Lets the service identity create the default consulting type of a newly created tenant
+     * (TenantService createTenant, ORISO-Helm#367). Accepted only by POST /consultingtypes, and
+     * only for a tenant that has no consulting type yet.
+     */
+    public static final String TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES =
+        PREFIX + "TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES";
   }
 }

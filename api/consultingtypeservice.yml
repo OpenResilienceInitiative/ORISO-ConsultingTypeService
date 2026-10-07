@@ -177,7 +177,7 @@ paths:
     post:
       tags:
         - consulting-type-controller
-      summary: 'Create a consulting type [Authorization: Role: tenant-admin]'
+      summary: 'Create a consulting type [Authorization: Role: tenant-admin, or Role: technical for the first consulting type of a new tenant]'
       operationId: createConsultingType
       requestBody:
         content:
@@ -196,6 +196,8 @@ paths:
           description: BAD REQUEST - invalid/incomplete request or body object
         403:
           description: FORBIDDEN - no/invalid CSRF token
+        409:
+          description: CONFLICT - tenant already has a consulting type
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
       security:
