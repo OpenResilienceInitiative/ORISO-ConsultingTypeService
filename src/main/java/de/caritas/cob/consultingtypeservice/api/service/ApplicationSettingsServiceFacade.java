@@ -16,6 +16,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
+import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import java.time.Instant;
 import java.util.Optional;
 import lombok.NonNull;
@@ -179,6 +180,13 @@ public class ApplicationSettingsServiceFacade {
       entity
           .getGlobalFeatureSystemNotificationEmailsEnabled()
           .setValue(settingsPatchDTO.getGlobalFeatureSystemNotificationEmailsEnabled());
+    }
+    if (settingsPatchDTO.getOneTopicPerAgencyEnabled() != null) {
+      if (entity.getOneTopicPerAgencyEnabled() == null) {
+        entity.setOneTopicPerAgencyEnabled(
+            new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false));
+      }
+      entity.getOneTopicPerAgencyEnabled().setValue(settingsPatchDTO.getOneTopicPerAgencyEnabled());
     }
     if (settingsPatchDTO.getGlobalSmtpEnabled() != null) {
       if (entity.getGlobalSmtpEnabled() == null) {

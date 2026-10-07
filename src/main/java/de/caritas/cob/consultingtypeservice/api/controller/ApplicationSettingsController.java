@@ -54,7 +54,12 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
   @PreAuthorize("@authorisationService.isSuperAdmin()")
   public ResponseEntity<ApplicationSettingsDTO> patchApplicationSettings(
       ApplicationSettingsPatchDTO settingsPatchDTO) {
-    // enableWalkthrough is platform-wide; a tenant admin must not switch it for every tenant.
+    // Platform-wide settings: a tenant admin must not switch them for every tenant.
+    if (settingsPatchDTO.getOneTopicPerAgencyEnabled() != null
+        && !authorisationService.isSuperAdmin()) {
+      throw new AccessDeniedException(
+          "Only the platform admin may change oneTopicPerAgencyEnabled");
+    }
     if (settingsPatchDTO.getEnableWalkthrough() != null && !authorisationService.isSuperAdmin()) {
       throw new AccessDeniedException(
           "enableWalkthrough can only be changed by the platform admin");

@@ -339,6 +339,54 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.value").value(true));
   }
 
+  @Test
+  void getApplicationSettings_Should_ReturnOneTopicPerAgencyOff_When_SettingWasNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-UserService#1264 do not carry the field
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setOneTopicPerAgencyEnabled(null);
+    applicationSettingsRepository.save(entity);
+
+    // when / then
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesOneTopicPerAgency()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchOneTopicPerAgency(authentication, true).andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreOneTopicPerAgency_When_PlatformAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchOneTopicPerAgency(authentication, true)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+
+    // clean up
+    patchOneTopicPerAgency(authentication, false)
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
   private static Authentication platformAdmin() {
     return new AuthenticationMockBuilder()
         .withUserRole(TENANT_ADMIN.getValue())
@@ -354,6 +402,13 @@ class ApplicationSettingsControllerIT {
             .cookie(new Cookie("csrfCookie", "csrfToken"))
             .contentType(APPLICATION_JSON)
             .content(body));
+  }
+
+  private ResultActions patchOneTopicPerAgency(Authentication authentication, boolean enabled)
+      throws Exception {
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setOneTopicPerAgencyEnabled(enabled);
+    return patchSettings(authentication, JsonConverter.convertToJson(patchDTO));
   }
 
   private void resetSettingsToPreviousState(Authentication authentication) throws Exception {

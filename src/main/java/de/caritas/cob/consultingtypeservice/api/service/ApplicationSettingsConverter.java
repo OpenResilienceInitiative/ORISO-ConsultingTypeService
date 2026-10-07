@@ -12,6 +12,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
+import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -52,6 +53,11 @@ public class ApplicationSettingsConverter {
                         : new GlobalFeatureSystemNotificationEmailsEnabled()
                             .withValue(false)
                             .withReadOnly(false)))
+            .oneTopicPerAgencyEnabled(
+                toFeatureToggleDTO(
+                    applicationSettings.getOneTopicPerAgencyEnabled() != null
+                        ? applicationSettings.getOneTopicPerAgencyEnabled()
+                        : new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false)))
             .globalSmtpEnabled(
                 toFeatureToggleDTO(
                     applicationSettings.getGlobalSmtpEnabled() != null
