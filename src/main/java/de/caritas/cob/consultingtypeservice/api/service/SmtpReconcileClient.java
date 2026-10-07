@@ -48,9 +48,9 @@ public class SmtpReconcileClient {
       @Value("${settings.smtp.reconcile.url:}") String url,
       @Value("${keycloak.auth-server-url:}") String keycloakUrl,
       @Value("${keycloak.realm:}") String realm,
-      @Value("${identity.technical.client-id:}") String clientId,
-      @Value("${identity.technical.subject:}") String subject,
-      @Value("${identity.technical.client-secret:}") String clientSecret) {
+      @Value("${IDENTITY_SMTP_SYNC_CLIENT_ID:}") String clientId,
+      @Value("${IDENTITY_SMTP_SYNC_SERVICE_SUBJECT:}") String subject,
+      @Value("${KEYCLOAK_SMTP_SYNC_CLIENT_SECRET:}") String clientSecret) {
     this.http =
         builder.connectTimeout(Duration.ofSeconds(3)).readTimeout(Duration.ofSeconds(40)).build();
     this.tokenHttp =
@@ -66,7 +66,7 @@ public class SmtpReconcileClient {
 
   public Acknowledgement reconcile(long revision) {
     URI helper = configuredUri(url, SMTP_SYNC_HELPER_NOT_CONFIGURED);
-    String token = technicalToken();
+    String token = smtpSyncToken();
     var headers = new HttpHeaders();
     headers.setBearerAuth(token);
     headers.setContentType(MediaType.APPLICATION_JSON);
@@ -96,7 +96,7 @@ public class SmtpReconcileClient {
     }
   }
 
-  private String technicalToken() {
+  private String smtpSyncToken() {
     if (blank(realm) || blank(clientId) || blank(subject) || blank(clientSecret))
       throw new SmtpSynchronizationUnavailableException(SMTP_SYNC_IDENTITY_NOT_CONFIGURED);
     URI base = configuredUri(keycloakUrl, SMTP_SYNC_IDENTITY_NOT_CONFIGURED);
@@ -128,7 +128,26 @@ public class SmtpReconcileClient {
           || !jwt.getExpiresAt().isAfter(Instant.now())
           || !(realmAccess instanceof Map)
           || !(((Map<?, ?>) realmAccess).get("roles") instanceof Collection)
-          || !((Collection<?>) ((Map<?, ?>) realmAccess).get("roles")).contains("technical"))
+          || !((Collection<?>) ((Map<?, ?>) realmAccess).get("roles")).contains("smtp-sync")
+          || !jwt.getAudience()
+              .containsAll(java.util.List.of("oriso-task-commands", "consultingtypeservice"))
+          || ((Collection<?>) ((Map<?, ?>) realmAccess).get("roles"))
+              .stream()
+                  .anyMatch(
+                      java.util.Set.of(
+                              "technical",
+                              "tenant-admin",
+                              "realm-admin",
+                              "manage-users",
+                              "agency-admin",
+                              "impersonation",
+                              "cluster-admin",
+                              "*",
+                              "wildcard")
+                          ::contains)
+          || (jwt.getClaims().get("resource_access") instanceof Map
+              && ((Map<?, ?>) jwt.getClaims().get("resource_access"))
+                  .containsKey("realm-management")))
         throw new SmtpSynchronizationUnavailableException(SMTP_SYNC_IDENTITY_UNAVAILABLE);
       return token;
     } catch (SmtpSynchronizationUnavailableException safe) {

@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 @Service("authorisationService")
 public class AuthorisationService {
 
+  @org.springframework.beans.factory.annotation.Autowired
+  private de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity taskIdentity;
+
   private static final String TENANT_ADMIN_ROLE = "tenant-admin";
 
   public Optional<Long> findTenantIdInAccessToken() {
@@ -34,6 +37,15 @@ public class AuthorisationService {
    * service accounts) can also carry tenant 0.
    */
   public boolean isSuperAdmin() {
+    if (findJwt()
+        .map(
+            jwt ->
+                de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity
+                        .hasTaskRole(jwt)
+                    || (taskIdentity != null && taskIdentity.isTaskToken(jwt)))
+        .orElse(false)) {
+      return false;
+    }
     Optional<Long> tenantId = findTenantIdInAccessToken();
     return tenantId.isPresent() && tenantId.get().equals(0L) && hasRealmRole(TENANT_ADMIN_ROLE);
   }

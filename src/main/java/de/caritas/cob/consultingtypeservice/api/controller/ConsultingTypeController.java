@@ -27,6 +27,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Api(tags = "consulting-type-controller")
 public class ConsultingTypeController implements ConsultingtypesApi {
+  @org.springframework.beans.factory.annotation.Autowired
+  private de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity taskIdentity;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private de.caritas.cob.consultingtypeservice.api.service.TenantBootstrapService bootstrap;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private jakarta.servlet.http.HttpServletRequest request;
 
   private final @NonNull ConsultingTypeService consultingTypeService;
   private final @NonNull ConsultingTypeGroupService consultingTypeGroupService;
@@ -133,11 +141,20 @@ public class ConsultingTypeController implements ConsultingtypesApi {
   @Override
   @PreAuthorize(
       "hasAnyAuthority('AUTHORIZATION_CREATE_CONSULTING_TYPE',"
-          + " 'AUTHORIZATION_TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES')")
+          + " 'AUTHORIZATION_TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES')"
+          + " or @taskServiceIdentity.allows(authentication, 'CONFIG_WIZARD')")
   public ResponseEntity<FullConsultingTypeResponseDTO> createConsultingType(
       final ConsultingTypeDTO consultingTypeDTO) {
     if (callerHasAuthority(AuthorityValue.CREATE_CONSULTING_TYPE)) {
       return ResponseEntity.ok(consultingTypeService.createConsultingType(consultingTypeDTO));
+    }
+    if (taskIdentity != null && taskIdentity.current("CONFIG_WIZARD")) {
+      return ResponseEntity.ok(
+          bootstrap.create(
+              consultingTypeDTO,
+              request.getHeader(
+                  de.caritas.cob.consultingtypeservice.config.security.TenantCreationContext
+                      .HEADER)));
     }
     return ResponseEntity.ok(
         consultingTypeService.createInitialConsultingTypeForTenant(consultingTypeDTO));

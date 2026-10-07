@@ -46,6 +46,13 @@ import org.springframework.web.context.WebApplicationContext;
  */
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
 @ActiveProfiles("testing")
+@org.springframework.test.context.TestPropertySource(
+    properties = {
+      "TASK_IDENTITY_AUDIENCE=consultingtypeservice",
+      "ORISO_TENANT_CREATION_CONTEXT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "IDENTITY_CONFIG_WIZARD_CLIENT_ID=backend-config-wizard",
+      "IDENTITY_CONFIG_WIZARD_SERVICE_SUBJECT=wizard-subject"
+    })
 @AutoConfigureTestDatabase
 class TenantDefaultConsultingTypeAuthorizationIT {
 
@@ -57,6 +64,7 @@ class TenantDefaultConsultingTypeAuthorizationIT {
 
   @Autowired private WebApplicationContext context;
   @Autowired private ConsultingTypeRepository consultingTypeRepository;
+  @Autowired private org.springframework.data.mongodb.core.MongoTemplate mongo;
 
   @MockitoBean private JwtDecoder jwtDecoder;
 
@@ -70,6 +78,10 @@ class TenantDefaultConsultingTypeAuthorizationIT {
 
   @AfterEach
   void removeTestTenants() {
+    mongo.remove(
+        org.springframework.data.mongodb.core.query.Query.query(
+            org.springframework.data.mongodb.core.query.Criteria.where("_id").in("7701", "7702")),
+        de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim.class);
     consultingTypeRepository.findAll().stream()
         .filter(
             entity ->
@@ -109,6 +121,207 @@ class TenantDefaultConsultingTypeAuthorizationIT {
     return consultingTypeRepository.findAll().stream()
         .filter(entity -> entity.getTenantId() != null && entity.getTenantId() == tenantId)
         .count();
+  }
+
+  @Test
+  void wizardCreatesInitialTypeOnlyAndRequiresExactIdentity() throws Exception {
+    var caller =
+        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+            .jwt()
+            .jwt(
+                token ->
+                    token
+                        .issuer("https://identity.example/realms/test")
+                        .subject("wizard-subject")
+                        .claim("azp", "backend-config-wizard")
+                        .audience(List.of("consultingtypeservice"))
+                        .issuedAt(java.time.Instant.now().minusSeconds(10))
+                        .expiresAt(java.time.Instant.now().plusSeconds(60))
+                        .claim("realm_access", Map.of("roles", List.of("config-wizard"))));
+    var dto = consultingTypeFor(NEW_TENANT_ID, "wizard-default");
+    mockMvc
+        .perform(
+            post(ROOT_PATH)
+                .with(caller)
+                .header(
+                    "X-ORISO-Tenant-Creation-Context",
+                    bootstrapProof(NEW_TENANT_ID, java.time.Instant.now().getEpochSecond()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+        .andExpect(status().isOk());
+    mockMvc
+        .perform(
+            post(ROOT_PATH)
+                .with(caller)
+                .header(
+                    "X-ORISO-Tenant-Creation-Context",
+                    bootstrapProof(NEW_TENANT_ID, java.time.Instant.now().getEpochSecond()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+        .andExpect(status().isConflict());
+    mockMvc
+        .perform(
+            patch(ROOT_PATH + "/1")
+                .with(caller)
+                .header(
+                    "X-ORISO-Tenant-Creation-Context",
+                    bootstrapProof(NEW_TENANT_ID, java.time.Instant.now().getEpochSecond()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(dto)))
+        .andExpect(status().isForbidden());
+    var foreign =
+        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+            .jwt()
+            .jwt(
+                token ->
+                    token
+                        .subject("foreign-subject")
+                        .claim("azp", "backend-config-wizard")
+                        .audience(List.of("consultingtypeservice"))
+                        .expiresAt(java.time.Instant.now().plusSeconds(60))
+                        .claim("realm_access", Map.of("roles", List.of("config-wizard"))));
+    mockMvc
+        .perform(
+            post(ROOT_PATH)
+                .with(foreign)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    OBJECT_MAPPER.writeValueAsString(
+                        consultingTypeFor(SECOND_TENANT_ID, "foreign-default"))))
+        .andExpect(status().isForbidden());
+    assertThat(consultingTypesOf(NEW_TENANT_ID)).isEqualTo(1);
+    assertThat(consultingTypesOf(SECOND_TENANT_ID)).isZero();
+  }
+
+  @Test
+  void wizardCannotBootstrapUnrelatedEmptyTenantWithMissingForeignOrExpiredProof()
+      throws Exception {
+    var caller =
+        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+            .jwt()
+            .jwt(
+                token ->
+                    token
+                        .issuer("https://identity.example/realms/test")
+                        .subject("wizard-subject")
+                        .claim("azp", "backend-config-wizard")
+                        .audience(List.of("consultingtypeservice"))
+                        .expiresAt(java.time.Instant.now().plusSeconds(60))
+                        .claim("realm_access", Map.of("roles", List.of("config-wizard"))));
+    String payload =
+        OBJECT_MAPPER.writeValueAsString(
+            consultingTypeFor(SECOND_TENANT_ID, "unauthorised-default"));
+    mockMvc
+        .perform(
+            post(ROOT_PATH).with(caller).contentType(MediaType.APPLICATION_JSON).content(payload))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            post(ROOT_PATH)
+                .with(caller)
+                .header(
+                    "X-ORISO-Tenant-Creation-Context",
+                    bootstrapProof(NEW_TENANT_ID, java.time.Instant.now().getEpochSecond()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            post(ROOT_PATH)
+                .with(caller)
+                .header(
+                    "X-ORISO-Tenant-Creation-Context",
+                    bootstrapProof(
+                        SECOND_TENANT_ID, java.time.Instant.now().getEpochSecond() - 120))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            post(ROOT_PATH)
+                .with(caller)
+                .header(
+                    "X-ORISO-Tenant-Creation-Context",
+                    bootstrapProof(SECOND_TENANT_ID, java.time.Instant.now().getEpochSecond())
+                        + "tamper")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(payload))
+        .andExpect(status().isForbidden());
+    assertThat(consultingTypesOf(SECOND_TENANT_ID)).isZero();
+  }
+
+  @Test
+  void simultaneousReplayOfValidProofCreatesAtMostOneInitialType() throws Exception {
+    var caller =
+        org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+            .jwt()
+            .jwt(
+                token ->
+                    token
+                        .issuer("https://identity.example/realms/test")
+                        .subject("wizard-subject")
+                        .claim("azp", "backend-config-wizard")
+                        .audience(List.of("consultingtypeservice"))
+                        .expiresAt(java.time.Instant.now().plusSeconds(60))
+                        .claim("realm_access", Map.of("roles", List.of("config-wizard"))));
+    String proof = bootstrapProof(NEW_TENANT_ID, java.time.Instant.now().getEpochSecond());
+    String body =
+        OBJECT_MAPPER.writeValueAsString(consultingTypeFor(NEW_TENANT_ID, "simultaneous-default"));
+    var start = new java.util.concurrent.CountDownLatch(1);
+    var pool = java.util.concurrent.Executors.newFixedThreadPool(2);
+    try {
+      java.util.concurrent.Callable<Integer> request =
+          () -> {
+            start.await();
+            return mockMvc
+                .perform(
+                    post(ROOT_PATH)
+                        .with(caller)
+                        .header("X-ORISO-Tenant-Creation-Context", proof)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andReturn()
+                .getResponse()
+                .getStatus();
+          };
+      var one = pool.submit(request);
+      var two = pool.submit(request);
+      start.countDown();
+      assertThat(
+              List.of(
+                  one.get(15, java.util.concurrent.TimeUnit.SECONDS),
+                  two.get(15, java.util.concurrent.TimeUnit.SECONDS)))
+          .containsExactlyInAnyOrder(200, 409);
+      assertThat(consultingTypesOf(NEW_TENANT_ID)).isEqualTo(1);
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  private String bootstrapProof(long tenantId, long now) throws Exception {
+    Map<String, Object> claims = new java.util.TreeMap<>();
+    claims.put("aud", "consultingtypeservice");
+    claims.put("azp", "backend-config-wizard");
+    claims.put("exp", now + 60);
+    claims.put("iat", now);
+    claims.put("iss", "tenantservice");
+    claims.put("nonce", "disposable-test-bootstrap");
+    claims.put("sub", "wizard-subject");
+    claims.put("tenantId", tenantId);
+    claims.put("tokenIssuer", "https://identity.example/realms/test");
+    claims.put("v", 1);
+    String encoded =
+        java.util.Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(OBJECT_MAPPER.writeValueAsBytes(claims));
+    var mac = javax.crypto.Mac.getInstance("HmacSHA256");
+    mac.init(new javax.crypto.spec.SecretKeySpec(new byte[32], "HmacSHA256"));
+    return encoded
+        + "."
+        + java.util.Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(
+                mac.doFinal(encoded.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
   }
 
   @Test

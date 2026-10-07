@@ -36,6 +36,9 @@ import org.springframework.security.web.csrf.CsrfFilter;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+  @org.springframework.beans.factory.annotation.Autowired
+  private de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity
+      taskServiceIdentity;
 
   public static final String[] WHITE_LIST =
       new String[] {
@@ -129,6 +132,10 @@ public class SecurityConfig {
 
   private Collection<GrantedAuthority> grantedAuthorities(
       Jwt jwt, RoleAuthorizationAuthorityMapper authorityMapper) {
+    if (de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity.hasTaskRole(jwt)
+        || (taskServiceIdentity != null && taskServiceIdentity.isTaskToken(jwt))) {
+      return java.util.List.of();
+    }
     var authorities = new HashSet<GrantedAuthority>();
     Collection<GrantedAuthority> jwtAuthorities = jwtGrantedAuthoritiesConverter.convert(jwt);
     if (jwtAuthorities != null) {

@@ -98,13 +98,14 @@ class SmtpReconcileClientTest {
         .header("alg", "RS256")
         .subject(subject)
         .claim("azp", client)
-        .claim("realm_access", Map.of("roles", List.of("technical")))
+        .audience(List.of("oriso-task-commands", "consultingtypeservice"))
+        .claim("realm_access", Map.of("roles", List.of("smtp-sync")))
         .expiresAt(Instant.now().plusSeconds(valid ? 60 : -60))
         .build();
   }
 
   @Test
-  void sendsOnlyRevisionAfterVerifiedTechnicalAuthentication() {
+  void sendsOnlyRevisionAfterVerifiedSmtpSyncAuthentication() {
     var result = client("technical-sub").reconcile(1);
     assertThat(result.getAppliedRevision()).isEqualTo(2);
     assertThat(result.getStatus()).isEqualTo("APPLIED");
