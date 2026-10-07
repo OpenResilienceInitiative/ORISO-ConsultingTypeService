@@ -41,6 +41,16 @@ import org.springframework.web.context.WebApplicationContext;
 @TestPropertySource(properties = "spring.profiles.active=testing")
 @TestPropertySource(properties = "feature.multitenancy.with.single.domain.enabled=true")
 @TestPropertySource(properties = "settings.smtp.password.encryption.secret=test-only-smtp-secret")
+@TestPropertySource(
+    properties = {
+      "TASK_IDENTITY_AUDIENCE=consultingtypeservice",
+      "IDENTITY_SYSTEM_EMAIL_DELIVERY_CLIENT_ID=backend-system-email-delivery",
+      "IDENTITY_SYSTEM_EMAIL_DELIVERY_SERVICE_SUBJECT=delivery-subject",
+      "IDENTITY_SMTP_SYNC_CLIENT_ID=backend-smtp-sync",
+      "IDENTITY_SMTP_SYNC_SERVICE_SUBJECT=sync-subject",
+      "IDENTITY_NOTIFICATION_DISPATCH_CLIENT_ID=backend-notification-dispatch",
+      "IDENTITY_NOTIFICATION_DISPATCH_SERVICE_SUBJECT=dispatch-subject"
+    })
 @AutoConfigureMockMvc(addFilters = false)
 class ApplicationSettingsControllerIT {
 
@@ -563,6 +573,85 @@ class ApplicationSettingsControllerIT {
     entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
     entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
     applicationSettingsRepository.save(entity);
+  }
+
+  @Test
+  void smtpSnapshotAllowsOnlyBoundTransportAndSyncTasks() throws Exception {
+    for (String actor : java.util.List.of("delivery", "sync")) {
+      String role = "delivery".equals(actor) ? "system-email-delivery" : "smtp-sync";
+      String client =
+          "delivery".equals(actor) ? "backend-system-email-delivery" : "backend-smtp-sync";
+      var caller = smtpTask(actor + "-subject", client, role, "consultingtypeservice");
+      mockMvc
+          .perform(MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials").with(caller))
+          .andExpect(status().isOk())
+          .andExpect(header().string("Cache-Control", "no-store"));
+      mockMvc
+          .perform(MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status").with(caller))
+          .andExpect(status().isForbidden());
+      mockMvc
+          .perform(
+              MockMvcRequestBuilders.patch("/settingsadmin")
+                  .with(caller)
+                  .contentType(APPLICATION_JSON)
+                  .content("{}"))
+          .andExpect(status().isForbidden());
+    }
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .with(
+                    smtpTask(
+                        "dispatch-subject",
+                        "backend-notification-dispatch",
+                        "notification-dispatch",
+                        "consultingtypeservice")))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .with(
+                    smtpTask("foreign", "backend-smtp-sync", "smtp-sync", "consultingtypeservice")))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .with(smtpTask("sync-subject", "backend-smtp-sync", "smtp-sync", "other-service")))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void taskWithInheritedTenantAdminCannotReadOrPatchThroughHumanBranch() throws Exception {
+    var caller =
+        smtpTask(
+            "sync-subject", "backend-smtp-sync", "smtp-sync,tenant-admin", "consultingtypeservice");
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials").with(caller))
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.patch("/settingsadmin")
+                .with(caller)
+                .contentType(APPLICATION_JSON)
+                .content("{}"))
+        .andExpect(status().isForbidden());
+  }
+
+  private org.springframework.test.web.servlet.request.RequestPostProcessor smtpTask(
+      String subject, String client, String role, String audience) {
+    return org.springframework.security.test.web.servlet.request
+        .SecurityMockMvcRequestPostProcessors.jwt()
+        .jwt(
+            token ->
+                token
+                    .subject(subject)
+                    .claim("azp", client)
+                    .claim("tenantId", 0L)
+                    .audience(java.util.List.of(audience))
+                    .expiresAt(java.time.Instant.now().plusSeconds(60))
+                    .claim(
+                        "realm_access",
+                        java.util.Map.of("roles", java.util.Arrays.asList(role.split(",")))));
   }
 
   @Test
