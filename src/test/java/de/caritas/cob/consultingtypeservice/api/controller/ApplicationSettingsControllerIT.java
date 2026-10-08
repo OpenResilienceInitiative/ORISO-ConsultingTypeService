@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -17,17 +18,21 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDT
 import de.caritas.cob.consultingtypeservice.api.repository.ApplicationSettingsRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.util.JsonConverter;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -90,7 +95,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.useTenantService.readOnly").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.value").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.readOnly").value(false))
-        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
         .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false))
         .andExpect(jsonPath("$.disableVideoAppointments.value").value(true))
         .andExpect(jsonPath("$.disableVideoAppointments.readOnly").value(false))
@@ -137,7 +142,8 @@ class ApplicationSettingsControllerIT {
     // given
     giveApplicationSettingEntityWithDynamicReleaseToggles();
     AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
-    Authentication authentication = builder.withUserRole(TENANT_ADMIN.getValue()).build();
+    Authentication authentication =
+        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build();
     ApplicationSettingsPatchDTO patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(false);
     patchDTO.setMainTenantSubdomainForSingleDomainMultitenancy("app2");
@@ -173,7 +179,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.useTenantService.readOnly").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.value").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.readOnly").value(false))
-        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
         .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false))
         .andExpect(jsonPath("$.disableVideoAppointments.value").value(true))
         .andExpect(jsonPath("$.disableVideoAppointments.readOnly").value(false))
@@ -221,8 +227,188 @@ class ApplicationSettingsControllerIT {
                 .header("csrfHeader", "csrfToken")
                 .cookie(new Cookie("csrfCookie", "csrfToken"))
                 .contentType(APPLICATION_JSON)
-                .content("{\"enableWalkthrough\":true}"))
+                .content("{\"useOverviewPage\":true}"))
         .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_SwitchWalkthroughOffAndOn_When_PlatformAdminPatchesIt()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"enableWalkthrough\":false}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(false));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false));
+
+    patchSettings(authentication, "{\"enableWalkthrough\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_LeaveWalkthroughUntouched_When_PatchOmitsIt()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_WalkthroughToggleIsReadOnly()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(true));
+    applicationSettingsRepository.save(entity);
+    Authentication authentication = platformAdmin();
+
+    try {
+      patchSettings(authentication, "{\"enableWalkthrough\":false}")
+          .andExpect(status().isBadRequest());
+      mockMvc
+          .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+          .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
+          .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(true));
+    } finally {
+      ApplicationSettingsEntity current = applicationSettingsRepository.findAll().get(0);
+      current.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+      applicationSettingsRepository.save(current);
+    }
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminOfRegularTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(
+            authentication,
+            "{\"enableWalkthrough\":false,\"mainTenantSubdomainForSingleDomainMultitenancy\":\"x\"}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
+        .andExpect(jsonPath("$.mainTenantSubdomainForSingleDomainMultitenancy.value").value("app"));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminWithoutTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    patchSettings(authentication, "{\"enableWalkthrough\":false}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminOfRegularTenantOmitsWalkthrough()
+          throws Exception {
+    // Before CTS#168 only enableWalkthrough was platform-only; now every field of this PATCH is.
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":false}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.value").value(true));
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnOneTopicPerAgencyOff_When_SettingWasNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-UserService#1264 do not carry the field
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setOneTopicPerAgencyEnabled(null);
+    applicationSettingsRepository.save(entity);
+
+    // when / then
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesOneTopicPerAgency()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchOneTopicPerAgency(authentication, true).andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreOneTopicPerAgency_When_PlatformAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchOneTopicPerAgency(authentication, true)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+
+    // clean up
+    patchOneTopicPerAgency(authentication, false)
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
+  private static Authentication platformAdmin() {
+    return new AuthenticationMockBuilder()
+        .withUserRole(TENANT_ADMIN.getValue())
+        .withTenantId("0")
+        .build();
+  }
+
+  private ResultActions patchSettings(Authentication authentication, String body) throws Exception {
+    return mockMvc.perform(
+        patch("/settingsadmin")
+            .with(authentication(authentication))
+            .header("csrfHeader", "csrfToken")
+            .cookie(new Cookie("csrfCookie", "csrfToken"))
+            .contentType(APPLICATION_JSON)
+            .content(body));
+  }
+
+  private ResultActions patchOneTopicPerAgency(Authentication authentication, boolean enabled)
+      throws Exception {
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setOneTopicPerAgencyEnabled(enabled);
+    return patchSettings(authentication, JsonConverter.convertToJson(patchDTO));
   }
 
   private void resetSettingsToPreviousState(Authentication authentication) throws Exception {
@@ -249,6 +435,73 @@ class ApplicationSettingsControllerIT {
                 .content(jsonRequest)
                 .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"legalContentChangesBySingleTenantAdminsAllowed\":false}",
+        "{\"mainTenantSubdomainForSingleDomainMultitenancy\":\"attacker\"}",
+        "{\"globalFeatureSystemNotificationEmailsEnabled\":true}",
+        "{\"globalSmtpEnabled\":true}",
+        "{\"globalSmtpHost\":\"smtp.attacker.example\"}",
+        "{\"globalSmtpPort\":\"2525\"}",
+        "{\"globalSmtpSecure\":true}",
+        "{\"globalSmtpUsername\":\"attacker\"}",
+        "{\"globalSmtpPassword\":\"attacker\"}",
+        "{\"globalSmtpFrom\":\"attacker@example.org\"}",
+        "{\"globalSmtpEmailThemeColor\":\"#000000\"}"
+      })
+  void patchApplicationSettings_Should_ReturnForbiddenAndStoreNothing_When_TenantScopedAdminPatches(
+      String platformWideChange) throws Exception {
+    var before = applicationSettingsRepository.findAll().get(0);
+    var hostBefore =
+        before.getGlobalSmtpHost() == null ? null : before.getGlobalSmtpHost().getValue();
+    var subdomainBefore = before.getMainTenantSubdomainForSingleDomainMultitenancy().getValue();
+    var legalBefore = before.getLegalContentChangesBySingleTenantAdminsAllowed().getValue();
+    var revisionBefore = before.getSmtpRevision();
+
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(TENANT_ADMIN.getValue())
+                            .withTenantId("1")
+                            .build()))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content(platformWideChange))
+        .andExpect(status().isForbidden());
+
+    var after = applicationSettingsRepository.findAll().get(0);
+    assertThat(after.getGlobalSmtpHost() == null ? null : after.getGlobalSmtpHost().getValue())
+        .isEqualTo(hostBefore);
+    assertThat(after.getMainTenantSubdomainForSingleDomainMultitenancy().getValue())
+        .isEqualTo(subdomainBefore);
+    assertThat(after.getLegalContentChangesBySingleTenantAdminsAllowed().getValue())
+        .isEqualTo(legalBefore);
+    assertThat(after.getSmtpRevision()).isEqualTo(revisionBefore);
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminHasNoTenantIdClaim()
+      throws Exception {
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(TENANT_ADMIN.getValue())
+                            .build()))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content("{\"globalSmtpHost\":\"smtp.attacker.example\"}"))
+        .andExpect(status().isForbidden());
   }
 
   @Test

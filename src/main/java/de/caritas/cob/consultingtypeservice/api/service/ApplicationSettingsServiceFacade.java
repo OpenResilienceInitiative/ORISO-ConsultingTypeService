@@ -1,10 +1,12 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
@@ -14,6 +16,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
+import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import java.time.Instant;
 import java.util.Optional;
 import lombok.NonNull;
@@ -152,6 +155,16 @@ public class ApplicationSettingsServiceFacade {
           .getLegalContentChangesBySingleTenantAdminsAllowed()
           .setValue(settingsPatchDTO.getLegalContentChangesBySingleTenantAdminsAllowed());
     }
+    if (settingsPatchDTO.getEnableWalkthrough() != null) {
+      if (entity.getEnableWalkthrough() == null) {
+        entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+      }
+      // readOnly is the operator's lock on the master switch; the admin API must not bypass it.
+      if (Boolean.TRUE.equals(entity.getEnableWalkthrough().getReadOnly())) {
+        throw new BadRequestException("enableWalkthrough is read-only");
+      }
+      entity.getEnableWalkthrough().setValue(settingsPatchDTO.getEnableWalkthrough());
+    }
     if (settingsPatchDTO.getMainTenantSubdomainForSingleDomainMultitenancy() != null) {
       entity
           .getMainTenantSubdomainForSingleDomainMultitenancy()
@@ -167,6 +180,13 @@ public class ApplicationSettingsServiceFacade {
       entity
           .getGlobalFeatureSystemNotificationEmailsEnabled()
           .setValue(settingsPatchDTO.getGlobalFeatureSystemNotificationEmailsEnabled());
+    }
+    if (settingsPatchDTO.getOneTopicPerAgencyEnabled() != null) {
+      if (entity.getOneTopicPerAgencyEnabled() == null) {
+        entity.setOneTopicPerAgencyEnabled(
+            new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false));
+      }
+      entity.getOneTopicPerAgencyEnabled().setValue(settingsPatchDTO.getOneTopicPerAgencyEnabled());
     }
     if (settingsPatchDTO.getGlobalSmtpEnabled() != null) {
       if (entity.getGlobalSmtpEnabled() == null) {
