@@ -64,7 +64,10 @@ public class SmtpReconcileClient {
     this.clientSecret = clientSecret;
   }
 
-  /** Blank URL: no push helper; the Keycloak SMTP Job pulls and acknowledges (Helm#420). */
+  /**
+   * Blank URL: no push helper; the Keycloak SMTP Job pulls and acknowledges (Helm#420). Push mode
+   * remains only for installs still running the old helper pod.
+   */
   public boolean isPushConfigured() {
     return !blank(url);
   }

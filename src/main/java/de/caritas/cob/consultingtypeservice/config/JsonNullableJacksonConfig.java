@@ -20,10 +20,10 @@ public class JsonNullableJacksonConfig {
   @SuppressWarnings({"rawtypes", "unchecked"})
   public JacksonModule jsonNullableModule() {
     return new SimpleModule("json-nullable")
-        .addSerializer((Class) JsonNullable.class, new Writer());
+        .addSerializer((Class) JsonNullable.class, new JsonNullableValueWriter());
   }
 
-  static class Writer extends ValueSerializer<JsonNullable<?>> {
+  static class JsonNullableValueWriter extends ValueSerializer<JsonNullable<?>> {
     @Override
     public void serialize(
         JsonNullable<?> value, JsonGenerator generator, SerializationContext context) {
