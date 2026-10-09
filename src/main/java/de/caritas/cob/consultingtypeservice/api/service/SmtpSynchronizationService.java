@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.time.Instant;
@@ -47,12 +48,28 @@ public class SmtpSynchronizationService {
   public void recoverPendingAtStartup() {
     store
         .findPendingAtStartup()
+        .filter(entity -> client.isPushConfigured())
         .ifPresent(
             entity ->
                 schedule(
                     entity.getId(),
                     entity.getSmtpPendingRevision(),
                     entity.getSmtpNextAttemptAt()));
+  }
+
+  /** Pull-based sync: marks only the exact current revision; a repeat report is idempotent. */
+  public boolean acknowledgeWritten(
+      ApplicationSettingsEntity entity, long revision, String status) {
+    if (store.acknowledge(entity.getId(), revision, status)) return true;
+    return store
+        .find(entity.getId())
+        .filter(
+            current ->
+                current.getSmtpPendingRevision() == null
+                    && current.getSmtpRevision() == revision
+                    && Long.valueOf(revision).equals(current.getSmtpAppliedRevision())
+                    && status.equals(current.getSmtpSyncStatus()))
+        .isPresent();
   }
 
   public void synchronizeAfterSave(String id, long revision) {
@@ -71,6 +88,9 @@ public class SmtpSynchronizationService {
           && entity.getSmtpNextAttemptAt().isAfter(Instant.now())) {
         schedule(id, revision, entity.getSmtpNextAttemptAt());
         return;
+      }
+      if (!client.isPushConfigured()) {
+        return; // Stays pending until the Keycloak SMTP Job acknowledges it.
       }
       try {
         var applied = client.reconcile(revision);

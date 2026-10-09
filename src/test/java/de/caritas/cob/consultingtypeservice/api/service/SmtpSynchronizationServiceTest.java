@@ -31,6 +31,19 @@ class SmtpSynchronizationServiceTest {
     pending.setSmtpRevision(2);
     pending.setSmtpPendingRevision(2L);
     when(store.find("known-settings")).thenReturn(Optional.of(pending));
+    when(client.isPushConfigured()).thenReturn(true);
+  }
+
+  // Helm#420: without a push helper the Keycloak SMTP Job pulls and acknowledges.
+  @Test
+  void withoutPushHelperSaveStaysPendingWithoutDispatchOrRetry() {
+    when(client.isPushConfigured()).thenReturn(false);
+    service.synchronizeAfterSave("known-settings", 2);
+    when(store.findPendingAtStartup()).thenReturn(Optional.of(pending));
+    service.recoverPendingAtStartup();
+    verify(client, never()).reconcile(anyLong());
+    verify(store, never()).defer(any(), anyLong(), anyInt(), any());
+    verifyNoInteractions(scheduler);
   }
 
   @Test
