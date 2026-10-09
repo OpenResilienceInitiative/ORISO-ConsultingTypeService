@@ -148,8 +148,9 @@ class ApplicationSettingsSmtpAtomicStoreIT {
     assertThat(restored.getSmtpSyncAttempts()).isEqualTo(4);
     assertThat(restored.getSmtpNextAttemptAt().toEpochMilli()).isEqualTo(next.toEpochMilli());
     var scheduler = mock(ScheduledExecutorService.class);
-    var service =
-        new SmtpSynchronizationService(restartedStore, mock(SmtpReconcileClient.class), scheduler);
+    var pushClient = mock(SmtpReconcileClient.class);
+    when(pushClient.isPushConfigured()).thenReturn(true);
+    var service = new SmtpSynchronizationService(restartedStore, pushClient, scheduler);
     service.recoverPendingAtStartup();
     verify(scheduler).schedule(any(Runnable.class), anyLong(), eq(TimeUnit.MILLISECONDS));
   }
