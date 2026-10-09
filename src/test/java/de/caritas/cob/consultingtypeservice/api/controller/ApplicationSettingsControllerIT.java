@@ -662,6 +662,37 @@ class ApplicationSettingsControllerIT {
         .doesNotContain("password", "username", "private");
   }
 
+  // The Admin panel accepts appliedRevision only as a JSON integer or null.
+  @Test
+  void smtpSyncStatusWritesAppliedRevisionAsNumberOrNull() throws Exception {
+    var entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSmtpRevision(5);
+    entity.setSmtpPendingRevision(null);
+    entity.setSmtpAppliedRevision(5L);
+    entity.setSmtpSyncStatus("APPLIED");
+    applicationSettingsRepository.save(entity);
+    var platform =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    var status = MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status");
+    mockMvc
+        .perform(status.with(authentication(platform)))
+        .andExpect(jsonPath("$.appliedRevision").value(5))
+        .andExpect(jsonPath("$.status").value("APPLIED"));
+    entity.setSmtpAppliedRevision(null);
+    entity.setSmtpSyncStatus(null);
+    applicationSettingsRepository.save(entity);
+    var body =
+        mockMvc
+            .perform(status.with(authentication(platform)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertThat(body).contains("\"appliedRevision\":null");
+  }
+
   @Test
   void smtpSyncStatusDeniesUnauthenticatedCaller() throws Exception {
     mockMvc
