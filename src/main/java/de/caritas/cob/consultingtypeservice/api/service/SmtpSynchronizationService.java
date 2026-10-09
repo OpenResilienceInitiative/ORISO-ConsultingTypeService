@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import jakarta.annotation.PreDestroy;
 import java.time.Duration;
 import java.time.Instant;
@@ -53,6 +54,21 @@ public class SmtpSynchronizationService {
                     entity.getId(),
                     entity.getSmtpPendingRevision(),
                     entity.getSmtpNextAttemptAt()));
+  }
+
+  /** Pull-based sync: marks only the exact current revision; a repeat report is idempotent. */
+  public boolean acknowledgeWritten(
+      ApplicationSettingsEntity entity, long revision, String status) {
+    if (store.acknowledge(entity.getId(), revision, status)) return true;
+    return store
+        .find(entity.getId())
+        .filter(
+            current ->
+                current.getSmtpPendingRevision() == null
+                    && current.getSmtpRevision() == revision
+                    && Long.valueOf(revision).equals(current.getSmtpAppliedRevision())
+                    && status.equals(current.getSmtpSyncStatus()))
+        .isPresent();
   }
 
   public void synchronizeAfterSave(String id, long revision) {

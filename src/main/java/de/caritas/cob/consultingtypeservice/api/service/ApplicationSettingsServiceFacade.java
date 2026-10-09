@@ -112,6 +112,13 @@ public class ApplicationSettingsServiceFacade {
     return getGlobalSmtpSnapshot().map(SmtpSnapshot::getCredentials);
   }
 
+  public boolean acknowledgeSmtpSynchronization(long revision, String status) {
+    return applicationSettingsService
+        .getApplicationSettings()
+        .map(entity -> smtpSynchronizationService.acknowledgeWritten(entity, revision, status))
+        .orElse(false);
+  }
+
   public SmtpSynchronizationStatus getSmtpSynchronizationStatus() {
     return SmtpSynchronizationStatus.from(
         applicationSettingsService.getApplicationSettings().orElse(null));
