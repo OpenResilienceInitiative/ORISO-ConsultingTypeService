@@ -48,6 +48,7 @@ public class SmtpSynchronizationService {
   public void recoverPendingAtStartup() {
     store
         .findPendingAtStartup()
+        .filter(entity -> client.isPushConfigured())
         .ifPresent(
             entity ->
                 schedule(
@@ -87,6 +88,9 @@ public class SmtpSynchronizationService {
           && entity.getSmtpNextAttemptAt().isAfter(Instant.now())) {
         schedule(id, revision, entity.getSmtpNextAttemptAt());
         return;
+      }
+      if (!client.isPushConfigured()) {
+        return; // Stays pending until the Keycloak SMTP Job acknowledges it.
       }
       try {
         var applied = client.reconcile(revision);

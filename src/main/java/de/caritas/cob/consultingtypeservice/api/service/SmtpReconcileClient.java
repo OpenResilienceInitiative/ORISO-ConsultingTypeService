@@ -64,6 +64,11 @@ public class SmtpReconcileClient {
     this.clientSecret = clientSecret;
   }
 
+  /** Blank URL: no push helper; the Keycloak SMTP Job pulls and acknowledges (Helm#420). */
+  public boolean isPushConfigured() {
+    return !blank(url);
+  }
+
   public Acknowledgement reconcile(long revision) {
     URI helper = configuredUri(url, SMTP_SYNC_HELPER_NOT_CONFIGURED);
     String token = technicalToken();
