@@ -4,6 +4,7 @@ import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
+import de.caritas.cob.consultingtypeservice.api.model.SmtpSynchronizationAcknowledgementDTO;
 import de.caritas.cob.consultingtypeservice.api.model.SmtpSynchronizationStatusDTO;
 import de.caritas.cob.consultingtypeservice.api.service.ApplicationSettingsServiceFacade;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.ApplicationsettingsControllerApi;
@@ -103,5 +104,16 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
         org.openapitools.jackson.nullable.JsonNullable.of(status.getAppliedRevision()));
     dto.setStatus(SmtpSynchronizationStatusDTO.StatusEnum.fromValue(status.getStatus()));
     return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(dto);
+  }
+
+  /** Keycloak SMTP sync Job reports the revision it wrote; never a newer pending save. */
+  @Override
+  @PreAuthorize("hasAuthority('AUTHORIZATION_TECHNICAL_DEFAULT')")
+  public ResponseEntity<Void> acknowledgeSmtpSync(
+      SmtpSynchronizationAcknowledgementDTO acknowledgement) {
+    return applicationSettingsServiceFacade.acknowledgeSmtpSynchronization(
+            acknowledgement.getRevision(), acknowledgement.getStatus().getValue())
+        ? ResponseEntity.noContent().build()
+        : ResponseEntity.status(HttpStatus.CONFLICT).build();
   }
 }

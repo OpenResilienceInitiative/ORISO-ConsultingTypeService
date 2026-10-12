@@ -113,6 +113,36 @@ paths:
           description: FORBIDDEN - insufficient permissions
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+  /settingsadmin/smtp-sync-acknowledgement:
+    post:
+      tags:
+        - applicationsettings-controller
+      summary: 'Report that Keycloak now holds one exact saved SMTP revision'
+      description: >-
+        Called by the Keycloak SMTP sync Job after it wrote the snapshot it read from
+        /settingsadmin/smtp-credentials. Only the technical service identity may call it.
+        A revision other than the current saved one is rejected, so a newer pending
+        save is never marked synchronized.
+      operationId: acknowledgeSmtpSync
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmtpSynchronizationAcknowledgementDTO'
+      responses:
+        204:
+          description: NO CONTENT - revision recorded as applied (also when already recorded)
+        400:
+          description: BAD REQUEST - invalid revision or status
+        401:
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        403:
+          description: FORBIDDEN - technical service identity required
+        409:
+          description: CONFLICT - revision is not the current saved SMTP revision
 components:
   securitySchemes:
     bearerAuth:
@@ -253,6 +283,20 @@ components:
           type: string
         globalSmtpPassword:
           type: string
+
+    SmtpSynchronizationAcknowledgementDTO:
+      type: object
+      required:
+        - revision
+        - status
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          enum: [APPLIED, DISABLED_OR_INCOMPLETE]
 
     SmtpSynchronizationStatusDTO:
       type: object
