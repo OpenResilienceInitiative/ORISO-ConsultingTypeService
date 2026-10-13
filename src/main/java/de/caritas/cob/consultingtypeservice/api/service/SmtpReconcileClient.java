@@ -21,7 +21,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 
 /**
- * Sends revision metadata only, using the existing technical account with no realm-admin rights.
+ * Sends revision metadata only, using a dedicated confidential technical client with no realm-admin
+ * rights.
  */
 @Component
 public class SmtpReconcileClient {
@@ -39,8 +40,7 @@ public class SmtpReconcileClient {
   private final String realm;
   private final String clientId;
   private final String subject;
-  private final String username;
-  private final String password;
+  private final String clientSecret;
 
   public SmtpReconcileClient(
       RestTemplateBuilder builder,
@@ -50,8 +50,7 @@ public class SmtpReconcileClient {
       @Value("${keycloak.realm:}") String realm,
       @Value("${identity.technical.client-id:}") String clientId,
       @Value("${identity.technical.subject:}") String subject,
-      @Value("${identity.technical.user.username:}") String username,
-      @Value("${identity.technical.user.password:}") String password) {
+      @Value("${identity.technical.client-secret:}") String clientSecret) {
     this.http =
         builder.connectTimeout(Duration.ofSeconds(3)).readTimeout(Duration.ofSeconds(40)).build();
     this.tokenHttp =
@@ -62,8 +61,7 @@ public class SmtpReconcileClient {
     this.realm = realm;
     this.clientId = clientId;
     this.subject = subject;
-    this.username = username;
-    this.password = password;
+    this.clientSecret = clientSecret;
   }
 
   public Acknowledgement reconcile(long revision) {
@@ -99,7 +97,7 @@ public class SmtpReconcileClient {
   }
 
   private String technicalToken() {
-    if (blank(realm) || blank(clientId) || blank(subject) || blank(username) || blank(password))
+    if (blank(realm) || blank(clientId) || blank(subject) || blank(clientSecret))
       throw new SmtpSynchronizationUnavailableException(SMTP_SYNC_IDENTITY_NOT_CONFIGURED);
     URI base = configuredUri(keycloakUrl, SMTP_SYNC_IDENTITY_NOT_CONFIGURED);
     URI endpoint =
@@ -108,11 +106,10 @@ public class SmtpReconcileClient {
             .build()
             .encode()
             .toUri();
-    var form = new LinkedMultiValueMap<String, String>();
-    form.add("grant_type", "password");
+    var form = new SensitiveFormData();
+    form.add("grant_type", "client_credentials");
     form.add("client_id", clientId);
-    form.add("username", username);
-    form.add("password", password);
+    form.add("client_secret", clientSecret);
     var headers = new HttpHeaders();
     headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
     try {
@@ -143,6 +140,19 @@ public class SmtpReconcileClient {
 
   private static boolean blank(String value) {
     return value == null || value.isBlank();
+  }
+
+  private static final class SensitiveFormData extends LinkedMultiValueMap<String, String> {
+
+    @Override
+    public String toString() {
+      var sanitized = new LinkedMultiValueMap<String, String>();
+      sanitized.putAll(this);
+      if (sanitized.containsKey("client_secret")) {
+        sanitized.put("client_secret", java.util.List.of("[REDACTED]"));
+      }
+      return sanitized.toString();
+    }
   }
 
   private static URI configuredUri(

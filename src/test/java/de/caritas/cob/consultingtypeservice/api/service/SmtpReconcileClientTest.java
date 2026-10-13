@@ -31,6 +31,8 @@ class SmtpReconcileClientTest {
   String bearer;
   String tokenForm;
   int helperStatus;
+  int tokenStatus;
+  AtomicInteger tokenCalls;
   String ack;
 
   @BeforeEach
@@ -42,16 +44,19 @@ class SmtpReconcileClientTest {
         .thenReturn(token("technical-sub", "app-client", true));
     helperCalls = new AtomicInteger();
     helperStatus = 200;
+    tokenStatus = 200;
+    tokenCalls = new AtomicInteger();
     ack = "{\"appliedRevision\":2,\"status\":\"APPLIED\"}";
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
     server.createContext(
         "/realms/realm/protocol/openid-connect/token",
         exchange -> {
+          tokenCalls.incrementAndGet();
           tokenForm = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
           byte[] body =
               "{\"access_token\":\"opaque-signed-token\"}".getBytes(StandardCharsets.UTF_8);
           exchange.getResponseHeaders().add("Content-Type", "application/json");
-          exchange.sendResponseHeaders(200, body.length);
+          exchange.sendResponseHeaders(tokenStatus, body.length);
           exchange.getResponseBody().write(body);
           exchange.close();
         });
@@ -85,7 +90,6 @@ class SmtpReconcileClientTest {
         "realm",
         "app-client",
         subject,
-        "technical-user",
         "test-password");
   }
 
@@ -109,7 +113,62 @@ class SmtpReconcileClientTest {
         .doesNotContain("test-password", "technical-user");
     assertThat(bearer).isEqualTo("Bearer opaque-signed-token");
     assertThat(tokenForm)
-        .contains("grant_type=password", "client_id=app-client", "username=technical-user");
+        .contains(
+            "grant_type=client_credentials", "client_id=app-client", "client_secret=test-password")
+        .doesNotContain("username=", "password=", "refresh_token=");
+  }
+
+  @Test
+  void httpDiagnosticsDoNotExposeClientSecret() {
+    var logger =
+        (ch.qos.logback.classic.Logger)
+            org.slf4j.LoggerFactory.getLogger(org.springframework.web.client.RestTemplate.class);
+    var previous = logger.getLevel();
+    var appender =
+        new ch.qos.logback.core.read.ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>();
+    appender.start();
+    logger.addAppender(appender);
+    logger.setLevel(ch.qos.logback.classic.Level.DEBUG);
+    try {
+      client("technical-sub").reconcile(1);
+      assertThat(appender.list)
+          .extracting(ch.qos.logback.classic.spi.ILoggingEvent::getFormattedMessage)
+          .noneMatch(message -> message.contains("test-password"));
+    } finally {
+      logger.setLevel(previous);
+      logger.detachAppender(appender);
+      appender.stop();
+    }
+  }
+
+  @Test
+  void missingClientSecretFailsBeforeIdentityOrHelperHttp() {
+    var client =
+        new SmtpReconcileClient(
+            new RestTemplateBuilder(),
+            decoders,
+            url + "/smtp/reconcile",
+            url,
+            "realm",
+            "app-client",
+            "technical-sub",
+            "");
+    assertThatThrownBy(() -> client.reconcile(1)).hasMessage("SMTP_SYNC_IDENTITY_NOT_CONFIGURED");
+    assertThat(tokenCalls.get()).isZero();
+    assertThat(helperCalls.get()).isZero();
+  }
+
+  @Test
+  void rejectedClientGrantNeverRetriesWithPassword() {
+    tokenStatus = 401;
+    assertThatThrownBy(() -> client("technical-sub").reconcile(1))
+        .hasMessage("SMTP_SYNC_IDENTITY_UNAVAILABLE")
+        .hasNoCause();
+    assertThat(tokenCalls.get()).isEqualTo(1);
+    assertThat(helperCalls.get()).isZero();
+    assertThat(tokenForm)
+        .contains("grant_type=client_credentials")
+        .doesNotContain("username=", "password=");
   }
 
   @ParameterizedTest

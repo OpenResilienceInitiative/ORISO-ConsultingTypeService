@@ -230,6 +230,21 @@
         "readOnly"
       ]
     },
+    "oneTopicPerAgencyEnabled": {
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "boolean"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "readOnly"
+      ]
+    },
     "globalFeatureSystemNotificationEmailsEnabled": {
       "type": "object",
       "properties": {
