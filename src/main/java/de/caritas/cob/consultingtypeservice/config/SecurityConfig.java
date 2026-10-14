@@ -1,6 +1,7 @@
 package de.caritas.cob.consultingtypeservice.config;
 
 import de.caritas.cob.consultingtypeservice.api.auth.RoleAuthorizationAuthorityMapper;
+import de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity;
 import de.caritas.cob.consultingtypeservice.filter.HttpTenantFilter;
 import de.caritas.cob.consultingtypeservice.filter.StatelessCsrfFilter;
 import jakarta.annotation.Nullable;
@@ -12,6 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.converter.Converter;
@@ -36,6 +38,7 @@ import org.springframework.security.web.csrf.CsrfFilter;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+  @Autowired private TaskServiceIdentity taskServiceIdentity;
 
   public static final String[] WHITE_LIST =
       new String[] {
@@ -129,6 +132,10 @@ public class SecurityConfig {
 
   private Collection<GrantedAuthority> grantedAuthorities(
       Jwt jwt, RoleAuthorizationAuthorityMapper authorityMapper) {
+    if (TaskServiceIdentity.hasTaskRole(jwt)
+        || (taskServiceIdentity != null && taskServiceIdentity.isTaskToken(jwt))) {
+      return java.util.List.of();
+    }
     var authorities = new HashSet<GrantedAuthority>();
     Collection<GrantedAuthority> jwtAuthorities = jwtGrantedAuthoritiesConverter.convert(jwt);
     if (jwtAuthorities != null) {
