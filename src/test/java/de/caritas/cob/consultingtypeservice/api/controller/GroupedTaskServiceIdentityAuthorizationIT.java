@@ -84,12 +84,314 @@ class GroupedTaskServiceIdentityAuthorizationIT {
   @AfterEach
   void cleanup() {
     types.findAll().stream()
-        .filter(type -> Integer.valueOf(9719).equals(type.getTenantId()))
+        .filter(
+            type ->
+                Integer.valueOf(9719).equals(type.getTenantId())
+                    || Integer.valueOf(9720).equals(type.getTenantId()))
         .forEach(types::delete);
     mongo.remove(
         org.springframework.data.mongodb.core.query.Query.query(
-            org.springframework.data.mongodb.core.query.Criteria.where("_id").is("9719")),
+            org.springframework.data.mongodb.core.query.Criteria.where("_id").in("9719", "9720")),
         "tenant_bootstrap_claims");
+    mongo.dropCollection("consulting_type_id_sequences");
+  }
+
+  enum InterveningCreator {
+    SETUP,
+    HUMAN
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.EnumSource(InterveningCreator.class)
+  void interruptedTenantRecoversAfterADifferentTenantCompletes(InterveningCreator creator)
+      throws Exception {
+    var stopped = new java.util.concurrent.atomic.AtomicBoolean();
+    org.mockito.stubbing.Answer<Object> beforeResult =
+        call -> {
+          var entity =
+              (de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity)
+                  call.getArgument(0);
+          if (Integer.valueOf(9719).equals(entity.getTenantId()) && !stopped.getAndSet(true)) {
+            throw new org.springframework.dao.DataAccessResourceFailureException(
+                "Synthetic interruption after claim, before result");
+          }
+          return call.callRealMethod();
+        };
+    doAnswer(beforeResult)
+        .when(mongo)
+        .insert(
+            org.mockito.ArgumentMatchers.any(
+                de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity.class));
+    var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
+    String firstBody = payload("interrupted-tenant", 9719);
+    String secondBody = payload("completed-other-tenant", 9720);
+    mvc.perform(create(setup, firstBody, creationProof(9719)))
+        .andExpect(status().isInternalServerError());
+    var other =
+        creator == InterveningCreator.SETUP
+            ? setup
+            : actor("human-subject", "human-admin", List.of("tenant-admin"));
+    String second =
+        mvc.perform(create(other, secondBody, creationProof(9720)))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String first =
+        mvc.perform(create(setup, firstBody, creationProof(9719)))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertThat(JSON.readTree(first).path("id")).isNotEqualTo(JSON.readTree(second).path("id"));
+    mvc.perform(create(setup, firstBody, creationProof(9719)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(JSON.readTree(first).path("id").asInt()));
+    mvc.perform(get("/consultingtypes/" + JSON.readTree(second).path("id").asInt() + "/full"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.tenantId").value(9720));
+  }
+
+  @Test
+  void concurrentDifferentTenantsReserveDistinctRecoverableResults() throws Exception {
+    var claimed = new java.util.concurrent.CountDownLatch(2);
+    var release = new java.util.concurrent.CountDownLatch(1);
+    org.mockito.stubbing.Answer<Object> afterClaim =
+        call -> {
+          Object result = call.callRealMethod();
+          claimed.countDown();
+          assertThat(release.await(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+          return result;
+        };
+    doAnswer(afterClaim)
+        .when(mongo)
+        .insert(
+            org.mockito.ArgumentMatchers.any(
+                de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim.class));
+    var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
+    String firstBody = payload("parallel-first-tenant", 9719);
+    String secondBody = payload("parallel-second-tenant", 9720);
+    var executor = java.util.concurrent.Executors.newFixedThreadPool(2);
+    try {
+      var first =
+          executor.submit(
+              () ->
+                  mvc.perform(create(setup, firstBody, creationProof(9719)))
+                      .andReturn()
+                      .getResponse());
+      var second =
+          executor.submit(
+              () ->
+                  mvc.perform(create(setup, secondBody, creationProof(9720)))
+                      .andReturn()
+                      .getResponse());
+      assertThat(claimed.await(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+      release.countDown();
+      var firstResult = first.get(20, java.util.concurrent.TimeUnit.SECONDS);
+      var secondResult = second.get(20, java.util.concurrent.TimeUnit.SECONDS);
+      assertThat(firstResult.getStatus()).isEqualTo(200);
+      assertThat(secondResult.getStatus()).isEqualTo(200);
+      int firstId = JSON.readTree(firstResult.getContentAsString()).path("id").asInt();
+      int secondId = JSON.readTree(secondResult.getContentAsString()).path("id").asInt();
+      assertThat(firstId).isNotEqualTo(secondId);
+      mvc.perform(create(setup, firstBody, creationProof(9719)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(firstId));
+      mvc.perform(create(setup, secondBody, creationProof(9720)))
+          .andExpect(status().isOk())
+          .andExpect(jsonPath("$.id").value(secondId));
+    } finally {
+      release.countDown();
+      executor.shutdownNow();
+      doCallRealMethod()
+          .when(mongo)
+          .insert(
+              org.mockito.ArgumentMatchers.any(
+                  de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim.class));
+    }
+  }
+
+  @Test
+  void bothOrdinaryRepositoriesInitializeAndReserveOneGlobalSequenceConcurrently()
+      throws Exception {
+    var start = new java.util.concurrent.CountDownLatch(1);
+    var executor = java.util.concurrent.Executors.newFixedThreadPool(8);
+    try {
+      var futures = new java.util.ArrayList<java.util.concurrent.Future<Integer>>();
+      for (int index = 0; index < 8; index++) {
+        String name = index % 2 == 0 ? "tenantAware" : "tenantUnaware";
+        var repository = ordinaryRepository(name);
+        futures.add(
+            executor.submit(
+                () -> {
+                  assertThat(start.await(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
+                  return repository.getNextId();
+                }));
+      }
+      start.countDown();
+      var reserved = new java.util.TreeSet<Integer>();
+      for (var future : futures) {
+        reserved.add(future.get(20, java.util.concurrent.TimeUnit.SECONDS));
+      }
+      assertThat(reserved).hasSize(8);
+      assertThat(reserved.last() - reserved.first()).isEqualTo(7);
+      assertThat(mongo.getCollection("consulting_type_id_sequences").countDocuments()).isEqualTo(1);
+    } finally {
+      start.countDown();
+      executor.shutdownNow();
+    }
+  }
+
+  @Test
+  void initialAllocationFloorIncludesStoredTypesAndPendingClaimsAndKeepsGaps() throws Exception {
+    mongo.insert(manualType(payload("pre-existing-high-type", 9720), 1000000));
+    mongo.insert(
+        new de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim(
+            "9719", "existing-attempt", 1000007, "existing-digest", "owner", "subject", "issuer"));
+    var repository =
+        context.getBean(
+            "tenantUnaware",
+            de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService
+                .class);
+    assertThat(repository.getNextId()).isEqualTo(1000008);
+    // No type is inserted for this reservation: the next caller must preserve that gap.
+    assertThat(repository.getNextId()).isEqualTo(1000009);
+    assertThat(
+            mongo.findById(
+                1000007, de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity.class))
+        .isNull();
+  }
+
+  @Test
+  void lostAllocationResponseLeavesAGapAndPublicRetryCreatesOneOwnedResult() throws Exception {
+    var failed = new java.util.concurrent.atomic.AtomicBoolean();
+    var abandoned = new java.util.concurrent.atomic.AtomicInteger(-1);
+    org.mockito.stubbing.Answer<Object> afterAllocation =
+        call -> {
+          org.bson.Document reserved = (org.bson.Document) call.callRealMethod();
+          if (reserved != null && !failed.getAndSet(true)) {
+            abandoned.set(((Number) reserved.get("lastId")).intValue());
+            throw new org.springframework.dao.DataAccessResourceFailureException(
+                "Synthetic lost allocation response");
+          }
+          return reserved;
+        };
+    doAnswer(afterAllocation)
+        .when(mongo)
+        .findAndModify(
+            org.mockito.ArgumentMatchers.any(
+                org.springframework.data.mongodb.core.query.Query.class),
+            org.mockito.ArgumentMatchers.any(
+                org.springframework.data.mongodb.core.query.Update.class),
+            org.mockito.ArgumentMatchers.any(
+                org.springframework.data.mongodb.core.FindAndModifyOptions.class),
+            eq(org.bson.Document.class),
+            eq("consulting_type_id_sequences"));
+    var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
+    String body = payload("lost-global-reservation");
+    mvc.perform(create(setup, body, creationProof(9719)))
+        .andExpect(status().isInternalServerError());
+    String created =
+        mvc.perform(create(setup, body, creationProof(9719)))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    int id = JSON.readTree(created).path("id").asInt();
+    assertThat(id).isGreaterThan(abandoned.get());
+    mvc.perform(create(setup, body, creationProof(9719)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(id));
+    assertOnePublicType();
+  }
+
+  @Test
+  void lastIntegerIdIsUsableButExhaustionNeverWrapsOrCreatesAnotherCounter() throws Exception {
+    mongo.insert(
+        new org.bson.Document("_id", "consulting-types")
+            .append("lastId", (long) Integer.MAX_VALUE - 1),
+        "consulting_type_id_sequences");
+    var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
+    mvc.perform(create(setup, payload("last-integer-type"), creationProof(9719)))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(Integer.MAX_VALUE));
+    for (int retry = 0; retry < 2; retry++) {
+      mvc.perform(create(setup, payload("exhausted-other-tenant", 9720), creationProof(9720)))
+          .andExpect(status().isInternalServerError());
+    }
+    var counter =
+        mongo.findById("consulting-types", org.bson.Document.class, "consulting_type_id_sequences");
+    assertThat(counter.getLong("lastId")).isEqualTo((long) Integer.MAX_VALUE);
+    assertThat(mongo.getCollection("consulting_type_id_sequences").countDocuments()).isEqualTo(1);
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"tenantAware", "tenantUnaware"})
+  void explicitConcurrentForeignCreationIsRefusedWithoutOverwritingItsData(String name)
+      throws Exception {
+    var injected = new java.util.concurrent.atomic.AtomicBoolean();
+    org.mockito.stubbing.Answer<Object> beforeExplicitInsert =
+        call -> {
+          var incoming =
+              (de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity)
+                  call.getArgument(0);
+          if (!injected.getAndSet(true)) {
+            mongo.insert(manualType(payload("foreign-explicit-type", 9720), incoming.getId()));
+          }
+          return call.callRealMethod();
+        };
+    doAnswer(beforeExplicitInsert)
+        .when(mongo)
+        .insert(
+            org.mockito.ArgumentMatchers.any(
+                de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity.class),
+            eq("consulting_types"));
+    var repository = ordinaryRepository(name);
+    assertThat(repository.addConsultingType(manualType(payload("refused-explicit-type"), 900001)))
+        .isEmpty();
+    mvc.perform(get("/consultingtypes/900001/full"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.tenantId").value(9720))
+        .andExpect(jsonPath("$.slug").value("foreign-explicit-type"));
+  }
+
+  private de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity manualType(
+      String body, int id) throws Exception {
+    var dto =
+        JSON.readValue(
+            body, de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO.class);
+    var typeConverter =
+        context.getBean(
+            de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter.class);
+    var entity = new de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity();
+    org.springframework.beans.BeanUtils.copyProperties(typeConverter.convert(dto), entity);
+    entity.setId(id);
+    return entity;
+  }
+
+  private de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService
+      ordinaryRepository(String name) {
+    if ("tenantUnaware".equals(name)) {
+      return context.getBean(
+          name,
+          de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService
+              .class);
+    }
+    // The testing profile disables multitenancy. Exercise the other implementation with
+    // a real Spring Data Mongo proxy without changing the HTTP security profile.
+    var repository =
+        new org.springframework.data.mongodb.repository.support.MongoRepositoryFactory(mongo)
+            .getRepository(
+                de.caritas.cob.consultingtypeservice.api.consultingtypes
+                    .ConsultingTypeTenantAwareRepository.class);
+    return new de.caritas.cob.consultingtypeservice.api.consultingtypes
+        .ConsultingTypeMongoTenantAwareRepositoryService(
+        repository,
+        context.getBean(
+            de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter.class),
+        context.getBean(
+            de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeIdAllocator
+                .class));
   }
 
   enum LostDatabaseResponse {
@@ -206,9 +508,12 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     String body = payload("reserved-default");
     mvc.perform(create(setup, body, creationProof(9719)))
         .andExpect(status().isInternalServerError());
-    var human = actor("human-subject", "human-admin", List.of("tenant-admin"));
+    var claim =
+        mongo.findById(
+            "9719", de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim.class);
+    mongo.insert(manualType(payload("explicit-foreign-reserved-id", 9720), claim.resultId()));
     String foreign =
-        mvc.perform(create(human, body, creationProof(9719)))
+        mvc.perform(get("/consultingtypes/" + claim.resultId() + "/full"))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
@@ -221,7 +526,9 @@ class GroupedTaskServiceIdentityAuthorizationIT {
             .getResponse()
             .getContentAsString();
     assertThat(JSON.readTree(reread)).isEqualTo(JSON.readTree(foreign));
-    assertOnePublicType();
+    mvc.perform(get("/consultingtypes/basic"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[?(@.tenantId == 9719)]").isEmpty());
   }
 
   @Test
@@ -266,10 +573,14 @@ class GroupedTaskServiceIdentityAuthorizationIT {
   }
 
   private String payload(String slug) throws Exception {
+    return payload(slug, 9719);
+  }
+
+  private String payload(String slug, int tenantId) throws Exception {
     var dto =
         new org.jeasy.random.EasyRandom()
             .nextObject(de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO.class)
-            .tenantId(9719)
+            .tenantId(tenantId)
             .slug(slug);
     dto.getRoles().getConsultant().addRoleNames("test", List.of("consultant"));
     return JSON.writeValueAsString(dto);

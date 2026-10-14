@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.MapperFeature;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter;
+import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeIdAllocator;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.mapper.FullConsultingTypeMapper;
@@ -18,7 +19,6 @@ import java.util.HexFormat;
 import java.util.UUID;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -37,12 +37,17 @@ public class TenantBootstrapService {
   private final MongoTemplate mongo;
   private final ConsultingTypeConverter converter;
   private final TenantCreationContext context;
+  private final ConsultingTypeIdAllocator ids;
 
   public TenantBootstrapService(
-      MongoTemplate mongo, ConsultingTypeConverter converter, TenantCreationContext context) {
+      MongoTemplate mongo,
+      ConsultingTypeConverter converter,
+      TenantCreationContext context,
+      ConsultingTypeIdAllocator ids) {
     this.mongo = mongo;
     this.converter = converter;
     this.context = context;
+    this.ids = ids;
   }
 
   public FullConsultingTypeResponseDTO create(ConsultingTypeDTO dto, String proof) {
@@ -60,10 +65,7 @@ public class TenantBootstrapService {
       }
     }
     if (claim == null) {
-      ConsultingTypeEntity last =
-          mongo.findOne(
-              new Query().with(Sort.by(Sort.Direction.DESC, "id")), ConsultingTypeEntity.class);
-      int resultId = last == null ? 0 : Math.addExact(last.getId(), 1);
+      int resultId = ids.reserve();
       var proposed =
           new TenantBootstrapClaim(
               tenantId,
