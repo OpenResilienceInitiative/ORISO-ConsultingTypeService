@@ -1,8 +1,10 @@
 package de.caritas.cob.consultingtypeservice.api.auth;
 
+import de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Service;
 /** Resolves authorisation details from the current security context. */
 @Service("authorisationService")
 public class AuthorisationService {
+  @Autowired private TaskServiceIdentity taskIdentity;
 
   private static final String TENANT_ADMIN_ROLE = "tenant-admin";
 
@@ -34,6 +37,14 @@ public class AuthorisationService {
    * service accounts) can also carry tenant 0.
    */
   public boolean isSuperAdmin() {
+    if (findJwt()
+        .map(
+            jwt ->
+                TaskServiceIdentity.hasTaskRole(jwt)
+                    || (taskIdentity != null && taskIdentity.isTaskToken(jwt)))
+        .orElse(false)) {
+      return false;
+    }
     Optional<Long> tenantId = findTenantIdInAccessToken();
     return tenantId.isPresent() && tenantId.get().equals(0L) && hasRealmRole(TENANT_ADMIN_ROLE);
   }

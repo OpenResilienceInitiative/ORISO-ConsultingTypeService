@@ -22,6 +22,8 @@ class ConsultingTypeRepositoryServiceTest {
 
   @Mock private ConsultingTypeConverter consultingTypeConverter;
 
+  @Mock private ConsultingTypeIdAllocator ids;
+
   @InjectMocks ConsultingTypeMongoRepositoryService consultingTypeMongoRepositoryService;
 
   @AfterEach
