@@ -66,7 +66,7 @@ public final class TaskContextProof {
 
   public static byte[] canonical(Object value) throws Exception {
     var output = new StringBuilder();
-    append(value instanceof JsonNode node ? node : JSON.valueToTree(value), output);
+    append(value instanceof JsonNode ? (JsonNode) value : JSON.valueToTree(value), output);
     return output.toString().getBytes(StandardCharsets.UTF_8);
   }
 
