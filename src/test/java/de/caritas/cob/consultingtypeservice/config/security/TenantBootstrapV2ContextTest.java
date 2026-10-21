@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.config.security;
 
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -112,11 +113,17 @@ class TenantBootstrapV2ContextTest {
             .claim("azp", "backend-setup")
             .audience(List.of("consultingtypeservice"))
             .expiresAt(Instant.now().plusSeconds(120))
-            .claim("realm_access", Map.of("roles", List.of("config-wizard")))
+            .claim(
+                "realm_access",
+                Map.of(
+                    "roles",
+                    List.of("config-wizard", "invitation-reservations", "consultant-import")))
             .build();
     SecurityContextHolder.getContext()
         .setAuthentication(new JwtAuthenticationToken(jwt, List.of()));
-    return new TenantCreationContext(environment, new TaskServiceIdentity(environment));
+    var identity = new TaskServiceIdentity(environment);
+    assertTrue(identity.current("CONFIG_WIZARD"), "canonical three-role SETUP precondition");
+    return new TenantCreationContext(environment, identity);
   }
 
   private static String proof(ConsultingTypeDTO dto) throws Exception {
