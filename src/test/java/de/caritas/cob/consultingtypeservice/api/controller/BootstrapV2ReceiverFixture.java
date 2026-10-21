@@ -33,7 +33,8 @@ public final class BootstrapV2ReceiverFixture {
     System.setProperty("spring.datasource.username", "sa");
     System.setProperty("spring.datasource.password", "synthetic-context-h2");
     System.setProperty("spring.datasource.driver-class-name", "org.h2.Driver");
-    System.setProperty("spring.jpa.properties.hibernate.dialect", "org.hibernate.dialect.H2Dialect");
+    System.setProperty(
+        "spring.jpa.properties.hibernate.dialect", "org.hibernate.dialect.H2Dialect");
     System.setProperty("spring.datasource.hikari.maximum-pool-size", "4");
     System.setProperty("spring.datasource.hikari.minimum-idle", "0");
     System.setProperty("spring.liquibase.enabled", "false");
