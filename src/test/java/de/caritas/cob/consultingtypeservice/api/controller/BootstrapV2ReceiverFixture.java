@@ -93,7 +93,9 @@ public final class BootstrapV2ReceiverFixture {
     }
   }
 
-  /** Counts and content hashes prove no claim, allocator or type write at the rejected HTTP seam. */
+  /**
+   * Counts and content hashes prove no claim, allocator or type write at the rejected HTTP seam.
+   */
   private static void snapshot(MongoTemplate mongo, String output) throws Exception {
     var state = new TreeMap<String, Object>();
     for (var collection :
