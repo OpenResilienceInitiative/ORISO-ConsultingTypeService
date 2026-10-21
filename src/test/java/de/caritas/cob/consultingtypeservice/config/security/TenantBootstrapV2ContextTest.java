@@ -127,8 +127,7 @@ class TenantBootstrapV2ContextTest {
     var claim = new AtomicReference<TenantBootstrapClaim>();
     var document = new AtomicReference<Document>();
     when(ids.reserve()).thenReturn(9000);
-    when(mongo.findById(eq("42"), eq(TenantBootstrapClaim.class)))
-        .thenAnswer(call -> claim.get());
+    when(mongo.findById(eq("42"), eq(TenantBootstrapClaim.class))).thenAnswer(call -> claim.get());
     when(mongo.insert(any(TenantBootstrapClaim.class)))
         .thenAnswer(
             call -> {
@@ -176,37 +175,68 @@ class TenantBootstrapV2ContextTest {
     // Fixed schema catalogue: values, arbitrary field names and identifiers are never emitted.
     for (String field :
         List.of(
-            "id", "tenantId", "description", "groups", "furtherInformation", "slug",
-            "excludeNonMainConsultantsFromTeamSessions", "lockedAgencies", "whiteSpot",
-            "groupChat", "consultantBoundedToConsultingType", "welcomeMessage",
-            "sendFurtherStepsMessage", "sendSaveSessionDataMessage", "sessionDataInitializing",
-            "initializeFeedbackChat", "isPeerChat", "languageFormal", "roles", "notifications",
-            "registration", "urls", "showAskerProfile", "isVideoCallAllowed",
-            "isSubsequentRegistrationAllowed", "isAnonymousConversationAllowed",
-            "requiredComponents", "welcomeScreen")) {
+            "id",
+            "tenantId",
+            "description",
+            "groups",
+            "furtherInformation",
+            "slug",
+            "excludeNonMainConsultantsFromTeamSessions",
+            "lockedAgencies",
+            "whiteSpot",
+            "groupChat",
+            "consultantBoundedToConsultingType",
+            "welcomeMessage",
+            "sendFurtherStepsMessage",
+            "sendSaveSessionDataMessage",
+            "sessionDataInitializing",
+            "initializeFeedbackChat",
+            "isPeerChat",
+            "languageFormal",
+            "roles",
+            "notifications",
+            "registration",
+            "urls",
+            "showAskerProfile",
+            "isVideoCallAllowed",
+            "isSubsequentRegistrationAllowed",
+            "isAnonymousConversationAllowed",
+            "requiredComponents",
+            "welcomeScreen")) {
       JsonNode left = expected.get(field);
       JsonNode right = actual.get(field);
       fields.put(
           field,
           Map.of(
-              "commandType", left == null ? "ABSENT" : left.getNodeType().name(),
-              "storedType", right == null ? "ABSENT" : right.getNodeType().name(),
-              "commandNull", left == null || left.isNull(),
-              "storedNull", right == null || right.isNull(),
-              "equal", Objects.equals(left, right),
-              "persistedFieldPresent", document.containsKey(field)));
+              "commandType",
+              left == null ? "ABSENT" : left.getNodeType().name(),
+              "storedType",
+              right == null ? "ABSENT" : right.getNodeType().name(),
+              "commandNull",
+              left == null || left.isNull(),
+              "storedNull",
+              right == null || right.isNull(),
+              "equal",
+              Objects.equals(left, right),
+              "persistedFieldPresent",
+              document.containsKey(field)));
     }
     System.out.println(
         "C16_ROUNDTRIP "
             + JSON.writeValueAsString(
                 Map.of(
-                    "resultIdMatches", claim.resultId().equals(stored.getId()),
-                    "tenantMatches", claim.tenantId().equals(String.valueOf(stored.getTenantId())),
-                    "attemptMatches", claim.attempt().equals(stored.getBootstrapAttempt()),
+                    "resultIdMatches",
+                    claim.resultId().equals(stored.getId()),
+                    "tenantMatches",
+                    claim.tenantId().equals(String.valueOf(stored.getTenantId())),
+                    "attemptMatches",
+                    claim.attempt().equals(stored.getBootstrapAttempt()),
                     "storedDigestMatches",
                     claim.payloadDigest().equals(stored.getBootstrapPayloadDigest()),
-                    "completeFingerprintModelEqual", expected.equals(actual),
-                    "fields", fields)));
+                    "completeFingerprintModelEqual",
+                    expected.equals(actual),
+                    "fields",
+                    fields)));
   }
 
   private static TenantCreationContext receiver() {
