@@ -86,7 +86,8 @@ public final class BootstrapV2ReceiverFixture {
       snapshot(mongoTemplate, "ORISO_BOOTSTRAP_RECEIVER_BEFORE");
       Files.writeString(
           Path.of(required("ORISO_BOOTSTRAP_RECEIVER_READY")),
-          "http://127.0.0.1:" + ((WebServerApplicationContext) context).getWebServer().getPort(),
+          // A single-label internal hostname lets the real tenant filter use the tenantId header.
+          "http://localhost:" + ((WebServerApplicationContext) context).getWebServer().getPort(),
           StandardCharsets.UTF_8);
       System.in.read();
       snapshot(mongoTemplate, "ORISO_BOOTSTRAP_RECEIVER_AFTER");
