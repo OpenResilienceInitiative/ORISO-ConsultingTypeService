@@ -14,7 +14,8 @@ class CreationContextKeyTest {
   @Test
   void fiveActorsStartsWithOnlyTheManagedTaskContextKey() {
     var environment = grouped().withProperty("ORISO_TASK_CONTEXT_KEY", KEY);
-    assertDoesNotThrow(() -> new TenantCreationContext(environment, mock(TaskServiceIdentity.class)));
+    assertDoesNotThrow(
+        () -> new TenantCreationContext(environment, mock(TaskServiceIdentity.class)));
   }
 
   @Test
