@@ -57,7 +57,8 @@ class TenantBootstrapV2ContextTest {
     when(mongo.findById(eq("42"), eq(TenantBootstrapClaim.class))).thenThrow(reachedMongo);
     var service = new TenantBootstrapService(mongo, converter, receiver(), ids);
     String proof = proof(dto);
-    assertSame(reachedMongo, assertThrows(IllegalStateException.class, () -> service.create(dto, proof)));
+    assertSame(
+        reachedMongo, assertThrows(IllegalStateException.class, () -> service.create(dto, proof)));
     verifyNoInteractions(ids);
   }
 
@@ -78,19 +79,26 @@ class TenantBootstrapV2ContextTest {
   }
 
   private static TenantCreationContext receiver() {
-    var environment = new MockEnvironment()
-        .withProperty("TASK_IDENTITY_MODEL", "FIVE_ACTORS")
-        .withProperty("TASK_IDENTITY_REQUIRED_TASKS", "CONFIG_WIZARD")
-        .withProperty("TASK_IDENTITY_AUDIENCE", "consultingtypeservice")
-        .withProperty("IDENTITY_SETUP_CLIENT_ID", "backend-setup")
-        .withProperty("IDENTITY_SETUP_SERVICE_SUBJECT", "setup-subject")
-        .withProperty("ORISO_TASK_CONTEXT_KEY", Base64.getEncoder().encodeToString(KEY));
-    var jwt = Jwt.withTokenValue("synthetic-no-wire-token")
-        .header("alg", "RS256").issuer(ISSUER).subject("setup-subject")
-        .claim("azp", "backend-setup").audience(List.of("consultingtypeservice"))
-        .expiresAt(Instant.now().plusSeconds(120))
-        .claim("realm_access", Map.of("roles", List.of("config-wizard"))).build();
-    SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt, List.of()));
+    var environment =
+        new MockEnvironment()
+            .withProperty("TASK_IDENTITY_MODEL", "FIVE_ACTORS")
+            .withProperty("TASK_IDENTITY_REQUIRED_TASKS", "CONFIG_WIZARD")
+            .withProperty("TASK_IDENTITY_AUDIENCE", "consultingtypeservice")
+            .withProperty("IDENTITY_SETUP_CLIENT_ID", "backend-setup")
+            .withProperty("IDENTITY_SETUP_SERVICE_SUBJECT", "setup-subject")
+            .withProperty("ORISO_TASK_CONTEXT_KEY", Base64.getEncoder().encodeToString(KEY));
+    var jwt =
+        Jwt.withTokenValue("synthetic-no-wire-token")
+            .header("alg", "RS256")
+            .issuer(ISSUER)
+            .subject("setup-subject")
+            .claim("azp", "backend-setup")
+            .audience(List.of("consultingtypeservice"))
+            .expiresAt(Instant.now().plusSeconds(120))
+            .claim("realm_access", Map.of("roles", List.of("config-wizard")))
+            .build();
+    SecurityContextHolder.getContext()
+        .setAuthentication(new JwtAuthenticationToken(jwt, List.of()));
     return new TenantCreationContext(environment, new TaskServiceIdentity(environment));
   }
 
@@ -109,12 +117,21 @@ class TenantBootstrapV2ContextTest {
     claims.put("tokenIssuer", ISSUER);
     claims.put("tenantId", 42);
     claims.put("target", "tenant/42/consulting-type/default");
-    claims.put("payloadDigest", HexFormat.of().formatHex(mac("payload\n", canonical(JSON.valueToTree(dto)))));
+    claims.put(
+        "payloadDigest",
+        HexFormat.of().formatHex(mac("payload\n", canonical(JSON.valueToTree(dto)))));
     claims.put("nonce", "0123456789abcdef0123456789abcdef");
     claims.put("iat", now);
     claims.put("exp", now + 60);
-    String encoded = Base64.getUrlEncoder().withoutPadding().encodeToString(canonical(JSON.valueToTree(claims)));
-    return encoded + "." + Base64.getUrlEncoder().withoutPadding().encodeToString(mac("proof\n", encoded.getBytes(StandardCharsets.US_ASCII)));
+    String encoded =
+        Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(canonical(JSON.valueToTree(claims)));
+    return encoded
+        + "."
+        + Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(mac("proof\n", encoded.getBytes(StandardCharsets.US_ASCII)));
   }
 
   private static byte[] canonical(JsonNode value) throws Exception {
@@ -124,16 +141,26 @@ class TenantBootstrapV2ContextTest {
       names.sort(String::compareTo);
       var fields = new ArrayList<String>();
       for (String name : names) {
-        if (!value.get(name).isNull()) fields.add(JSON.writeValueAsString(name) + ":" + new String(canonical(value.get(name)), StandardCharsets.UTF_8));
+        if (!value.get(name).isNull()) {
+          fields.add(
+              JSON.writeValueAsString(name)
+                  + ":"
+                  + new String(canonical(value.get(name)), StandardCharsets.UTF_8));
+        }
       }
       return ("{" + String.join(",", fields) + "}").getBytes(StandardCharsets.UTF_8);
     }
     if (value.isArray()) {
       var items = new ArrayList<String>();
-      for (JsonNode item : value) items.add(new String(canonical(item), StandardCharsets.UTF_8));
+      for (JsonNode item : value) {
+        items.add(new String(canonical(item), StandardCharsets.UTF_8));
+      }
       return ("[" + String.join(",", items) + "]").getBytes(StandardCharsets.UTF_8);
     }
-    return (value.isNumber() ? value.decimalValue().stripTrailingZeros().toPlainString() : JSON.writeValueAsString(value)).getBytes(StandardCharsets.UTF_8);
+    return (value.isNumber()
+            ? value.decimalValue().stripTrailingZeros().toPlainString()
+            : JSON.writeValueAsString(value))
+        .getBytes(StandardCharsets.UTF_8);
   }
 
   private static byte[] mac(String domain, byte[] payload) throws Exception {
