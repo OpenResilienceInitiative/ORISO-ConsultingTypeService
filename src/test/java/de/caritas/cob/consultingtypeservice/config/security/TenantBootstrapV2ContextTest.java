@@ -124,9 +124,7 @@ class TenantBootstrapV2ContextTest {
     claims.put("iat", now);
     claims.put("exp", now + 60);
     String encoded =
-        Base64.getUrlEncoder()
-            .withoutPadding()
-            .encodeToString(canonical(JSON.valueToTree(claims)));
+        Base64.getUrlEncoder().withoutPadding().encodeToString(canonical(JSON.valueToTree(claims)));
     return encoded
         + "."
         + Base64.getUrlEncoder()
