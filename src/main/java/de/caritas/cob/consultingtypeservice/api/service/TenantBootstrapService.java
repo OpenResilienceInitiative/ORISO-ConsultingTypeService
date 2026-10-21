@@ -51,7 +51,7 @@ public class TenantBootstrapService {
   }
 
   public FullConsultingTypeResponseDTO create(ConsultingTypeDTO dto, String proof) {
-    context.require(dto.getTenantId() == null ? 0L : dto.getTenantId().longValue(), proof);
+    context.require(dto, proof);
     Jwt actor = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     ConsultingType payload = converter.convert(dto);
     String digest = digest(payload);

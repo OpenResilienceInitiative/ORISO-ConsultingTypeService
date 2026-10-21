@@ -2,11 +2,15 @@ package de.caritas.cob.consultingtypeservice.config.security;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.JsonNode;
+import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Map;
+import java.util.HashSet;
+import java.util.Set;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import org.springframework.core.env.Environment;
@@ -56,8 +60,66 @@ public class TenantCreationContext {
     return mac.doFinal(payload.getBytes(StandardCharsets.US_ASCII));
   }
 
+  /** C16 is bound to the actual received DTO before conversion, claim or allocator access. */
+  public void require(ConsultingTypeDTO dto, String proof) {
+    if (!TaskContextProof.grouped(environment)) {
+      require(dto == null || dto.getTenantId() == null ? 0L : dto.getTenantId().longValue(), proof);
+      return;
+    }
+    if (!identity.current("CONFIG_WIZARD") || dto == null || dto.getTenantId() == null
+        || dto.getTenantId() < 1) {
+      throw new AccessDeniedException("Verified tenant bootstrap required");
+    }
+    try {
+      byte[] key = TaskContextProof.key(environment);
+      JsonNode claims = TaskContextProof.verify(key, proof);
+      Set<String> fields = new HashSet<>();
+      claims.fieldNames().forEachRemaining(fields::add);
+      if (!fields.equals(Set.of("v", "iss", "aud", "actor", "purpose", "operation", "method",
+          "azp", "sub", "tokenIssuer", "tenantId", "target", "payloadDigest", "nonce", "iat", "exp"))) {
+        throw new IllegalArgumentException();
+      }
+      Jwt caller = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+      long tenantId = dto.getTenantId().longValue();
+      long issued = TaskContextProof.integer(claims.path("iat"));
+      long expires = TaskContextProof.integer(claims.path("exp"));
+      long now = Instant.now().getEpochSecond();
+      if (TaskContextProof.integer(claims.path("v")) != 2
+          || TaskContextProof.integer(claims.path("tenantId")) != tenantId
+          || !text(claims, "iss", "tenantservice")
+          || !text(claims, "aud", "consultingtypeservice")
+          || !text(claims, "actor", "SETUP")
+          || !text(claims, "purpose", "CONFIG_WIZARD")
+          || !text(claims, "operation", "tenant.consulting-type.bootstrap")
+          || !text(claims, "method", "POST")
+          || !text(claims, "target", "tenant/" + tenantId + "/consulting-type/default")
+          || !text(claims, "azp", caller.getClaimAsString("azp"))
+          || !text(claims, "sub", caller.getSubject())
+          || caller.getIssuer() == null
+          || !text(claims, "tokenIssuer", caller.getIssuer().toString())
+          || issued < 0 || issued > now || expires <= now || expires <= issued
+          || expires - issued > 60
+          || !claims.path("nonce").isTextual()
+          || !claims.path("nonce").textValue().matches("[a-f0-9]{32}")
+          || !claims.path("payloadDigest").isTextual()
+          || !claims.path("payloadDigest").textValue().matches("[a-f0-9]{64}")
+          || !MessageDigest.isEqual(TaskContextProof.digest(key, dto).getBytes(StandardCharsets.US_ASCII),
+              claims.path("payloadDigest").textValue().getBytes(StandardCharsets.US_ASCII))) {
+        throw new IllegalArgumentException();
+      }
+    } catch (Exception invalid) {
+      throw new AccessDeniedException("Invalid tenant bootstrap context");
+    }
+  }
+
+  private static boolean text(JsonNode claims, String field, String expected) {
+    return expected != null && claims.path(field).isTextual()
+        && expected.equals(claims.path(field).textValue());
+  }
+
   public void require(long tenantId, String proof) {
-    if (!identity.current("CONFIG_WIZARD")
+    if (TaskContextProof.grouped(environment)
+        || !identity.current("CONFIG_WIZARD")
         || tenantId < 1
         || proof == null
         || proof.length() > 2048) {
