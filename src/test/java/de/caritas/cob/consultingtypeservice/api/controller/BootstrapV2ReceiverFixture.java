@@ -3,13 +3,22 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.caritas.cob.consultingtypeservice.ConsultingTypeServiceApplication;
+import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity;
+import de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HexFormat;
+import java.util.Map;
+import java.util.TreeMap;
+import org.bson.Document;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.web.server.context.WebServerApplicationContext;
+import org.springframework.data.mongodb.core.MongoTemplate;
 
 /** Disposable real receiver launcher for the cross-repository public HTTP proof test. */
 public final class BootstrapV2ReceiverFixture {
@@ -73,12 +82,44 @@ public final class BootstrapV2ReceiverFixture {
       System.setProperty(prefix + "_SERVICE_SUBJECT", actor.path("subject").asText());
     }
     try (var context = SpringApplication.run(ConsultingTypeServiceApplication.class, arguments)) {
+      MongoTemplate mongoTemplate = context.getBean(MongoTemplate.class);
+      snapshot(mongoTemplate, "ORISO_BOOTSTRAP_RECEIVER_BEFORE");
       Files.writeString(
           Path.of(required("ORISO_BOOTSTRAP_RECEIVER_READY")),
           "http://127.0.0.1:" + ((WebServerApplicationContext) context).getWebServer().getPort(),
           StandardCharsets.UTF_8);
       System.in.read();
+      snapshot(mongoTemplate, "ORISO_BOOTSTRAP_RECEIVER_AFTER");
     }
+  }
+
+  /** Counts and content hashes prove no claim, allocator or type write at the rejected HTTP seam. */
+  private static void snapshot(MongoTemplate mongo, String output) throws Exception {
+    var state = new TreeMap<String, Object>();
+    for (var collection :
+        Map.of(
+                "claims", mongo.getCollectionName(TenantBootstrapClaim.class),
+                "counter", "consulting_type_id_sequences",
+                "types", mongo.getCollectionName(ConsultingTypeEntity.class))
+            .entrySet()) {
+      var documents =
+          mongo
+              .getCollection(collection.getValue())
+              .find()
+              .sort(new Document("_id", 1))
+              .into(new ArrayList<>());
+      String content = String.join("\n", documents.stream().map(Document::toJson).toList());
+      state.put(
+          collection.getKey(),
+          Map.of(
+              "count", documents.size(),
+              "sha256",
+                  HexFormat.of()
+                      .formatHex(
+                          MessageDigest.getInstance("SHA-256")
+                              .digest(content.getBytes(StandardCharsets.UTF_8)))));
+    }
+    Files.writeString(Path.of(required(output)), new ObjectMapper().writeValueAsString(state));
   }
 
   private static String required(String name) {
