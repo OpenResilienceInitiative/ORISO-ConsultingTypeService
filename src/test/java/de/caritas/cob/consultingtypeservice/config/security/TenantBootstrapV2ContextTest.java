@@ -109,14 +109,75 @@ class TenantBootstrapV2ContextTest {
   @Test
   void aMaterializedCommandSurvivesTheActualMongoMappingRoundTripAndOwnedReadback()
       throws Exception {
-    var dto =
-        JSON.readValue(
-            "{\"tenantId\":42,\"slug\":\"native-bootstrap-v2\","
-                + "\"description\":\"Materialized native bootstrap ☃\","
-                + "\"groups\":[\"native-fixture\"],\"languageFormal\":true,"
-                + "\"showAskerProfile\":false,\"isVideoCallAllowed\":false,"
-                + "\"roles\":{\"consultant\":{\"default\":[\"consultant\"]}}}",
-            ConsultingTypeDTO.class);
+    var dto = roundTripCommand();
+    var fixture = roundTripFixture();
+    String proof = proof(dto);
+    var response = assertDoesNotThrow(() -> fixture.service().create(dto, proof));
+    assertEquals(42, response.getTenantId());
+    assertEquals(9000, response.getId());
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
+  void explicitBootstrapFlagsSurviveWithoutBeingReplacedBySchemaDefaults(boolean flag)
+      throws Exception {
+    var dto = roundTripCommand();
+    explicitFlags(dto, flag);
+    var fixture = roundTripFixture();
+    String proof = proof(dto);
+    var response = assertDoesNotThrow(() -> fixture.service().create(dto, proof));
+    assertEquals(Boolean.valueOf(flag), response.getConsultantBoundedToConsultingType());
+    assertEquals(Boolean.valueOf(flag), response.getExcludeNonMainConsultantsFromTeamSessions());
+    assertEquals(Boolean.valueOf(flag), response.getIsAnonymousConversationAllowed());
+    assertEquals(Boolean.valueOf(flag), response.getIsSubsequentRegistrationAllowed());
+    assertEquals(Boolean.valueOf(flag), response.getSendFurtherStepsMessage());
+  }
+
+  @Test
+  void aChangedPayloadCannotReuseTheOwnedClaimOrRewriteItsStoredResult() throws Exception {
+    var dto = roundTripCommand();
+    explicitFlags(dto, true);
+    var fixture = roundTripFixture();
+    String originalProof = proof(dto);
+    assertDoesNotThrow(() -> fixture.service().create(dto, originalProof));
+    String before = fixture.document().get().toJson();
+    var changed = roundTripCommand();
+    explicitFlags(changed, true);
+    changed.setDescription("changed-owned-command");
+    String changedProof = proof(changed);
+    assertThrows(
+        de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException.class,
+        () -> fixture.service().create(changed, changedProof));
+    assertTrue(before.equals(fixture.document().get().toJson()), "owned result remains unchanged");
+    assertEquals(1, fixture.writes().get());
+    assertDoesNotThrow(() -> fixture.service().create(dto, originalProof));
+    assertEquals(1, fixture.writes().get());
+  }
+
+  private static void explicitFlags(ConsultingTypeDTO dto, boolean flag) {
+    dto.setConsultantBoundedToConsultingType(flag);
+    dto.setExcludeNonMainConsultantsFromTeamSessions(flag);
+    dto.setIsAnonymousConversationAllowed(flag);
+    dto.setIsSubsequentRegistrationAllowed(flag);
+    dto.setSendFurtherStepsMessage(flag);
+  }
+
+  private static ConsultingTypeDTO roundTripCommand() throws Exception {
+    return JSON.readValue(
+        "{\"tenantId\":42,\"slug\":\"native-bootstrap-v2\","
+            + "\"description\":\"Materialized native bootstrap ☃\","
+            + "\"groups\":[\"native-fixture\"],\"languageFormal\":true,"
+            + "\"showAskerProfile\":false,\"isVideoCallAllowed\":false,"
+            + "\"roles\":{\"consultant\":{\"default\":[\"consultant\"]}}}",
+        ConsultingTypeDTO.class);
+  }
+
+  private record RoundTripFixture(
+      TenantBootstrapService service,
+      AtomicReference<Document> document,
+      java.util.concurrent.atomic.AtomicInteger writes) {}
+
+  private static RoundTripFixture roundTripFixture() throws Exception {
     var converter = new ConsultingTypeConverter();
     var mappingContext = new MongoMappingContext();
     mappingContext.afterPropertiesSet();
@@ -126,6 +187,8 @@ class TenantBootstrapV2ContextTest {
     var ids = mock(ConsultingTypeIdAllocator.class);
     var claim = new AtomicReference<TenantBootstrapClaim>();
     var document = new AtomicReference<Document>();
+    var materialized = new AtomicReference<ConsultingTypeEntity>();
+    var writes = new java.util.concurrent.atomic.AtomicInteger();
     when(ids.reserve()).thenReturn(9000);
     when(mongo.findById(eq("42"), eq(TenantBootstrapClaim.class))).thenAnswer(call -> claim.get());
     when(mongo.insert(any(TenantBootstrapClaim.class)))
@@ -138,7 +201,9 @@ class TenantBootstrapV2ContextTest {
         .thenAnswer(
             call -> {
               var stored = new Document();
-              mapping.write(call.getArgument(0), stored);
+              materialized.set(call.getArgument(0));
+              mapping.write(materialized.get(), stored);
+              writes.incrementAndGet();
               document.set(stored);
               return call.getArgument(0);
             });
@@ -147,14 +212,11 @@ class TenantBootstrapV2ContextTest {
             call -> {
               if (document.get() == null) return null;
               var stored = mapping.read(ConsultingTypeEntity.class, document.get());
-              roundTripDiagnostics(converter.convert(dto), stored, claim.get(), document.get());
+              roundTripDiagnostics(materialized.get(), stored, claim.get(), document.get());
               return stored;
             });
-    var service = new TenantBootstrapService(mongo, converter, receiver(), ids);
-    String proof = proof(dto);
-    var response = assertDoesNotThrow(() -> service.create(dto, proof));
-    assertEquals(42, response.getTenantId());
-    assertEquals(9000, response.getId());
+    return new RoundTripFixture(
+        new TenantBootstrapService(mongo, converter, receiver(), ids), document, writes);
   }
 
   private static void roundTripDiagnostics(

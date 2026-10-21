@@ -53,7 +53,7 @@ public class TenantBootstrapService {
   public FullConsultingTypeResponseDTO create(ConsultingTypeDTO dto, String proof) {
     context.require(dto, proof);
     Jwt actor = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    ConsultingType payload = converter.convert(dto);
+    ConsultingType payload = materializedPayload(dto);
     String digest = digest(payload);
     String tenantId = dto.getTenantId().toString();
     TenantBootstrapClaim claim = mongo.findById(tenantId, TenantBootstrapClaim.class);
@@ -108,6 +108,24 @@ public class TenantBootstrapService {
       throw new InternalServerErrorException("Tenant bootstrap outcome is not yet verifiable");
     }
     return ownedResult(claim, result);
+  }
+
+  private ConsultingType materializedPayload(ConsultingTypeDTO dto) {
+    ConsultingType payload = converter.convert(dto);
+    ConsultingType defaults = new ConsultingType();
+    // Freeze the same declared defaults that Mongo readback applies to omitted null flags.
+    if (payload.getConsultantBoundedToConsultingType() == null)
+      payload.setConsultantBoundedToConsultingType(defaults.getConsultantBoundedToConsultingType());
+    if (payload.getExcludeNonMainConsultantsFromTeamSessions() == null)
+      payload.setExcludeNonMainConsultantsFromTeamSessions(
+          defaults.getExcludeNonMainConsultantsFromTeamSessions());
+    if (payload.getIsAnonymousConversationAllowed() == null)
+      payload.setIsAnonymousConversationAllowed(defaults.getIsAnonymousConversationAllowed());
+    if (payload.getIsSubsequentRegistrationAllowed() == null)
+      payload.setIsSubsequentRegistrationAllowed(defaults.getIsSubsequentRegistrationAllowed());
+    if (payload.getSendFurtherStepsMessage() == null)
+      payload.setSendFurtherStepsMessage(defaults.getSendFurtherStepsMessage());
+    return payload;
   }
 
   private boolean tenantHasTypes(Integer tenantId) {
