@@ -78,6 +78,23 @@ class TenantBootstrapV2ContextTest {
     verifyNoInteractions(mongo, converter, ids);
   }
 
+  @Test
+  void sameTenantWithChangedBodyDeniesBeforeConverterOrMongo() throws Exception {
+    var mongo = mock(MongoTemplate.class);
+    var converter = mock(ConsultingTypeConverter.class);
+    var ids = mock(ConsultingTypeIdAllocator.class);
+    var signed = new ConsultingTypeDTO();
+    signed.setTenantId(42);
+    signed.setDescription("signed-body");
+    String proof = proof(signed);
+    var received = new ConsultingTypeDTO();
+    received.setTenantId(42);
+    received.setDescription("changed-body");
+    var service = new TenantBootstrapService(mongo, converter, receiver(), ids);
+    assertThrows(AccessDeniedException.class, () -> service.create(received, proof));
+    verifyNoInteractions(mongo, converter, ids);
+  }
+
   private static TenantCreationContext receiver() {
     var environment =
         new MockEnvironment()
