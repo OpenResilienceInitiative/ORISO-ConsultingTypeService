@@ -1,8 +1,11 @@
 package de.caritas.cob.consultingtypeservice.config.security;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -13,6 +16,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeIdAllocator;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
+import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim;
 import de.caritas.cob.consultingtypeservice.api.service.TenantBootstrapService;
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
@@ -23,12 +27,18 @@ import java.util.Base64;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
+import org.bson.Document;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.convert.MappingMongoConverter;
+import org.springframework.data.mongodb.core.convert.NoOpDbRefResolver;
+import org.springframework.data.mongodb.core.mapping.MongoMappingContext;
 import org.springframework.mock.env.MockEnvironment;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -94,6 +104,109 @@ class TenantBootstrapV2ContextTest {
     var service = new TenantBootstrapService(mongo, converter, receiver(), ids);
     assertThrows(AccessDeniedException.class, () -> service.create(received, proof));
     verifyNoInteractions(mongo, converter, ids);
+  }
+
+  @Test
+  void aMaterializedCommandSurvivesTheActualMongoMappingRoundTripAndOwnedReadback()
+      throws Exception {
+    var dto =
+        JSON.readValue(
+            "{\"tenantId\":42,\"slug\":\"native-bootstrap-v2\","
+                + "\"description\":\"Materialized native bootstrap ☃\","
+                + "\"groups\":[\"native-fixture\"],\"languageFormal\":true,"
+                + "\"showAskerProfile\":false,\"isVideoCallAllowed\":false,"
+                + "\"roles\":{\"consultant\":{\"default\":[\"consultant\"]}}}",
+            ConsultingTypeDTO.class);
+    var converter = new ConsultingTypeConverter();
+    var mappingContext = new MongoMappingContext();
+    mappingContext.afterPropertiesSet();
+    var mapping = new MappingMongoConverter(NoOpDbRefResolver.INSTANCE, mappingContext);
+    mapping.afterPropertiesSet();
+    var mongo = mock(MongoTemplate.class);
+    var ids = mock(ConsultingTypeIdAllocator.class);
+    var claim = new AtomicReference<TenantBootstrapClaim>();
+    var document = new AtomicReference<Document>();
+    when(ids.reserve()).thenReturn(9000);
+    when(mongo.findById(eq("42"), eq(TenantBootstrapClaim.class)))
+        .thenAnswer(call -> claim.get());
+    when(mongo.insert(any(TenantBootstrapClaim.class)))
+        .thenAnswer(
+            call -> {
+              claim.set(call.getArgument(0));
+              return claim.get();
+            });
+    when(mongo.insert(any(ConsultingTypeEntity.class)))
+        .thenAnswer(
+            call -> {
+              var stored = new Document();
+              mapping.write(call.getArgument(0), stored);
+              document.set(stored);
+              return call.getArgument(0);
+            });
+    when(mongo.findById(eq(9000), eq(ConsultingTypeEntity.class)))
+        .thenAnswer(
+            call -> {
+              if (document.get() == null) return null;
+              var stored = mapping.read(ConsultingTypeEntity.class, document.get());
+              roundTripDiagnostics(converter.convert(dto), stored, claim.get(), document.get());
+              return stored;
+            });
+    var service = new TenantBootstrapService(mongo, converter, receiver(), ids);
+    String proof = proof(dto);
+    var response = assertDoesNotThrow(() -> service.create(dto, proof));
+    assertEquals(42, response.getTenantId());
+    assertEquals(9000, response.getId());
+  }
+
+  private static void roundTripDiagnostics(
+      ConsultingType command,
+      ConsultingTypeEntity stored,
+      TenantBootstrapClaim claim,
+      Document document)
+      throws Exception {
+    var before = new ConsultingType();
+    var after = new ConsultingType();
+    org.springframework.beans.BeanUtils.copyProperties(command, before);
+    org.springframework.beans.BeanUtils.copyProperties(stored, after);
+    before.setId(null);
+    after.setId(null);
+    JsonNode expected = JSON.valueToTree(before);
+    JsonNode actual = JSON.valueToTree(after);
+    var fields = new TreeMap<String, Object>();
+    // Fixed schema catalogue: values, arbitrary field names and identifiers are never emitted.
+    for (String field :
+        List.of(
+            "id", "tenantId", "description", "groups", "furtherInformation", "slug",
+            "excludeNonMainConsultantsFromTeamSessions", "lockedAgencies", "whiteSpot",
+            "groupChat", "consultantBoundedToConsultingType", "welcomeMessage",
+            "sendFurtherStepsMessage", "sendSaveSessionDataMessage", "sessionDataInitializing",
+            "initializeFeedbackChat", "isPeerChat", "languageFormal", "roles", "notifications",
+            "registration", "urls", "showAskerProfile", "isVideoCallAllowed",
+            "isSubsequentRegistrationAllowed", "isAnonymousConversationAllowed",
+            "requiredComponents", "welcomeScreen")) {
+      JsonNode left = expected.get(field);
+      JsonNode right = actual.get(field);
+      fields.put(
+          field,
+          Map.of(
+              "commandType", left == null ? "ABSENT" : left.getNodeType().name(),
+              "storedType", right == null ? "ABSENT" : right.getNodeType().name(),
+              "commandNull", left == null || left.isNull(),
+              "storedNull", right == null || right.isNull(),
+              "equal", Objects.equals(left, right),
+              "persistedFieldPresent", document.containsKey(field)));
+    }
+    System.out.println(
+        "C16_ROUNDTRIP "
+            + JSON.writeValueAsString(
+                Map.of(
+                    "resultIdMatches", claim.resultId().equals(stored.getId()),
+                    "tenantMatches", claim.tenantId().equals(String.valueOf(stored.getTenantId())),
+                    "attemptMatches", claim.attempt().equals(stored.getBootstrapAttempt()),
+                    "storedDigestMatches",
+                    claim.payloadDigest().equals(stored.getBootstrapPayloadDigest()),
+                    "completeFingerprintModelEqual", expected.equals(actual),
+                    "fields", fields)));
   }
 
   private static TenantCreationContext receiver() {
