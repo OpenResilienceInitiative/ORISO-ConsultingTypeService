@@ -57,6 +57,31 @@ class TenantBootstrapV2ContextTest {
   }
 
   @Test
+  void standardApplicationScanningDoesNotDiscoverExplicitNativeSchedulingControls() {
+    var application = de.caritas.cob.consultingtypeservice.ConsultingTypeServiceApplication.class;
+    var componentScan = org.springframework.core.annotation.AnnotatedElementUtils.findMergedAnnotation(
+        application, org.springframework.context.annotation.ComponentScan.class);
+    var scanner = new org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider(
+        true, new MockEnvironment().withProperty("multitenancy.enabled", "true"));
+    var factory = new org.springframework.beans.factory.support.DefaultListableBeanFactory();
+    for (var exclusion : componentScan.excludeFilters()) {
+      for (Class<?> filterClass : exclusion.classes()) {
+        var filter = (org.springframework.core.type.filter.TypeFilter)
+            org.springframework.beans.BeanUtils.instantiateClass(filterClass);
+        if (filter instanceof org.springframework.beans.factory.BeanFactoryAware) {
+          ((org.springframework.beans.factory.BeanFactoryAware) filter).setBeanFactory(factory);
+        }
+        scanner.addExcludeFilter(filter);
+      }
+    }
+    String explicit = de.caritas.cob.consultingtypeservice.api.controller.BootstrapV2ReceiverFixture
+        .PairedControls.class.getName();
+    assertTrue(scanner.findCandidateComponents(application.getPackageName()).stream()
+        .noneMatch(candidate -> explicit.equals(candidate.getBeanClassName())),
+        "Manually registered native scheduling controls must not be component-scanned");
+  }
+
+  @Test
   void exactMaterializedDtoPassesTheC16GuardBeforeTheFirstMongoQuery() throws Exception {
     var mongo = mock(MongoTemplate.class);
     var converter = mock(ConsultingTypeConverter.class);
