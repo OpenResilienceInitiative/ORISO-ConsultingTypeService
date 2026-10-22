@@ -15,6 +15,7 @@ import de.caritas.cob.consultingtypeservice.api.model.FullConsultingTypeResponse
 import de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim;
 import de.caritas.cob.consultingtypeservice.config.security.TenantCreationContext;
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
+import de.caritas.cob.consultingtypeservice.schemas.model.Registration;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
@@ -62,7 +63,7 @@ public class TenantBootstrapService {
     String nonce = context.require(dto, proof);
     validator.validateBootstrapCommand(dto);
     Jwt actor = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    ConsultingType payload = materializedPayload(dto);
+    ConsultingType payload = materializedPayload(dto, nonce != null);
     String digest = digest(payload);
     String tenantId = dto.getTenantId().toString();
     // C nonces come from the private SQL INSERT; later attempts require terminal CTS
@@ -133,7 +134,7 @@ public class TenantBootstrapService {
     String nonce = context.requireCompensation(dto, proof);
     validator.validateBootstrapCommand(dto);
     Jwt actor = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-    ConsultingType payload = materializedPayload(dto);
+    ConsultingType payload = materializedPayload(dto, nonce != null);
     String digest = digest(payload);
     String tenantId = dto.getTenantId().toString();
     String claimId = tenantId + ":" + nonce;
@@ -214,7 +215,7 @@ public class TenantBootstrapService {
         Document.class);
   }
 
-  private ConsultingType materializedPayload(ConsultingTypeDTO dto) {
+  private ConsultingType materializedPayload(ConsultingTypeDTO dto, boolean verifiedC) {
     ConsultingType payload = converter.convert(dto);
     ConsultingType defaults = new ConsultingType();
     // Freeze the same declared defaults that Mongo readback applies to omitted null flags.
@@ -229,6 +230,17 @@ public class TenantBootstrapService {
       payload.setIsSubsequentRegistrationAllowed(defaults.getIsSubsequentRegistrationAllowed());
     if (payload.getSendFurtherStepsMessage() == null)
       payload.setSendFurtherStepsMessage(defaults.getSendFurtherStepsMessage());
+    if (verifiedC && payload.getRegistration() != null) {
+      var registration = payload.getRegistration();
+      var declared = new Registration();
+      // The ordinary converter stays unchanged; C freezes the complete configured command.
+      if (dto.getRegistration().getMinPostcodeSize() != null)
+        registration.setMinPostcodeSize(dto.getRegistration().getMinPostcodeSize());
+      if (registration.getAutoSelectAgency() == null)
+        registration.setAutoSelectAgency(declared.getAutoSelectAgency());
+      if (registration.getAutoSelectPostcode() == null)
+        registration.setAutoSelectPostcode(declared.getAutoSelectPostcode());
+    }
     return payload;
   }
 
