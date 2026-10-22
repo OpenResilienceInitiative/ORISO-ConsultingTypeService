@@ -11,10 +11,13 @@ public class ConsultingTypeEntity extends ConsultingType {
   private Boolean bootstrapCompensated;
 
   @JsonIgnore
-  public Boolean getBootstrapCompensated() { return bootstrapCompensated; }
+  public Boolean getBootstrapCompensated() {
+    return bootstrapCompensated;
+  }
 
-  public void setBootstrapCompensated(Boolean terminal) { this.bootstrapCompensated = terminal; }
-
+  public void setBootstrapCompensated(Boolean terminal) {
+    this.bootstrapCompensated = terminal;
+  }
 
   @JsonIgnore
   public String getBootstrapAttempt() {

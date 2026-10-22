@@ -371,17 +371,21 @@ class TenantBootstrapV2ContextTest {
   }
 
   @Test
-  void independentlySignedCompensationUsesTheSamePayloadAndAttemptButAnotherDomain() throws Exception {
+  void independentlySignedCompensationUsesTheSamePayloadAndAttemptButAnotherDomain()
+      throws Exception {
     var dto = roundTripCommand();
     String create = proof(dto);
-    var claims = (com.fasterxml.jackson.databind.node.ObjectNode) TaskContextProof.verify(KEY, create);
+    var claims =
+        (com.fasterxml.jackson.databind.node.ObjectNode) TaskContextProof.verify(KEY, create);
     claims.put("operation", "tenant.consulting-type.compensate");
     claims.put("target", "tenant/42/consulting-type/default/compensation");
     String compensation = TaskContextProof.sign(KEY, claims);
-    assertEquals("0123456789abcdef0123456789abcdef", receiver().requireCompensation(dto, compensation));
+    assertEquals(
+        "0123456789abcdef0123456789abcdef", receiver().requireCompensation(dto, compensation));
     assertThrows(AccessDeniedException.class, () -> receiver().require(dto, compensation));
     dto.setDescription("foreign-current-body");
-    assertThrows(AccessDeniedException.class, () -> receiver().requireCompensation(dto, compensation));
+    assertThrows(
+        AccessDeniedException.class, () -> receiver().requireCompensation(dto, compensation));
   }
 
   @Test
@@ -405,7 +409,8 @@ class TenantBootstrapV2ContextTest {
     assertEquals(original.actorIssuer(), stored.actorIssuer());
     fixture.claim().set(stored);
     String before = fixture.document().get().toJson();
-    assertThrows(de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException.class,
+    assertThrows(
+        de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException.class,
         () -> fixture.service().create(dto, proof(dto)));
     assertEquals(before, fixture.document().get().toJson());
     assertEquals(1, fixture.writes().get());

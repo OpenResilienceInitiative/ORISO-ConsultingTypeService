@@ -118,9 +118,21 @@ public class TenantCreationContext {
           || !text(claims, "aud", "consultingtypeservice")
           || !text(claims, "actor", "SETUP")
           || !text(claims, "purpose", "CONFIG_WIZARD")
-          || !text(claims, "operation", compensation ? "tenant.consulting-type.compensate" : "tenant.consulting-type.bootstrap")
+          || !text(
+              claims,
+              "operation",
+              compensation
+                  ? "tenant.consulting-type.compensate"
+                  : "tenant.consulting-type.bootstrap")
           || !text(claims, "method", "POST")
-          || !text(claims, "target", "tenant/" + tenantId + (compensation ? "/consulting-type/default/compensation" : "/consulting-type/default"))
+          || !text(
+              claims,
+              "target",
+              "tenant/"
+                  + tenantId
+                  + (compensation
+                      ? "/consulting-type/default/compensation"
+                      : "/consulting-type/default"))
           || !text(claims, "azp", caller.getClaimAsString("azp"))
           || !text(claims, "sub", caller.getSubject())
           || caller.getIssuer() == null

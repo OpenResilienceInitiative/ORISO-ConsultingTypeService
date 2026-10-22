@@ -18,13 +18,13 @@ import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import java.util.List;
-import org.bson.Document;
-import org.springframework.data.mongodb.core.FindAndReplaceOptions;
-import org.springframework.data.mongodb.core.query.BasicQuery;
 import java.util.UUID;
+import org.bson.Document;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
+import org.springframework.data.mongodb.core.FindAndReplaceOptions;
 import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.BasicQuery;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -126,7 +126,9 @@ public class TenantBootstrapService {
     return ownedResult(claim, result);
   }
 
-  /** Result fencing is durable before claim terminalization and before SQL release is acknowledged. */
+  /**
+   * Result fencing is durable before claim terminalization and before SQL release is acknowledged.
+   */
   public void compensate(ConsultingTypeDTO dto, String proof) {
     String nonce = context.requireCompensation(dto, proof);
     validator.validateBootstrapCommand(dto);
@@ -142,15 +144,19 @@ public class TenantBootstrapService {
     if (!completeClaim.equals(mongo.findById(claimId, Document.class, claims)))
       throw new ConflictException("Bootstrap claim has current foreign drift");
     String results = mongo.getCollectionName(ConsultingTypeEntity.class);
-    Document terminal = new Document("_id", claim.resultId())
-        .append("tenantId", dto.getTenantId())
-        .append("bootstrapAttempt", nonce)
-        .append("bootstrapPayloadDigest", digest)
-        .append("bootstrapCompensated", true);
+    Document terminal =
+        new Document("_id", claim.resultId())
+            .append("tenantId", dto.getTenantId())
+            .append("bootstrapAttempt", nonce)
+            .append("bootstrapPayloadDigest", digest)
+            .append("bootstrapCompensated", true);
     Document actual = mongo.findById(claim.resultId(), Document.class, results);
     if (actual == null) {
-      try { mongo.insert(new Document(terminal), results); }
-      catch (DuplicateKeyException concurrentCreate) { /* Exact readback below decides ownership. */ }
+      try {
+        mongo.insert(new Document(terminal), results);
+      } catch (DuplicateKeyException concurrentCreate) {
+        /* Exact readback below decides ownership. */
+      }
       actual = mongo.findById(claim.resultId(), Document.class, results);
     }
     if (!terminal.equals(actual)) {
@@ -160,13 +166,15 @@ public class TenantBootstrapService {
       expected.setBootstrapAttempt(nonce);
       expected.setBootstrapPayloadDigest(digest);
       Document complete = document(expected);
-      if (!complete.equals(actual)) throw new ConflictException("Bootstrap result has current foreign drift");
+      if (!complete.equals(actual))
+        throw new ConflictException("Bootstrap result has current foreign drift");
       Document fenced = replaceExact(actual, terminal, results);
       if (fenced == null) {
         // A same-attempt retry may have won; arbitrary drift never authorizes replacement.
         fenced = mongo.findById(claim.resultId(), Document.class, results);
       }
-      if (!terminal.equals(fenced)) throw new ConflictException("Bootstrap result fence was not verified");
+      if (!terminal.equals(fenced))
+        throw new ConflictException("Bootstrap result fence was not verified");
     }
     if (!terminal.equals(mongo.findById(claim.resultId(), Document.class, results)))
       throw new ConflictException("Bootstrap terminal readback is not verified");
@@ -191,10 +199,19 @@ public class TenantBootstrapService {
   }
 
   private Document replaceExact(Document before, Document after, String collection) {
-    var query = new BasicQuery(new Document("_id", before.get("_id"))
-        .append("$expr", new Document("$eq", List.of("$$ROOT", new Document("$literal", before)))));
-    return mongo.findAndReplace(query, after, FindAndReplaceOptions.options().returnNew(),
-        Document.class, collection, Document.class);
+    var query =
+        new BasicQuery(
+            new Document("_id", before.get("_id"))
+                .append(
+                    "$expr",
+                    new Document("$eq", List.of("$$ROOT", new Document("$literal", before)))));
+    return mongo.findAndReplace(
+        query,
+        after,
+        FindAndReplaceOptions.options().returnNew(),
+        Document.class,
+        collection,
+        Document.class);
   }
 
   private ConsultingType materializedPayload(ConsultingTypeDTO dto) {
@@ -217,7 +234,8 @@ public class TenantBootstrapService {
 
   private boolean tenantHasTypes(Integer tenantId) {
     return mongo.exists(
-        Query.query(Criteria.where("tenantId").is(tenantId).and("bootstrapCompensated").ne(true)), ConsultingTypeEntity.class);
+        Query.query(Criteria.where("tenantId").is(tenantId).and("bootstrapCompensated").ne(true)),
+        ConsultingTypeEntity.class);
   }
 
   private void requireOwnedClaim(

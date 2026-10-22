@@ -139,19 +139,30 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
 
   @Override
   public ConsultingTypeEntity update(ConsultingType consultingType) {
-    if (environment != null && de.caritas.cob.consultingtypeservice.config.security.TaskContextProof.grouped(environment)) {
+    if (environment != null
+        && de.caritas.cob.consultingtypeservice.config.security.TaskContextProof.grouped(
+            environment)) {
       var current = (ConsultingTypeEntity) consultingType;
-      var criteria = org.springframework.data.mongodb.core.query.Criteria.where("_id").is(current.getId())
-          .and("bootstrapCompensated").ne(true);
-      if (!isTechnicalTenantContext()) criteria.and("tenantId").is(TenantContext.getCurrentTenant());
-      var changed = mongo.findAndReplace(
-          org.springframework.data.mongodb.core.query.Query.query(criteria), current,
-          org.springframework.data.mongodb.core.FindAndReplaceOptions.options().returnNew(),
-          ConsultingTypeEntity.class, mongo.getCollectionName(ConsultingTypeEntity.class), ConsultingTypeEntity.class);
+      var criteria =
+          org.springframework.data.mongodb.core.query.Criteria.where("_id")
+              .is(current.getId())
+              .and("bootstrapCompensated")
+              .ne(true);
+      if (!isTechnicalTenantContext())
+        criteria.and("tenantId").is(TenantContext.getCurrentTenant());
+      var changed =
+          mongo.findAndReplace(
+              org.springframework.data.mongodb.core.query.Query.query(criteria),
+              current,
+              org.springframework.data.mongodb.core.FindAndReplaceOptions.options().returnNew(),
+              ConsultingTypeEntity.class,
+              mongo.getCollectionName(ConsultingTypeEntity.class),
+              ConsultingTypeEntity.class);
       if (changed == null) throw new NotFoundException("Consulting type is absent or terminal");
       return changed;
     }
-    return this.consultingTypeMongoTenantAwareRepository.save((ConsultingTypeEntity) consultingType);
+    return this.consultingTypeMongoTenantAwareRepository.save(
+        (ConsultingTypeEntity) consultingType);
   }
 
   @Override
