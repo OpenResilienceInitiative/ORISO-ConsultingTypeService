@@ -154,6 +154,49 @@ class TenantBootstrapV2ContextTest {
     assertEquals(1, fixture.writes().get());
   }
 
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(strings = {"minimal", "urls", "registration", "notes", "mandatoryFields"})
+  void invalidConfiguredCommandsAreRejectedBeforeAnyMongoQueryOrAllocation(String missing)
+      throws Exception {
+    var dto = roundTripCommand();
+    if (missing.equals("minimal")) {
+      dto = JSON.readValue(TenantBootstrapV2ContextTest.class.getResourceAsStream(
+          "/bootstrap-v2-invalid-minimal-consulting-type.json"), ConsultingTypeDTO.class);
+      dto.setTenantId(42);
+    } else if (missing.equals("urls")) dto.setUrls(null);
+    else if (missing.equals("registration")) dto.setRegistration(null);
+    else if (missing.equals("notes")) dto.getRegistration().setNotes(null);
+    else dto.getRegistration().setMandatoryFields(null);
+    var mongo = mock(MongoTemplate.class);
+    var ids = mock(ConsultingTypeIdAllocator.class);
+    var service = new TenantBootstrapService(mongo, new ConsultingTypeConverter(), receiver(), ids);
+    String signed = proof(dto);
+    var command = dto;
+    assertThrows(de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException.class,
+        () -> service.create(command, signed));
+    verifyNoInteractions(mongo, ids);
+  }
+
+  @Test
+  void theCompleteConfiguredDtoSatisfiesTheExistingPersistenceSchemaWithoutAGeneratedId()
+      throws Exception {
+    var schema = new org.json.JSONObject(new org.json.JSONTokener(
+        TenantBootstrapV2ContextTest.class.getResourceAsStream("/schemas/consulting-type.json")));
+    var required = schema.getJSONArray("required");
+    var commandRequired = new org.json.JSONArray();
+    for (int index = 0; index < required.length(); index++) {
+      if (!required.getString(index).equals("id")) commandRequired.put(required.getString(index));
+    }
+    schema.put("required", commandRequired);
+    var command = new org.json.JSONObject(new org.json.JSONTokener(
+        TenantBootstrapV2ContextTest.class.getResourceAsStream(
+            "/bootstrap-v2-complete-consulting-type.json")));
+    // Tenant id is overwritten from the private live Grant, not taken from configuration.
+    command.put("tenantId", 42);
+    assertDoesNotThrow(() -> org.everit.json.schema.loader.SchemaLoader.builder()
+        .schemaJson(schema).useDefaults(true).draftV7Support().build().load().build().validate(command));
+  }
+
   private static void explicitFlags(ConsultingTypeDTO dto, boolean flag) {
     dto.setConsultantBoundedToConsultingType(flag);
     dto.setExcludeNonMainConsultantsFromTeamSessions(flag);
@@ -163,13 +206,17 @@ class TenantBootstrapV2ContextTest {
   }
 
   private static ConsultingTypeDTO roundTripCommand() throws Exception {
-    return JSON.readValue(
-        "{\"tenantId\":42,\"slug\":\"native-bootstrap-v2\","
-            + "\"description\":\"Materialized native bootstrap ☃\","
-            + "\"groups\":[\"native-fixture\"],\"languageFormal\":true,"
-            + "\"showAskerProfile\":false,\"isVideoCallAllowed\":false,"
-            + "\"roles\":{\"consultant\":{\"default\":[\"consultant\"]}}}",
-        ConsultingTypeDTO.class);
+    var dto = JSON.readValue(
+        TenantBootstrapV2ContextTest.class.getResourceAsStream(
+            "/bootstrap-v2-complete-consulting-type.json"), ConsultingTypeDTO.class);
+    dto.setTenantId(42);
+    // All five flags are optional in a valid command; explicit variants below remain exact.
+    dto.setConsultantBoundedToConsultingType(null);
+    dto.setExcludeNonMainConsultantsFromTeamSessions(null);
+    dto.setIsAnonymousConversationAllowed(null);
+    dto.setIsSubsequentRegistrationAllowed(null);
+    dto.setSendFurtherStepsMessage(null);
+    return dto;
   }
 
   private record RoundTripFixture(
