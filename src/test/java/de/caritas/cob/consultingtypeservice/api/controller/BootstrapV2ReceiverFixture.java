@@ -168,6 +168,7 @@ public final class BootstrapV2ReceiverFixture {
     private String originalAttempt;
     private Long counterAtCapture;
     private Map<String, String> terminalSnapshot;
+    private Map<String, String> heldSnapshot;
     private boolean terminalRetryUnchanged;
     private ConsultingTypeEntity staleAware, staleUnaware;
     private MongoTemplate mongo;
@@ -200,7 +201,9 @@ public final class BootstrapV2ReceiverFixture {
                   "STALE_UPDATES",
                   "ORDINARY_CONTROL",
                   "CAPTURE_TERMINAL",
-                  "CHECK_TERMINAL")
+                  "CHECK_TERMINAL",
+                  "CAPTURE_HELD",
+                  "CHECK_HELD")
               .contains(command.path("command").textValue())) throw refused();
       return command.path("command").textValue();
     }
@@ -356,7 +359,13 @@ public final class BootstrapV2ReceiverFixture {
         }
         retiredReads();
       } else if (command.equals("ORDINARY_CONTROL")) ordinaryControl();
-      else if (command.equals("CAPTURE_TERMINAL")) {
+      else if (command.equals("CAPTURE_HELD")) {
+        if (heldSnapshot != null) throw refused();
+        heldSnapshot = completeTerminalSnapshot();
+      } else if (command.equals("CHECK_HELD")) {
+        if (heldSnapshot == null) throw refused();
+        terminalRetryUnchanged = heldSnapshot.equals(completeTerminalSnapshot());
+      } else if (command.equals("CAPTURE_TERMINAL")) {
         var claim = mongo.findById(TENANT + ":" + originalAttempt, TenantBootstrapClaim.class);
         if (!primaryCompleted
             || !staleCaptured
