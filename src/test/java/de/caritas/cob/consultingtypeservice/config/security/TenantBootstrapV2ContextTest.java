@@ -64,7 +64,8 @@ class TenantBootstrapV2ContextTest {
     var dto = roundTripCommand();
     when(converter.convert(dto)).thenReturn(new ConsultingType());
     var reachedMongo = new IllegalStateException("finite first-query observation");
-    when(mongo.findById(eq("42"), eq(TenantBootstrapClaim.class))).thenThrow(reachedMongo);
+    when(mongo.findById(eq("42:0123456789abcdef0123456789abcdef"), eq(TenantBootstrapClaim.class)))
+        .thenThrow(reachedMongo);
     var service = new TenantBootstrapService(mongo, converter, receiver(), ids, validator());
     String proof = proof(dto);
     assertSame(
@@ -144,6 +145,40 @@ class TenantBootstrapV2ContextTest {
     assertEquals(before, fixture.document().get().toJson());
     assertEquals(1, fixture.writes().get());
     assertDoesNotThrow(() -> fixture.service().create(dto, original));
+    assertEquals(1, fixture.writes().get());
+  }
+
+  @Test
+  void legacyPersistedClaimsKeepTheirOriginalTenantIdentity() throws Exception {
+    var document = new Document("_id", "42")
+        .append("attempt", "legacy-attempt")
+        .append("resultId", 9000)
+        .append("payloadDigest", "legacy-digest")
+        .append("actorClient", "legacy-client")
+        .append("actorSubject", "legacy-subject")
+        .append("actorIssuer", ISSUER);
+    var legacy = mapping().read(TenantBootstrapClaim.class, document);
+    assertEquals("42", legacy.claimId());
+    assertEquals("42", legacy.tenantId());
+    assertEquals("legacy-attempt", legacy.attempt());
+    assertEquals(9000, legacy.resultId());
+  }
+
+  @Test
+  void cCannotAdoptAnUnboundLegacyClaimEvenWhenOwnerPayloadAndAttemptMatch() throws Exception {
+    var dto = roundTripCommand();
+    var fixture = roundTripFixture();
+    String original = proof(dto);
+    assertDoesNotThrow(() -> fixture.service().create(dto, original));
+    var current = fixture.claim().get();
+    fixture.claim().set(new TenantBootstrapClaim(
+        current.tenantId(), current.attempt(), current.resultId(), current.payloadDigest(),
+        current.actorClient(), current.actorSubject(), current.actorIssuer()));
+    String before = fixture.document().get().toJson();
+    assertThrows(
+        de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException.class,
+        () -> fixture.service().create(dto, original));
+    assertEquals(before, fixture.document().get().toJson());
     assertEquals(1, fixture.writes().get());
   }
 
@@ -335,7 +370,8 @@ class TenantBootstrapV2ContextTest {
     var materialized = new AtomicReference<ConsultingTypeEntity>();
     var writes = new java.util.concurrent.atomic.AtomicInteger();
     when(ids.reserve()).thenReturn(9000);
-    when(mongo.findById(eq("42"), eq(TenantBootstrapClaim.class))).thenAnswer(call -> claim.get());
+    when(mongo.findById(any(String.class), eq(TenantBootstrapClaim.class)))
+        .thenAnswer(call -> claim.get());
     when(mongo.insert(any(TenantBootstrapClaim.class)))
         .thenAnswer(
             call -> {

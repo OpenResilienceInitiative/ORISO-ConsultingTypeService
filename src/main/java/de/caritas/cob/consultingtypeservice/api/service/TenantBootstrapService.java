@@ -55,16 +55,19 @@ public class TenantBootstrapService {
   }
 
   public FullConsultingTypeResponseDTO create(ConsultingTypeDTO dto, String proof) {
-    context.require(dto, proof);
+    String nonce = context.require(dto, proof);
     validator.validateBootstrapCommand(dto);
     Jwt actor = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     ConsultingType payload = materializedPayload(dto);
     String digest = digest(payload);
     String tenantId = dto.getTenantId().toString();
-    TenantBootstrapClaim claim = mongo.findById(tenantId, TenantBootstrapClaim.class);
+    // C nonces come from the private SQL INSERT; later attempts require terminal CTS acknowledgement
+    // before that exact SQL ownership can be released. Arbitrary re-signing is outside this boundary.
+    String claimId = nonce == null ? tenantId : tenantId + ":" + nonce;
+    TenantBootstrapClaim claim = mongo.findById(claimId, TenantBootstrapClaim.class);
     if (claim == null && tenantHasTypes(dto.getTenantId())) {
       // Another request may have committed after our earlier empty claim read.
-      claim = mongo.findById(tenantId, TenantBootstrapClaim.class);
+      claim = mongo.findById(claimId, TenantBootstrapClaim.class);
       if (claim == null) {
         throw new ConflictException("Tenant already has a consulting type");
       }
@@ -73,8 +76,9 @@ public class TenantBootstrapService {
       int resultId = ids.reserve();
       var proposed =
           new TenantBootstrapClaim(
+              claimId,
               tenantId,
-              UUID.randomUUID().toString(),
+              nonce == null ? UUID.randomUUID().toString() : nonce,
               resultId,
               digest,
               actor.getClaimAsString("azp"),
@@ -83,10 +87,10 @@ public class TenantBootstrapService {
       try {
         claim = mongo.insert(proposed);
       } catch (DuplicateKeyException alreadyClaimed) {
-        claim = mongo.findById(tenantId, TenantBootstrapClaim.class);
+        claim = mongo.findById(claimId, TenantBootstrapClaim.class);
       }
     }
-    requireOwnedClaim(claim, actor, digest, tenantId);
+    requireOwnedClaim(claim, actor, digest, tenantId, claimId, nonce);
     ConsultingTypeEntity result = mongo.findById(claim.resultId(), ConsultingTypeEntity.class);
     if (result != null) {
       return ownedResult(claim, result);
@@ -139,11 +143,14 @@ public class TenantBootstrapService {
   }
 
   private void requireOwnedClaim(
-      TenantBootstrapClaim claim, Jwt actor, String digest, String tenantId) {
+      TenantBootstrapClaim claim, Jwt actor, String digest, String tenantId, String claimId,
+      String nonce) {
     if (claim == null
         || claim.resultId() == null
         || claim.attempt() == null
         || !tenantId.equals(claim.tenantId())
+        || !claimId.equals(claim.claimId())
+        || (nonce != null && !nonce.equals(claim.attempt()))
         || !digest.equals(claim.payloadDigest())
         || !actor.getClaimAsString("azp").equals(claim.actorClient())
         || !actor.getSubject().equals(claim.actorSubject())

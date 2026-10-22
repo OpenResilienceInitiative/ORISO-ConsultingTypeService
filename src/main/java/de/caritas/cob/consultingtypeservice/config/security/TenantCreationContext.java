@@ -61,10 +61,10 @@ public class TenantCreationContext {
   }
 
   /** C16 is bound to the actual received DTO before conversion, claim or allocator access. */
-  public void require(ConsultingTypeDTO dto, String proof) {
+  public String require(ConsultingTypeDTO dto, String proof) {
     if (!TaskContextProof.grouped(environment)) {
       require(dto == null || dto.getTenantId() == null ? 0L : dto.getTenantId().longValue(), proof);
-      return;
+      return null;
     }
     if (!identity.current("CONFIG_WIZARD")
         || dto == null
@@ -129,6 +129,7 @@ public class TenantCreationContext {
               claims.path("payloadDigest").textValue().getBytes(StandardCharsets.US_ASCII))) {
         throw new IllegalArgumentException();
       }
+      return claims.path("nonce").textValue();
     } catch (Exception invalid) {
       throw new AccessDeniedException("Invalid tenant bootstrap context");
     }
