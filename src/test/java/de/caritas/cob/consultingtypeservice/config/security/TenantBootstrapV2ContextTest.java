@@ -643,7 +643,8 @@ class TenantBootstrapV2ContextTest {
             .issuer(ISSUER)
             .subject("setup-subject")
             .claim("azp", "backend-setup")
-            .audience(List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice"))
+            .audience(
+                List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice"))
             .expiresAt(Instant.now().plusSeconds(120))
             .claim(
                 "realm_access",
