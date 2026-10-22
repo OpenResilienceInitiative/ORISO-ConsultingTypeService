@@ -5,6 +5,7 @@ on:
   push:
     branches:
     - pre-dev
+    - dev
 
 env:
   REDOCLY_VERSION: 2.40.0
