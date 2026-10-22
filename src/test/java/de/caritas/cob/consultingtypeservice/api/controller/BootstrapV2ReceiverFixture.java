@@ -167,6 +167,8 @@ public final class BootstrapV2ReceiverFixture {
     private String activeRepository;
     private String originalAttempt;
     private Long counterAtCapture;
+    private Map<String, String> terminalSnapshot;
+    private boolean terminalRetryUnchanged;
     private ConsultingTypeEntity staleAware, staleUnaware;
     private MongoTemplate mongo;
     private org.springframework.context.ConfigurableApplicationContext context;
@@ -196,7 +198,7 @@ public final class BootstrapV2ReceiverFixture {
                   "RELEASE_DELAYED",
                   "CAPTURE_STALE",
                   "STALE_UPDATES",
-                  "ORDINARY_CONTROL")
+                  "ORDINARY_CONTROL", "CAPTURE_TERMINAL", "CHECK_TERMINAL")
               .contains(command.path("command").textValue())) throw refused();
       return command.path("command").textValue();
     }
@@ -352,6 +354,15 @@ public final class BootstrapV2ReceiverFixture {
         }
         retiredReads();
       } else if (command.equals("ORDINARY_CONTROL")) ordinaryControl();
+      else if (command.equals("CAPTURE_TERMINAL")) {
+        var claim = mongo.findById(TENANT + ":" + originalAttempt, TenantBootstrapClaim.class);
+        if (!primaryCompleted || !staleCaptured || terminalSnapshot != null || claim == null || !claim.bootstrapCompensated())
+          throw refused();
+        terminalSnapshot = completeTerminalSnapshot();
+      } else if (command.equals("CHECK_TERMINAL")) {
+        if (terminalSnapshot == null) throw refused();
+        terminalRetryUnchanged = terminalSnapshot.equals(completeTerminalSnapshot());
+      }
     }
 
     private void retiredReads() {
@@ -444,6 +455,22 @@ public final class BootstrapV2ReceiverFixture {
       return ((Number) value).longValue();
     }
 
+    private Map<String, String> completeTerminalSnapshot() {
+      var fingerprints = new TreeMap<String, String>();
+      for (var entry : Map.of("claims", mongo.getCollectionName(TenantBootstrapClaim.class),
+          "types", mongo.getCollectionName(ConsultingTypeEntity.class),
+          "counter", "consulting_type_id_sequences").entrySet()) {
+        var documents = mongo.find(new org.springframework.data.mongodb.core.query.Query()
+            .with(org.springframework.data.domain.Sort.by("_id")), Document.class, entry.getValue());
+        String content = String.join("\n", documents.stream().map(Document::toJson).toList());
+        try {
+          fingerprints.put(entry.getKey(), java.util.HexFormat.of().formatHex(
+              java.security.MessageDigest.getInstance("SHA-256").digest(content.getBytes(StandardCharsets.UTF_8))));
+        } catch (java.security.NoSuchAlgorithmException unavailable) { throw refused(); }
+      }
+      return Map.copyOf(fingerprints);
+    }
+
     private void write(String state) throws Exception {
       var values = new TreeMap<String, Object>();
       values.put("sequence", sequence);
@@ -465,6 +492,7 @@ public final class BootstrapV2ReceiverFixture {
       values.put("retiredReadChecks", retiredReadChecks);
       values.put("retiredReadsHidden", retiredReadsHidden);
       values.put("ordinaryPreserved", ordinaryPreserved);
+      values.put("terminalRetryUnchanged", terminalRetryUnchanged);
       var query =
           org.springframework.data.mongodb.core.query.Query.query(
               org.springframework.data.mongodb.core.query.Criteria.where("tenantId").is(TENANT));
