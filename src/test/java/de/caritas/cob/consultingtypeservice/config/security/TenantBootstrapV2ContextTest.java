@@ -155,13 +155,17 @@ class TenantBootstrapV2ContextTest {
   }
 
   @org.junit.jupiter.params.ParameterizedTest
-  @org.junit.jupiter.params.provider.ValueSource(strings = {"minimal", "urls", "registration", "notes", "mandatoryFields"})
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {"minimal", "urls", "registration", "notes", "mandatoryFields"})
   void invalidConfiguredCommandsAreRejectedBeforeAnyMongoQueryOrAllocation(String missing)
       throws Exception {
     var dto = roundTripCommand();
     if (missing.equals("minimal")) {
-      dto = JSON.readValue(TenantBootstrapV2ContextTest.class.getResourceAsStream(
-          "/bootstrap-v2-invalid-minimal-consulting-type.json"), ConsultingTypeDTO.class);
+      dto =
+          JSON.readValue(
+              TenantBootstrapV2ContextTest.class.getResourceAsStream(
+                  "/bootstrap-v2-invalid-minimal-consulting-type.json"),
+              ConsultingTypeDTO.class);
       dto.setTenantId(42);
     } else if (missing.equals("urls")) dto.setUrls(null);
     else if (missing.equals("registration")) dto.setRegistration(null);
@@ -172,7 +176,8 @@ class TenantBootstrapV2ContextTest {
     var service = new TenantBootstrapService(mongo, new ConsultingTypeConverter(), receiver(), ids);
     String signed = proof(dto);
     var command = dto;
-    assertThrows(de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException.class,
+    assertThrows(
+        de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException.class,
         () -> service.create(command, signed));
     verifyNoInteractions(mongo, ids);
   }
@@ -180,21 +185,34 @@ class TenantBootstrapV2ContextTest {
   @Test
   void theCompleteConfiguredDtoSatisfiesTheExistingPersistenceSchemaWithoutAGeneratedId()
       throws Exception {
-    var schema = new org.json.JSONObject(new org.json.JSONTokener(
-        TenantBootstrapV2ContextTest.class.getResourceAsStream("/schemas/consulting-type.json")));
+    var schema =
+        new org.json.JSONObject(
+            new org.json.JSONTokener(
+                TenantBootstrapV2ContextTest.class.getResourceAsStream(
+                    "/schemas/consulting-type.json")));
     var required = schema.getJSONArray("required");
     var commandRequired = new org.json.JSONArray();
     for (int index = 0; index < required.length(); index++) {
       if (!required.getString(index).equals("id")) commandRequired.put(required.getString(index));
     }
     schema.put("required", commandRequired);
-    var command = new org.json.JSONObject(new org.json.JSONTokener(
-        TenantBootstrapV2ContextTest.class.getResourceAsStream(
-            "/bootstrap-v2-complete-consulting-type.json")));
+    var command =
+        new org.json.JSONObject(
+            new org.json.JSONTokener(
+                TenantBootstrapV2ContextTest.class.getResourceAsStream(
+                    "/bootstrap-v2-complete-consulting-type.json")));
     // Tenant id is overwritten from the private live Grant, not taken from configuration.
     command.put("tenantId", 42);
-    assertDoesNotThrow(() -> org.everit.json.schema.loader.SchemaLoader.builder()
-        .schemaJson(schema).useDefaults(true).draftV7Support().build().load().build().validate(command));
+    assertDoesNotThrow(
+        () ->
+            org.everit.json.schema.loader.SchemaLoader.builder()
+                .schemaJson(schema)
+                .useDefaults(true)
+                .draftV7Support()
+                .build()
+                .load()
+                .build()
+                .validate(command));
   }
 
   private static void explicitFlags(ConsultingTypeDTO dto, boolean flag) {
@@ -206,9 +224,11 @@ class TenantBootstrapV2ContextTest {
   }
 
   private static ConsultingTypeDTO roundTripCommand() throws Exception {
-    var dto = JSON.readValue(
-        TenantBootstrapV2ContextTest.class.getResourceAsStream(
-            "/bootstrap-v2-complete-consulting-type.json"), ConsultingTypeDTO.class);
+    var dto =
+        JSON.readValue(
+            TenantBootstrapV2ContextTest.class.getResourceAsStream(
+                "/bootstrap-v2-complete-consulting-type.json"),
+            ConsultingTypeDTO.class);
     dto.setTenantId(42);
     // All five flags are optional in a valid command; explicit variants below remain exact.
     dto.setConsultantBoundedToConsultingType(null);
