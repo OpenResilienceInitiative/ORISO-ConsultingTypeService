@@ -56,11 +56,14 @@ public class ConsultingTypeValidator {
   /** Validate the actual command before conversion, allocation or any Mongo operation. */
   public void validateBootstrapCommand(ConsultingTypeDTO command) {
     try {
-      String json = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL)
-          .writeValueAsString(command);
+      String json =
+          new ObjectMapper()
+              .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+              .writeValueAsString(command);
       buildSchema(true).validate(new JSONObject(json));
     } catch (ValidationException | JsonProcessingException | org.json.JSONException invalid) {
-      throw new BadRequestException("Tenant bootstrap configuration violates the consulting type schema");
+      throw new BadRequestException(
+          "Tenant bootstrap configuration violates the consulting type schema");
     }
   }
 

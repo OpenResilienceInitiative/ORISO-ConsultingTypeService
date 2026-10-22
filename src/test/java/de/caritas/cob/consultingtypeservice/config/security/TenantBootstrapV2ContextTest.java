@@ -172,7 +172,9 @@ class TenantBootstrapV2ContextTest {
     else dto.getRegistration().setMandatoryFields(null);
     var mongo = mock(MongoTemplate.class);
     var ids = mock(ConsultingTypeIdAllocator.class);
-    var service = new TenantBootstrapService(mongo, new ConsultingTypeConverter(), receiver(), ids, validator());
+    var service =
+        new TenantBootstrapService(
+            mongo, new ConsultingTypeConverter(), receiver(), ids, validator());
     String signed = proof(dto);
     var command = dto;
     assertThrows(
@@ -228,15 +230,27 @@ class TenantBootstrapV2ContextTest {
     var expected = JSON.valueToTree(payload);
     var actual = JSON.valueToTree(stored);
     var changed = new java.util.TreeSet<String>();
-    expected.fieldNames().forEachRemaining(name -> {
-      if (!Objects.equals(expected.get(name), actual.get(name))) changed.add(name);
-    });
-    actual.fieldNames().forEachRemaining(name -> {
-      if (!Objects.equals(expected.get(name), actual.get(name))) changed.add(name);
-    });
-    assertEquals(new java.util.TreeSet<>(List.of("consultantBoundedToConsultingType",
-        "excludeNonMainConsultantsFromTeamSessions", "isAnonymousConversationAllowed",
-        "isSubsequentRegistrationAllowed", "sendFurtherStepsMessage")), changed);
+    expected
+        .fieldNames()
+        .forEachRemaining(
+            name -> {
+              if (!Objects.equals(expected.get(name), actual.get(name))) changed.add(name);
+            });
+    actual
+        .fieldNames()
+        .forEachRemaining(
+            name -> {
+              if (!Objects.equals(expected.get(name), actual.get(name))) changed.add(name);
+            });
+    assertEquals(
+        new java.util.TreeSet<>(
+            List.of(
+                "consultantBoundedToConsultingType",
+                "excludeNonMainConsultantsFromTeamSessions",
+                "isAnonymousConversationAllowed",
+                "isSubsequentRegistrationAllowed",
+                "sendFurtherStepsMessage")),
+        changed);
   }
 
   private static void explicitFlags(ConsultingTypeDTO dto, boolean flag) {
@@ -307,7 +321,9 @@ class TenantBootstrapV2ContextTest {
               return stored;
             });
     return new RoundTripFixture(
-        new TenantBootstrapService(mongo, converter, receiver(), ids, validator()), document, writes);
+        new TenantBootstrapService(mongo, converter, receiver(), ids, validator()),
+        document,
+        writes);
   }
 
   private static void roundTripDiagnostics(
@@ -392,8 +408,10 @@ class TenantBootstrapV2ContextTest {
                     fields)));
   }
 
-  private static de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeValidator validator() {
-    var validator = new de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeValidator();
+  private static de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeValidator
+      validator() {
+    var validator =
+        new de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeValidator();
     org.springframework.test.util.ReflectionTestUtils.setField(
         validator, "consultingTypeJsonSchemaFile", "/schemas/consulting-type.json");
     return validator;
