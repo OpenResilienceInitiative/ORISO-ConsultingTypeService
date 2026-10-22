@@ -136,7 +136,6 @@ public final class BootstrapV2ReceiverFixture {
   /**
    * Only the explicit disposable launcher registers these finite real-storage scheduling controls.
    */
-  @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods = false)
   public static final class PairedControls
       implements org.springframework.beans.factory.config.BeanPostProcessor, AutoCloseable {
     private static final long TENANT = 9158L;
