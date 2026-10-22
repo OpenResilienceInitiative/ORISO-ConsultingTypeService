@@ -27,6 +27,12 @@ public class ConsultingTypeMongoRepositoryService implements ConsultingTypeRepos
   @Value("${feature.multitenancy.with.single.domain.enabled}")
   private boolean multitenancyWithSingleDomainEnabled;
 
+  @org.springframework.beans.factory.annotation.Autowired
+  private org.springframework.data.mongodb.core.MongoTemplate mongo;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private org.springframework.core.env.Environment environment;
+
   /**
    * Get a complete list of all {@link ConsultingType}.
    *
@@ -115,6 +121,17 @@ public class ConsultingTypeMongoRepositoryService implements ConsultingTypeRepos
 
   @Override
   public ConsultingTypeEntity update(ConsultingType consultingType) {
+    if (environment != null && de.caritas.cob.consultingtypeservice.config.security.TaskContextProof.grouped(environment)) {
+      var current = (ConsultingTypeEntity) consultingType;
+      var criteria = org.springframework.data.mongodb.core.query.Criteria.where("_id").is(current.getId())
+          .and("bootstrapCompensated").ne(true);
+      var changed = mongo.findAndReplace(
+          org.springframework.data.mongodb.core.query.Query.query(criteria), current,
+          org.springframework.data.mongodb.core.FindAndReplaceOptions.options().returnNew(),
+          ConsultingTypeEntity.class, mongo.getCollectionName(ConsultingTypeEntity.class), ConsultingTypeEntity.class);
+      if (changed == null) throw new NotFoundException("Consulting type is absent or terminal");
+      return changed;
+    }
     return this.consultingTypeRepository.save((ConsultingTypeEntity) consultingType);
   }
 

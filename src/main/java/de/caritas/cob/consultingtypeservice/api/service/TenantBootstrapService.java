@@ -17,6 +17,10 @@ import de.caritas.cob.consultingtypeservice.config.security.TenantCreationContex
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
 import java.security.MessageDigest;
 import java.util.HexFormat;
+import java.util.List;
+import org.bson.Document;
+import org.springframework.data.mongodb.core.FindAndReplaceOptions;
+import org.springframework.data.mongodb.core.query.BasicQuery;
 import java.util.UUID;
 import org.springframework.beans.BeanUtils;
 import org.springframework.dao.DuplicateKeyException;
@@ -93,6 +97,7 @@ public class TenantBootstrapService {
       }
     }
     requireOwnedClaim(claim, actor, digest, tenantId, claimId, nonce);
+    if (claim.bootstrapCompensated()) throw new ConflictException("Bootstrap attempt is terminal");
     ConsultingTypeEntity result = mongo.findById(claim.resultId(), ConsultingTypeEntity.class);
     if (result != null) {
       return ownedResult(claim, result);
@@ -121,6 +126,77 @@ public class TenantBootstrapService {
     return ownedResult(claim, result);
   }
 
+  /** Result fencing is durable before claim terminalization and before SQL release is acknowledged. */
+  public void compensate(ConsultingTypeDTO dto, String proof) {
+    String nonce = context.requireCompensation(dto, proof);
+    validator.validateBootstrapCommand(dto);
+    Jwt actor = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+    ConsultingType payload = materializedPayload(dto);
+    String digest = digest(payload);
+    String tenantId = dto.getTenantId().toString();
+    String claimId = tenantId + ":" + nonce;
+    TenantBootstrapClaim claim = mongo.findById(claimId, TenantBootstrapClaim.class);
+    requireOwnedClaim(claim, actor, digest, tenantId, claimId, nonce);
+    String claims = mongo.getCollectionName(TenantBootstrapClaim.class);
+    Document completeClaim = document(claim);
+    if (!completeClaim.equals(mongo.findById(claimId, Document.class, claims)))
+      throw new ConflictException("Bootstrap claim has current foreign drift");
+    String results = mongo.getCollectionName(ConsultingTypeEntity.class);
+    Document terminal = new Document("_id", claim.resultId())
+        .append("tenantId", dto.getTenantId())
+        .append("bootstrapAttempt", nonce)
+        .append("bootstrapPayloadDigest", digest)
+        .append("bootstrapCompensated", true);
+    Document actual = mongo.findById(claim.resultId(), Document.class, results);
+    if (actual == null) {
+      try { mongo.insert(new Document(terminal), results); }
+      catch (DuplicateKeyException concurrentCreate) { /* Exact readback below decides ownership. */ }
+      actual = mongo.findById(claim.resultId(), Document.class, results);
+    }
+    if (!terminal.equals(actual)) {
+      var expected = new ConsultingTypeEntity();
+      BeanUtils.copyProperties(payload, expected);
+      expected.setId(claim.resultId());
+      expected.setBootstrapAttempt(nonce);
+      expected.setBootstrapPayloadDigest(digest);
+      Document complete = document(expected);
+      if (!complete.equals(actual)) throw new ConflictException("Bootstrap result has current foreign drift");
+      Document fenced = replaceExact(actual, terminal, results);
+      if (fenced == null) {
+        // A same-attempt retry may have won; arbitrary drift never authorizes replacement.
+        fenced = mongo.findById(claim.resultId(), Document.class, results);
+      }
+      if (!terminal.equals(fenced)) throw new ConflictException("Bootstrap result fence was not verified");
+    }
+    if (!terminal.equals(mongo.findById(claim.resultId(), Document.class, results)))
+      throw new ConflictException("Bootstrap terminal readback is not verified");
+    if (!claim.bootstrapCompensated()) {
+      Document completed = document(claim.terminal());
+      Document changed = replaceExact(completeClaim, completed, claims);
+      if (changed == null) changed = mongo.findById(claimId, Document.class, claims);
+      if (!completed.equals(changed))
+        throw new ConflictException("Bootstrap claim terminalization is not verified");
+    }
+    TenantBootstrapClaim verified = mongo.findById(claimId, TenantBootstrapClaim.class);
+    requireOwnedClaim(verified, actor, digest, tenantId, claimId, nonce);
+    if (!verified.bootstrapCompensated()
+        || !document(verified).equals(mongo.findById(claimId, Document.class, claims)))
+      throw new ConflictException("Bootstrap claim is not terminal or has current drift");
+  }
+
+  private Document document(Object value) {
+    Document result = new Document();
+    mongo.getConverter().write(value, result);
+    return result;
+  }
+
+  private Document replaceExact(Document before, Document after, String collection) {
+    var query = new BasicQuery(new Document("_id", before.get("_id"))
+        .append("$expr", new Document("$eq", List.of("$$ROOT", new Document("$literal", before)))));
+    return mongo.findAndReplace(query, after, FindAndReplaceOptions.options().returnNew(),
+        Document.class, collection, Document.class);
+  }
+
   private ConsultingType materializedPayload(ConsultingTypeDTO dto) {
     ConsultingType payload = converter.convert(dto);
     ConsultingType defaults = new ConsultingType();
@@ -141,7 +217,7 @@ public class TenantBootstrapService {
 
   private boolean tenantHasTypes(Integer tenantId) {
     return mongo.exists(
-        Query.query(Criteria.where("tenantId").is(tenantId)), ConsultingTypeEntity.class);
+        Query.query(Criteria.where("tenantId").is(tenantId).and("bootstrapCompensated").ne(true)), ConsultingTypeEntity.class);
   }
 
   private void requireOwnedClaim(
@@ -167,7 +243,8 @@ public class TenantBootstrapService {
 
   private FullConsultingTypeResponseDTO ownedResult(
       TenantBootstrapClaim claim, ConsultingTypeEntity result) {
-    if (!claim.resultId().equals(result.getId())
+    if (Boolean.TRUE.equals(result.getBootstrapCompensated())
+        || !claim.resultId().equals(result.getId())
         || !claim.tenantId().equals(String.valueOf(result.getTenantId()))
         || !claim.attempt().equals(result.getBootstrapAttempt())
         || !claim.payloadDigest().equals(result.getBootstrapPayloadDigest())

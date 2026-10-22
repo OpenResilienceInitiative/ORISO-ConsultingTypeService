@@ -360,6 +360,58 @@ class TenantBootstrapV2ContextTest {
   }
 
   @Test
+  void createProofNeverAuthorizesCompensationOrTouchesMongo() throws Exception {
+    var mongo = mock(MongoTemplate.class);
+    var converter = mock(ConsultingTypeConverter.class);
+    var ids = mock(ConsultingTypeIdAllocator.class);
+    var dto = roundTripCommand();
+    var service = new TenantBootstrapService(mongo, converter, receiver(), ids, validator());
+    assertThrows(AccessDeniedException.class, () -> service.compensate(dto, proof(dto)));
+    verifyNoInteractions(mongo, converter, ids);
+  }
+
+  @Test
+  void independentlySignedCompensationUsesTheSamePayloadAndAttemptButAnotherDomain() throws Exception {
+    var dto = roundTripCommand();
+    String create = proof(dto);
+    var claims = (com.fasterxml.jackson.databind.node.ObjectNode) TaskContextProof.verify(KEY, create);
+    claims.put("operation", "tenant.consulting-type.compensate");
+    claims.put("target", "tenant/42/consulting-type/default/compensation");
+    String compensation = TaskContextProof.sign(KEY, claims);
+    assertEquals("0123456789abcdef0123456789abcdef", receiver().requireCompensation(dto, compensation));
+    assertThrows(AccessDeniedException.class, () -> receiver().require(dto, compensation));
+    dto.setDescription("foreign-current-body");
+    assertThrows(AccessDeniedException.class, () -> receiver().requireCompensation(dto, compensation));
+  }
+
+  @Test
+  void durableTerminalClaimRetainsExactOwnerPayloadAndAttemptAcrossMongoMapping() throws Exception {
+    var fixture = roundTripFixture();
+    var dto = roundTripCommand();
+    fixture.service().create(dto, proof(dto));
+    var original = fixture.claim().get();
+    var terminal = original.terminal();
+    var document = new Document();
+    mapping().write(terminal, document);
+    var stored = mapping().read(TenantBootstrapClaim.class, document);
+    assertTrue(stored.bootstrapCompensated());
+    assertEquals(original.claimId(), stored.claimId());
+    assertEquals(original.tenantId(), stored.tenantId());
+    assertEquals(original.attempt(), stored.attempt());
+    assertEquals(original.resultId(), stored.resultId());
+    assertEquals(original.payloadDigest(), stored.payloadDigest());
+    assertEquals(original.actorClient(), stored.actorClient());
+    assertEquals(original.actorSubject(), stored.actorSubject());
+    assertEquals(original.actorIssuer(), stored.actorIssuer());
+    fixture.claim().set(stored);
+    String before = fixture.document().get().toJson();
+    assertThrows(de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException.class,
+        () -> fixture.service().create(dto, proof(dto)));
+    assertEquals(before, fixture.document().get().toJson());
+    assertEquals(1, fixture.writes().get());
+  }
+
+  @Test
   void nativePairedControlRequiresTheExactFiniteCommandAndIntegralSequence() throws Exception {
     assertEquals(
         "OBSERVE",

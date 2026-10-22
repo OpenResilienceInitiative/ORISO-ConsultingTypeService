@@ -62,6 +62,16 @@ public class TenantCreationContext {
 
   /** C16 is bound to the actual received DTO before conversion, claim or allocator access. */
   public String require(ConsultingTypeDTO dto, String proof) {
+    return require(dto, proof, false);
+  }
+
+  public String requireCompensation(ConsultingTypeDTO dto, String proof) {
+    if (!TaskContextProof.grouped(environment))
+      throw new AccessDeniedException("Owned C bootstrap compensation required");
+    return require(dto, proof, true);
+  }
+
+  private String require(ConsultingTypeDTO dto, String proof, boolean compensation) {
     if (!TaskContextProof.grouped(environment)) {
       require(dto == null || dto.getTenantId() == null ? 0L : dto.getTenantId().longValue(), proof);
       return null;
@@ -108,9 +118,9 @@ public class TenantCreationContext {
           || !text(claims, "aud", "consultingtypeservice")
           || !text(claims, "actor", "SETUP")
           || !text(claims, "purpose", "CONFIG_WIZARD")
-          || !text(claims, "operation", "tenant.consulting-type.bootstrap")
+          || !text(claims, "operation", compensation ? "tenant.consulting-type.compensate" : "tenant.consulting-type.bootstrap")
           || !text(claims, "method", "POST")
-          || !text(claims, "target", "tenant/" + tenantId + "/consulting-type/default")
+          || !text(claims, "target", "tenant/" + tenantId + (compensation ? "/consulting-type/default/compensation" : "/consulting-type/default"))
           || !text(claims, "azp", caller.getClaimAsString("azp"))
           || !text(claims, "sub", caller.getSubject())
           || caller.getIssuer() == null

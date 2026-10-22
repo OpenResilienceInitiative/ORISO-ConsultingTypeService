@@ -15,6 +15,7 @@ public final class TenantBootstrapClaim {
   private final String actorClient;
   private final String actorSubject;
   private final String actorIssuer;
+  private final boolean bootstrapCompensated;
 
   public TenantBootstrapClaim(
       String tenantId,
@@ -35,7 +36,6 @@ public final class TenantBootstrapClaim {
         actorIssuer);
   }
 
-  @PersistenceCreator
   public TenantBootstrapClaim(
       String claimId,
       String tenantId,
@@ -45,6 +45,13 @@ public final class TenantBootstrapClaim {
       String actorClient,
       String actorSubject,
       String actorIssuer) {
+    this(claimId, tenantId, attempt, resultId, payloadDigest, actorClient, actorSubject, actorIssuer, false);
+  }
+
+  @PersistenceCreator
+  public TenantBootstrapClaim(String claimId, String tenantId, String attempt, Integer resultId,
+      String payloadDigest, String actorClient, String actorSubject, String actorIssuer,
+      Boolean bootstrapCompensated) {
     this.claimId = claimId;
     // Existing v1 documents stored the tenant directly as their id without a second scalar.
     this.tenantId = tenantId == null ? claimId : tenantId;
@@ -54,6 +61,14 @@ public final class TenantBootstrapClaim {
     this.actorClient = actorClient;
     this.actorSubject = actorSubject;
     this.actorIssuer = actorIssuer;
+    this.bootstrapCompensated = Boolean.TRUE.equals(bootstrapCompensated);
+  }
+
+  public boolean bootstrapCompensated() { return bootstrapCompensated; }
+
+  public TenantBootstrapClaim terminal() {
+    return new TenantBootstrapClaim(claimId, tenantId, attempt, resultId, payloadDigest,
+        actorClient, actorSubject, actorIssuer, true);
   }
 
   public String claimId() {

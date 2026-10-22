@@ -10,11 +10,12 @@ import org.springframework.data.mongodb.repository.Query;
 @ConditionalOnExpression("${multitenancy.enabled:true}")
 public interface ConsultingTypeTenantAwareRepository extends ConsultingTypeRepository {
 
-  @Query(value = "{'tenantId': ?0 }")
+  @Query(value = "{'tenantId': ?0, 'bootstrapCompensated': {$ne: true}}")
   List<ConsultingTypeEntity> findAllHavingTenantId(Long tenantId);
 
+  @Query("{'slug': ?0, 'tenantId': ?1, 'bootstrapCompensated': {$ne: true}}")
   List<ConsultingTypeEntity> findBySlugAndTenantId(String slug, Long tenantId);
 
-  @Query(value = "{'_id': ?0, 'tenantId': ?1 }")
+  @Query(value = "{'_id': ?0, 'tenantId': ?1, 'bootstrapCompensated': {$ne: true}}")
   ConsultingTypeEntity findConsultingTypeByIdAndTenantId(Integer consultingtypeId, Long tenantId);
 }
