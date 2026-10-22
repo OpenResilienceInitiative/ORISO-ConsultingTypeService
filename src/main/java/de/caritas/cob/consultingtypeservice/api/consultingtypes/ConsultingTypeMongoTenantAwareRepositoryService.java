@@ -7,8 +7,8 @@ import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
 import java.util.List;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Repository;
 @Repository("tenantAware")
 @Primary
 @ConditionalOnExpression("${multitenancy.enabled:true}")
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class ConsultingTypeMongoTenantAwareRepositoryService
     implements ConsultingTypeRepositoryService {
