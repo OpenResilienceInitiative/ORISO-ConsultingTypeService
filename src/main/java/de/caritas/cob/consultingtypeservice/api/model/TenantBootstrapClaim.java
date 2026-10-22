@@ -24,7 +24,15 @@ public final class TenantBootstrapClaim {
       String actorClient,
       String actorSubject,
       String actorIssuer) {
-    this(tenantId, tenantId, attempt, resultId, payloadDigest, actorClient, actorSubject, actorIssuer);
+    this(
+        tenantId,
+        tenantId,
+        attempt,
+        resultId,
+        payloadDigest,
+        actorClient,
+        actorSubject,
+        actorIssuer);
   }
 
   @PersistenceCreator

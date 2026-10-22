@@ -150,13 +150,14 @@ class TenantBootstrapV2ContextTest {
 
   @Test
   void legacyPersistedClaimsKeepTheirOriginalTenantIdentity() throws Exception {
-    var document = new Document("_id", "42")
-        .append("attempt", "legacy-attempt")
-        .append("resultId", 9000)
-        .append("payloadDigest", "legacy-digest")
-        .append("actorClient", "legacy-client")
-        .append("actorSubject", "legacy-subject")
-        .append("actorIssuer", ISSUER);
+    var document =
+        new Document("_id", "42")
+            .append("attempt", "legacy-attempt")
+            .append("resultId", 9000)
+            .append("payloadDigest", "legacy-digest")
+            .append("actorClient", "legacy-client")
+            .append("actorSubject", "legacy-subject")
+            .append("actorIssuer", ISSUER);
     var legacy = mapping().read(TenantBootstrapClaim.class, document);
     assertEquals("42", legacy.claimId());
     assertEquals("42", legacy.tenantId());
@@ -171,9 +172,17 @@ class TenantBootstrapV2ContextTest {
     String original = proof(dto);
     assertDoesNotThrow(() -> fixture.service().create(dto, original));
     var current = fixture.claim().get();
-    fixture.claim().set(new TenantBootstrapClaim(
-        current.tenantId(), current.attempt(), current.resultId(), current.payloadDigest(),
-        current.actorClient(), current.actorSubject(), current.actorIssuer()));
+    fixture
+        .claim()
+        .set(
+            new TenantBootstrapClaim(
+                current.tenantId(),
+                current.attempt(),
+                current.resultId(),
+                current.payloadDigest(),
+                current.actorClient(),
+                current.actorSubject(),
+                current.actorIssuer()));
     String before = fixture.document().get().toJson();
     assertThrows(
         de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException.class,

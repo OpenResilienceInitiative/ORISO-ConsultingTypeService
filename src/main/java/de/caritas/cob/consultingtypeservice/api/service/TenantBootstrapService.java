@@ -61,8 +61,10 @@ public class TenantBootstrapService {
     ConsultingType payload = materializedPayload(dto);
     String digest = digest(payload);
     String tenantId = dto.getTenantId().toString();
-    // C nonces come from the private SQL INSERT; later attempts require terminal CTS acknowledgement
-    // before that exact SQL ownership can be released. Arbitrary re-signing is outside this boundary.
+    // C nonces come from the private SQL INSERT; later attempts require terminal CTS
+    // acknowledgement
+    // before that exact SQL ownership can be released. Arbitrary re-signing is outside this
+    // boundary.
     String claimId = nonce == null ? tenantId : tenantId + ":" + nonce;
     TenantBootstrapClaim claim = mongo.findById(claimId, TenantBootstrapClaim.class);
     if (claim == null && tenantHasTypes(dto.getTenantId())) {
@@ -143,7 +145,11 @@ public class TenantBootstrapService {
   }
 
   private void requireOwnedClaim(
-      TenantBootstrapClaim claim, Jwt actor, String digest, String tenantId, String claimId,
+      TenantBootstrapClaim claim,
+      Jwt actor,
+      String digest,
+      String tenantId,
+      String claimId,
       String nonce) {
     if (claim == null
         || claim.resultId() == null
