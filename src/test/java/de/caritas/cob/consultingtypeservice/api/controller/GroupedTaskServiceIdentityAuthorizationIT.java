@@ -82,11 +82,15 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     mvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
     cleanup();
     var fixture = actorJwt("setup-subject", "backend-setup", SETUP_ROLES);
-    var identity = context.getBean(
-        de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity.class);
-    assertThat(identity.allows(
-        new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken(fixture, List.of()),
-        "CONFIG_WIZARD")).isTrue();
+    var identity =
+        context.getBean(
+            de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity.class);
+    assertThat(
+            identity.allows(
+                new org.springframework.security.oauth2.server.resource.authentication
+                    .JwtAuthenticationToken(fixture, List.of()),
+                "CONFIG_WIZARD"))
+        .isTrue();
   }
 
   @AfterEach
@@ -99,9 +103,12 @@ class GroupedTaskServiceIdentityAuthorizationIT {
         .forEach(types::delete);
     mongo.remove(
         org.springframework.data.mongodb.core.query.Query.query(
-            new org.springframework.data.mongodb.core.query.Criteria().orOperator(
-                org.springframework.data.mongodb.core.query.Criteria.where("_id").in("9719", "9720"),
-                org.springframework.data.mongodb.core.query.Criteria.where("tenantId").in("9719", "9720"))),
+            new org.springframework.data.mongodb.core.query.Criteria()
+                .orOperator(
+                    org.springframework.data.mongodb.core.query.Criteria.where("_id")
+                        .in("9719", "9720"),
+                    org.springframework.data.mongodb.core.query.Criteria.where("tenantId")
+                        .in("9719", "9720"))),
         "tenant_bootstrap_claims");
     mongo.dropCollection("consulting_type_id_sequences");
   }
@@ -135,8 +142,7 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
     String firstBody = payload("interrupted-tenant", 9719);
     String secondBody = payload("completed-other-tenant", 9720);
-    mvc.perform(create(setup, firstBody, 9719L))
-        .andExpect(status().isInternalServerError());
+    mvc.perform(create(setup, firstBody, 9719L)).andExpect(status().isInternalServerError());
     var other =
         creator == InterveningCreator.SETUP
             ? setup
@@ -185,16 +191,10 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     try {
       var first =
           executor.submit(
-              () ->
-                  mvc.perform(create(setup, firstBody, 9719L))
-                      .andReturn()
-                      .getResponse());
+              () -> mvc.perform(create(setup, firstBody, 9719L)).andReturn().getResponse());
       var second =
           executor.submit(
-              () ->
-                  mvc.perform(create(setup, secondBody, 9720L))
-                      .andReturn()
-                      .getResponse());
+              () -> mvc.perform(create(setup, secondBody, 9720L)).andReturn().getResponse());
       assertThat(claimed.await(20, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
       release.countDown();
       var firstResult = first.get(20, java.util.concurrent.TimeUnit.SECONDS);
@@ -299,8 +299,7 @@ class GroupedTaskServiceIdentityAuthorizationIT {
             eq("consulting_type_id_sequences"));
     var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
     String body = payload("lost-global-reservation");
-    mvc.perform(create(setup, body, 9719L))
-        .andExpect(status().isInternalServerError());
+    mvc.perform(create(setup, body, 9719L)).andExpect(status().isInternalServerError());
     String created =
         mvc.perform(create(setup, body, 9719L))
             .andExpect(status().isOk())
@@ -462,8 +461,7 @@ class GroupedTaskServiceIdentityAuthorizationIT {
             eq(de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity.class));
     var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
     String body = payload("recoverable-default");
-    mvc.perform(create(setup, body, 9719L))
-        .andExpect(status().isInternalServerError());
+    mvc.perform(create(setup, body, 9719L)).andExpect(status().isInternalServerError());
     String recovered =
         mvc.perform(create(setup, body, 9719L))
             .andExpect(status().isOk())
@@ -516,11 +514,11 @@ class GroupedTaskServiceIdentityAuthorizationIT {
                 de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeEntity.class));
     var setup = actor("setup-subject", "backend-setup", SETUP_ROLES);
     String body = payload("reserved-default");
-    mvc.perform(create(setup, body, 9719L))
-        .andExpect(status().isInternalServerError());
+    mvc.perform(create(setup, body, 9719L)).andExpect(status().isInternalServerError());
     var claim =
         mongo.findById(
-            claimKey(9719L), de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim.class);
+            claimKey(9719L),
+            de.caritas.cob.consultingtypeservice.api.model.TenantBootstrapClaim.class);
     mongo.insert(manualType(payload("explicit-foreign-reserved-id", 9720), claim.resultId()));
     String foreign =
         mvc.perform(get("/consultingtypes/" + claim.resultId() + "/full"))
@@ -587,12 +585,18 @@ class GroupedTaskServiceIdentityAuthorizationIT {
   }
 
   private String payload(String slug, int tenantId) throws Exception {
-    try (var source = getClass().getResourceAsStream("/bootstrap-v2-complete-consulting-type.json")) {
+    try (var source =
+        getClass().getResourceAsStream("/bootstrap-v2-complete-consulting-type.json")) {
       assertThat(source != null).isTrue();
-      var dto = JSON.readValue(source,
-          de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO.class)
-          .tenantId(tenantId).slug(slug);
-      context.getBean(de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeValidator.class)
+      var dto =
+          JSON.readValue(
+                  source, de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO.class)
+              .tenantId(tenantId)
+              .slug(slug);
+      context
+          .getBean(
+              de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeValidator
+                  .class)
           .validateBootstrapCommand(dto);
       return JSON.writeValueAsString(dto);
     }
@@ -637,9 +641,7 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     var executor = java.util.concurrent.Executors.newSingleThreadExecutor();
     try {
       var delayed =
-          executor.submit(
-              () ->
-                  mvc.perform(create(setup, body, 9719L)).andReturn().getResponse());
+          executor.submit(() -> mvc.perform(create(setup, body, 9719L)).andReturn().getResponse());
       assertThat(paused.await(10, java.util.concurrent.TimeUnit.SECONDS)).isTrue();
       String created =
           mvc.perform(create(setup, body, 9719L))
@@ -705,13 +707,15 @@ class GroupedTaskServiceIdentityAuthorizationIT {
   }
 
   private String nonce(long tenant) {
-    return bootstrapNonces.computeIfAbsent(tenant,
-        ignored -> java.util.UUID.randomUUID().toString().replace("-", ""));
+    return bootstrapNonces.computeIfAbsent(
+        tenant, ignored -> java.util.UUID.randomUUID().toString().replace("-", ""));
   }
 
   private String creationProof(long tenant, String body) throws Exception {
     long now = Instant.now().getEpochSecond();
-    var dto = JSON.readValue(body, de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO.class);
+    var dto =
+        JSON.readValue(
+            body, de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO.class);
     var claims = new java.util.TreeMap<String, Object>();
     claims.put("v", 2);
     claims.put("iss", "tenantservice");
@@ -725,14 +729,22 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     claims.put("sub", "setup-subject");
     claims.put("tokenIssuer", "https://identity.example/realms/test");
     claims.put("tenantId", tenant);
-    claims.put("payloadDigest", java.util.HexFormat.of().formatHex(mac("payload\n", canonical(JSON.valueToTree(dto)))));
+    claims.put(
+        "payloadDigest",
+        java.util.HexFormat.of().formatHex(mac("payload\n", canonical(JSON.valueToTree(dto)))));
     claims.put("nonce", nonce(tenant));
     claims.put("iat", now);
     claims.put("exp", now + 60);
-    String encoded = java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(canonical(JSON.valueToTree(claims)));
-    return encoded + "." + java.util.Base64.getUrlEncoder().withoutPadding()
-        .encodeToString(mac("proof\n", encoded.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
+    String encoded =
+        java.util.Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(canonical(JSON.valueToTree(claims)));
+    return encoded
+        + "."
+        + java.util.Base64.getUrlEncoder()
+            .withoutPadding()
+            .encodeToString(
+                mac("proof\n", encoded.getBytes(java.nio.charset.StandardCharsets.US_ASCII)));
   }
 
   private byte[] canonical(com.fasterxml.jackson.databind.JsonNode value) throws Exception {
@@ -741,19 +753,28 @@ class GroupedTaskServiceIdentityAuthorizationIT {
       value.fieldNames().forEachRemaining(names::add);
       names.sort(String::compareTo);
       var fields = new java.util.ArrayList<String>();
-      for (String name : names) if (!value.get(name).isNull()) {
-        fields.add(JSON.writeValueAsString(name) + ":"
-            + new String(canonical(value.get(name)), java.nio.charset.StandardCharsets.UTF_8));
-      }
-      return ("{" + String.join(",", fields) + "}").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      for (String name : names)
+        if (!value.get(name).isNull()) {
+          fields.add(
+              JSON.writeValueAsString(name)
+                  + ":"
+                  + new String(
+                      canonical(value.get(name)), java.nio.charset.StandardCharsets.UTF_8));
+        }
+      return ("{" + String.join(",", fields) + "}")
+          .getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
     if (value.isArray()) {
       var items = new java.util.ArrayList<String>();
-      for (var item : value) items.add(new String(canonical(item), java.nio.charset.StandardCharsets.UTF_8));
-      return ("[" + String.join(",", items) + "]").getBytes(java.nio.charset.StandardCharsets.UTF_8);
+      for (var item : value)
+        items.add(new String(canonical(item), java.nio.charset.StandardCharsets.UTF_8));
+      return ("[" + String.join(",", items) + "]")
+          .getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
-    return (value.isNumber() ? value.decimalValue().stripTrailingZeros().toPlainString()
-        : JSON.writeValueAsString(value)).getBytes(java.nio.charset.StandardCharsets.UTF_8);
+    return (value.isNumber()
+            ? value.decimalValue().stripTrailingZeros().toPlainString()
+            : JSON.writeValueAsString(value))
+        .getBytes(java.nio.charset.StandardCharsets.UTF_8);
   }
 
   private byte[] mac(String domain, byte[] value) throws Exception {
@@ -795,21 +816,33 @@ class GroupedTaskServiceIdentityAuthorizationIT {
   }
 
   private RequestPostProcessor actor(String subject, String client, List<String> roles) {
-    return jwt().jwt(actorJwt(subject, client, roles))
+    return jwt()
+        .jwt(actorJwt(subject, client, roles))
         .authorities(token -> converter.convert(token).getAuthorities());
   }
 
-  private org.springframework.security.oauth2.jwt.Jwt actorJwt(String subject, String client, List<String> roles) {
-    var audiences = "backend-setup".equals(client)
-        ? List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice")
-        : "backend-mail".equals(client)
-            ? List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice", "oriso-task-commands")
-            : List.of("consultingtypeservice");
+  private org.springframework.security.oauth2.jwt.Jwt actorJwt(
+      String subject, String client, List<String> roles) {
+    var audiences =
+        "backend-setup".equals(client)
+            ? List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice")
+            : "backend-mail".equals(client)
+                ? List.of(
+                    "tenantservice",
+                    "agencyservice",
+                    "consultingtypeservice",
+                    "userservice",
+                    "oriso-task-commands")
+                : List.of("consultingtypeservice");
     return org.springframework.security.oauth2.jwt.Jwt.withTokenValue("synthetic-no-wire-token")
         .header("alg", "RS256")
-        .subject(subject).claim("azp", client)
+        .subject(subject)
+        .claim("azp", client)
         .issuer("https://identity.example/realms/test")
-        .audience(audiences).expiresAt(Instant.now().plusSeconds(60))
-        .claim("tenantId", 0L).claim("realm_access", Map.of("roles", roles)).build();
+        .audience(audiences)
+        .expiresAt(Instant.now().plusSeconds(60))
+        .claim("tenantId", 0L)
+        .claim("realm_access", Map.of("roles", roles))
+        .build();
   }
 }
