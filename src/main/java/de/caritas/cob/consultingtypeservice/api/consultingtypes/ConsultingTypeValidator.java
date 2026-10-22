@@ -1,6 +1,11 @@
 package de.caritas.cob.consultingtypeservice.api.consultingtypes;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.caritas.cob.consultingtypeservice.api.exception.UnexpectedErrorException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,13 +53,38 @@ public class ConsultingTypeValidator {
     }
   }
 
+  /** Validate the actual command before conversion, allocation or any Mongo operation. */
+  public void validateBootstrapCommand(ConsultingTypeDTO command) {
+    try {
+      String json = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL)
+          .writeValueAsString(command);
+      buildSchema(true).validate(new JSONObject(json));
+    } catch (ValidationException | JsonProcessingException | org.json.JSONException invalid) {
+      throw new BadRequestException("Tenant bootstrap configuration violates the consulting type schema");
+    }
+  }
+
   private Schema buildSchema() {
+    return buildSchema(false);
+  }
+
+  private Schema buildSchema(boolean bootstrapCommand) {
     var consultingTypeJsonSchema =
         new JSONObject(
             new JSONTokener(
                 Objects.requireNonNull(
                     ConsultingTypeValidator.class.getResourceAsStream(
                         consultingTypeJsonSchemaFile))));
+    if (bootstrapCommand) {
+      // The receiver allocates id; every other existing persistence requirement stays exact.
+      var storedRequired = consultingTypeJsonSchema.getJSONArray("required");
+      var commandRequired = new org.json.JSONArray();
+      for (int index = 0; index < storedRequired.length(); index++) {
+        String name = storedRequired.getString(index);
+        if (!name.equals("id")) commandRequired.put(name);
+      }
+      consultingTypeJsonSchema.put("required", commandRequired);
+    }
     return SchemaLoader.builder()
         .useDefaults(true)
         .schemaJson(consultingTypeJsonSchema)

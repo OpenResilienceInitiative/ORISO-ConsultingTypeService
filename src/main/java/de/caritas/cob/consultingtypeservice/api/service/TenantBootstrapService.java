@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeIdAllocator;
+import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeValidator;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.mapper.FullConsultingTypeMapper;
@@ -38,20 +39,24 @@ public class TenantBootstrapService {
   private final ConsultingTypeConverter converter;
   private final TenantCreationContext context;
   private final ConsultingTypeIdAllocator ids;
+  private final ConsultingTypeValidator validator;
 
   public TenantBootstrapService(
       MongoTemplate mongo,
       ConsultingTypeConverter converter,
       TenantCreationContext context,
-      ConsultingTypeIdAllocator ids) {
+      ConsultingTypeIdAllocator ids,
+      ConsultingTypeValidator validator) {
     this.mongo = mongo;
     this.converter = converter;
     this.context = context;
     this.ids = ids;
+    this.validator = validator;
   }
 
   public FullConsultingTypeResponseDTO create(ConsultingTypeDTO dto, String proof) {
     context.require(dto, proof);
+    validator.validateBootstrapCommand(dto);
     Jwt actor = (Jwt) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
     ConsultingType payload = materializedPayload(dto);
     String digest = digest(payload);
