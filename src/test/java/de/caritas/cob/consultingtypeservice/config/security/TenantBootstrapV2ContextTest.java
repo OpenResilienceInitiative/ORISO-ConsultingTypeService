@@ -116,6 +116,37 @@ class TenantBootstrapV2ContextTest {
     assertEquals(9000, response.getId());
   }
 
+  @Test
+  void theVerifiedAttemptNonceOwnsBothTheDurableClaimAndItsMaterializedResult() throws Exception {
+    var dto = roundTripCommand();
+    var fixture = roundTripFixture();
+    assertDoesNotThrow(() -> fixture.service().create(dto, proof(dto)));
+    assertEquals("0123456789abcdef0123456789abcdef", fixture.claim().get().attempt());
+    assertEquals("0123456789abcdef0123456789abcdef",
+        fixture.document().get().getString("bootstrapAttempt"));
+    var claimDocument = new Document();
+    var mapping = mapping();
+    mapping.write(fixture.claim().get(), claimDocument);
+    assertEquals("42:0123456789abcdef0123456789abcdef", claimDocument.getString("_id"));
+  }
+
+  @Test
+  void anotherAttemptCannotAdoptTheFirstAttemptsSamePayloadOrResult() throws Exception {
+    var dto = roundTripCommand();
+    var fixture = roundTripFixture();
+    String original = proof(dto);
+    assertDoesNotThrow(() -> fixture.service().create(dto, original));
+    String before = fixture.document().get().toJson();
+    String foreignAttempt = proof(dto, "fedcba9876543210fedcba9876543210");
+    assertThrows(
+        de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException.class,
+        () -> fixture.service().create(dto, foreignAttempt));
+    assertEquals(before, fixture.document().get().toJson());
+    assertEquals(1, fixture.writes().get());
+    assertDoesNotThrow(() -> fixture.service().create(dto, original));
+    assertEquals(1, fixture.writes().get());
+  }
+
   @org.junit.jupiter.params.ParameterizedTest
   @org.junit.jupiter.params.provider.ValueSource(booleans = {false, true})
   void explicitBootstrapFlagsSurviveWithoutBeingReplacedBySchemaDefaults(boolean flag)
@@ -280,7 +311,16 @@ class TenantBootstrapV2ContextTest {
   private record RoundTripFixture(
       TenantBootstrapService service,
       AtomicReference<Document> document,
+      AtomicReference<TenantBootstrapClaim> claim,
       java.util.concurrent.atomic.AtomicInteger writes) {}
+
+  private static MappingMongoConverter mapping() throws Exception {
+    var context = new MongoMappingContext();
+    context.afterPropertiesSet();
+    var mapping = new MappingMongoConverter(NoOpDbRefResolver.INSTANCE, context);
+    mapping.afterPropertiesSet();
+    return mapping;
+  }
 
   private static RoundTripFixture roundTripFixture() throws Exception {
     var converter = new ConsultingTypeConverter();
@@ -323,6 +363,7 @@ class TenantBootstrapV2ContextTest {
     return new RoundTripFixture(
         new TenantBootstrapService(mongo, converter, receiver(), ids, validator()),
         document,
+        claim,
         writes);
   }
 
@@ -448,6 +489,10 @@ class TenantBootstrapV2ContextTest {
   }
 
   private static String proof(ConsultingTypeDTO dto) throws Exception {
+    return proof(dto, "0123456789abcdef0123456789abcdef");
+  }
+
+  private static String proof(ConsultingTypeDTO dto, String nonce) throws Exception {
     long now = Instant.now().getEpochSecond();
     Map<String, Object> claims = new TreeMap<>();
     claims.put("v", 2);
@@ -465,7 +510,7 @@ class TenantBootstrapV2ContextTest {
     claims.put(
         "payloadDigest",
         HexFormat.of().formatHex(mac("payload\n", canonical(JSON.valueToTree(dto)))));
-    claims.put("nonce", "0123456789abcdef0123456789abcdef");
+    claims.put("nonce", nonce);
     claims.put("iat", now);
     claims.put("exp", now + 60);
     String encoded =
