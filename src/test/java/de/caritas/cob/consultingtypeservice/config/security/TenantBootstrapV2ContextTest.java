@@ -122,8 +122,8 @@ class TenantBootstrapV2ContextTest {
     var fixture = roundTripFixture();
     assertDoesNotThrow(() -> fixture.service().create(dto, proof(dto)));
     assertEquals("0123456789abcdef0123456789abcdef", fixture.claim().get().attempt());
-    assertEquals("0123456789abcdef0123456789abcdef",
-        fixture.document().get().getString("bootstrapAttempt"));
+    assertEquals(
+        "0123456789abcdef0123456789abcdef", fixture.document().get().getString("bootstrapAttempt"));
     var claimDocument = new Document();
     var mapping = mapping();
     mapping.write(fixture.claim().get(), claimDocument);
