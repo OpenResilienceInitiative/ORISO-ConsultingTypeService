@@ -141,29 +141,34 @@ class TenantBootstrapV2ContextTest {
   void aMaterializedCommandSurvivesTheActualMongoMappingRoundTripAndOwnedReadback()
       throws Exception {
     var checks = new java.util.ArrayList<org.junit.jupiter.api.function.Executable>();
-    for (String variant : List.of("original", "registration-flags", "registration-postcode", "groups")) {
-      checks.add(() -> {
-        var dto = roundTripCommand();
-        if (variant.equals("registration-flags")) {
-          dto.getRegistration().setAutoSelectAgency(null);
-          dto.getRegistration().setAutoSelectPostcode(null);
-        }
-        if (variant.equals("registration-postcode")) dto.getRegistration().setMinPostcodeSize(8);
-        if (variant.equals("groups")) dto.setGroups(List.of("owned-bootstrap-group"));
-        assertDoesNotThrow(() -> validator().validateBootstrapCommand(dto), variant);
-        var fixture = roundTripFixture();
-        String proof = proof(dto);
-        var response = assertDoesNotThrow(() -> fixture.service().create(dto, proof), variant);
-        assertEquals(42, response.getTenantId());
-        assertEquals(9000, response.getId());
-        assertEquals(variant.equals("registration-postcode") ? 8 : 5,
-            response.getRegistration().getMinPostcodeSize(), variant);
-        if (variant.equals("registration-flags")) {
-          assertEquals(false, response.getRegistration().getAutoSelectAgency());
-          assertEquals(false, response.getRegistration().getAutoSelectPostcode());
-        }
-        assertEquals(dto.getGroups(), fixture.document().get().get("groups"), variant);
-      });
+    for (String variant :
+        List.of("original", "registration-flags", "registration-postcode", "groups")) {
+      checks.add(
+          () -> {
+            var dto = roundTripCommand();
+            if (variant.equals("registration-flags")) {
+              dto.getRegistration().setAutoSelectAgency(null);
+              dto.getRegistration().setAutoSelectPostcode(null);
+            }
+            if (variant.equals("registration-postcode"))
+              dto.getRegistration().setMinPostcodeSize(8);
+            if (variant.equals("groups")) dto.setGroups(List.of("owned-bootstrap-group"));
+            assertDoesNotThrow(() -> validator().validateBootstrapCommand(dto), variant);
+            var fixture = roundTripFixture();
+            String proof = proof(dto);
+            var response = assertDoesNotThrow(() -> fixture.service().create(dto, proof), variant);
+            assertEquals(42, response.getTenantId());
+            assertEquals(9000, response.getId());
+            assertEquals(
+                variant.equals("registration-postcode") ? 8 : 5,
+                response.getRegistration().getMinPostcodeSize(),
+                variant);
+            if (variant.equals("registration-flags")) {
+              assertEquals(false, response.getRegistration().getAutoSelectAgency());
+              assertEquals(false, response.getRegistration().getAutoSelectPostcode());
+            }
+            assertEquals(dto.getGroups(), fixture.document().get().get("groups"), variant);
+          });
     }
     org.junit.jupiter.api.Assertions.assertAll(checks);
   }
