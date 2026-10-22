@@ -330,25 +330,37 @@ class TenantBootstrapV2ContextTest {
 
   @Test
   void nativePairedControlRequiresTheExactFiniteCommandAndIntegralSequence() throws Exception {
-    assertEquals("OBSERVE",
-        de.caritas.cob.consultingtypeservice.api.controller.BootstrapV2ReceiverFixture.PairedControls
-            .checkedCommand(JSON.readTree("{\"sequence\":1,\"command\":\"OBSERVE\"}")));
-    for (String invalid : List.of("{}", "null", "{\"sequence\":true,\"command\":\"ARM\"}",
-        "{\"sequence\":1.5,\"command\":\"ARM\"}", "{\"sequence\":0,\"command\":\"ARM\"}",
-        "{\"sequence\":1,\"command\":\"ARM\",\"extra\":true}")) {
+    assertEquals(
+        "OBSERVE",
+        de.caritas.cob.consultingtypeservice.api.controller.BootstrapV2ReceiverFixture
+            .PairedControls.checkedCommand(
+            JSON.readTree("{\"sequence\":1,\"command\":\"OBSERVE\"}")));
+    for (String invalid :
+        List.of(
+            "{}",
+            "null",
+            "{\"sequence\":true,\"command\":\"ARM\"}",
+            "{\"sequence\":1.5,\"command\":\"ARM\"}",
+            "{\"sequence\":0,\"command\":\"ARM\"}",
+            "{\"sequence\":1,\"command\":\"ARM\",\"extra\":true}")) {
       JsonNode command = JSON.readTree(invalid);
-      assertThrows(IllegalStateException.class, () ->
-          de.caritas.cob.consultingtypeservice.api.controller.BootstrapV2ReceiverFixture.PairedControls
-              .checkedCommand(command));
+      assertThrows(
+          IllegalStateException.class,
+          () ->
+              de.caritas.cob.consultingtypeservice.api.controller.BootstrapV2ReceiverFixture
+                  .PairedControls.checkedCommand(command));
     }
   }
 
   @Test
   void nativePairedControlRefusalsNeverEchoPrivateCommandsOrValues() throws Exception {
     JsonNode command = JSON.readTree("{\"sequence\":1,\"command\":\"private-synthetic-bearer\"}");
-    var failure = assertThrows(IllegalStateException.class, () ->
-        de.caritas.cob.consultingtypeservice.api.controller.BootstrapV2ReceiverFixture.PairedControls
-            .checkedCommand(command));
+    var failure =
+        assertThrows(
+            IllegalStateException.class,
+            () ->
+                de.caritas.cob.consultingtypeservice.api.controller.BootstrapV2ReceiverFixture
+                    .PairedControls.checkedCommand(command));
     assertTrue(!failure.getMessage().contains("private-synthetic-bearer"));
     assertTrue(!failure.getMessage().contains("sequence"));
   }

@@ -133,21 +133,34 @@ public final class BootstrapV2ReceiverFixture {
     Files.writeString(Path.of(required(output)), new ObjectMapper().writeValueAsString(state));
   }
 
-  /** Only the explicit disposable launcher registers these finite real-storage scheduling controls. */
+  /**
+   * Only the explicit disposable launcher registers these finite real-storage scheduling controls.
+   */
   @org.springframework.boot.test.context.TestConfiguration(proxyBeanMethods = false)
   public static final class PairedControls
       implements org.springframework.beans.factory.config.BeanPostProcessor, AutoCloseable {
     private static final long TENANT = 9158L;
     private final Path directory;
     private final ObjectMapper json = new ObjectMapper();
-    private final java.util.concurrent.CountDownLatch primary = new java.util.concurrent.CountDownLatch(1);
-    private final java.util.concurrent.CountDownLatch delayed = new java.util.concurrent.CountDownLatch(1);
-    private final java.util.concurrent.atomic.AtomicInteger insertEntries = new java.util.concurrent.atomic.AtomicInteger();
-    private final java.util.concurrent.atomic.AtomicInteger actualInsertCalls = new java.util.concurrent.atomic.AtomicInteger();
-    private final java.util.concurrent.atomic.AtomicInteger conditionalWrites = new java.util.concurrent.atomic.AtomicInteger();
-    private final java.util.concurrent.atomic.AtomicInteger blockedWrites = new java.util.concurrent.atomic.AtomicInteger();
-    private final java.util.concurrent.atomic.AtomicInteger unconditionalWrites = new java.util.concurrent.atomic.AtomicInteger();
-    private volatile boolean armed, primaryPaused, delayedPaused, primaryCompleted, delayedDuplicate;
+    private final java.util.concurrent.CountDownLatch primary =
+        new java.util.concurrent.CountDownLatch(1);
+    private final java.util.concurrent.CountDownLatch delayed =
+        new java.util.concurrent.CountDownLatch(1);
+    private final java.util.concurrent.atomic.AtomicInteger insertEntries =
+        new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicInteger actualInsertCalls =
+        new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicInteger conditionalWrites =
+        new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicInteger blockedWrites =
+        new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.atomic.AtomicInteger unconditionalWrites =
+        new java.util.concurrent.atomic.AtomicInteger();
+    private volatile boolean armed,
+        primaryPaused,
+        delayedPaused,
+        primaryCompleted,
+        delayedDuplicate;
     private volatile boolean staleActive, staleCaptured, ordinaryPreserved, closed;
     private volatile boolean awareAttempted, awareBlocked, unawareAttempted, unawareBlocked;
     private volatile boolean retiredReadsHidden;
@@ -170,14 +183,21 @@ public final class BootstrapV2ReceiverFixture {
       if (command == null || !command.isObject()) throw refused();
       var fields = new java.util.HashSet<String>();
       command.fieldNames().forEachRemaining(fields::add);
-      if (!command.isObject() || !fields.equals(java.util.Set.of("sequence", "command"))
+      if (!command.isObject()
+          || !fields.equals(java.util.Set.of("sequence", "command"))
           || !command.path("sequence").isIntegralNumber()
           || !command.path("sequence").canConvertToLong()
           || command.path("sequence").longValue() < 1
           || command.path("sequence").longValue() > 10000
           || !command.path("command").isTextual()
-          || !java.util.Set.of("ARM", "OBSERVE", "RELEASE_PRIMARY", "RELEASE_DELAYED",
-              "CAPTURE_STALE", "STALE_UPDATES", "ORDINARY_CONTROL")
+          || !java.util.Set.of(
+                  "ARM",
+                  "OBSERVE",
+                  "RELEASE_PRIMARY",
+                  "RELEASE_DELAYED",
+                  "CAPTURE_STALE",
+                  "STALE_UPDATES",
+                  "ORDINARY_CONTROL")
               .contains(command.path("command").textValue())) throw refused();
       return command.path("command").textValue();
     }
@@ -187,85 +207,100 @@ public final class BootstrapV2ReceiverFixture {
       if (!(bean instanceof MongoTemplate)) return bean;
       var proxy = new org.springframework.aop.framework.ProxyFactory(bean);
       proxy.setProxyTargetClass(true);
-      proxy.addAdvice((org.aopalliance.intercept.MethodInterceptor) invocation -> {
-        Object[] arguments = invocation.getArguments();
-        String method = invocation.getMethod().getName();
-        if (armed && method.equals("insert") && arguments.length == 1
-            && arguments[0] instanceof ConsultingTypeEntity
-            && Long.valueOf(TENANT).equals(((ConsultingTypeEntity) arguments[0]).getTenantId().longValue())) {
-          int ordinal = insertEntries.incrementAndGet();
-          if (ordinal > 2) {
-            actualInsertCalls.incrementAndGet();
-            return invocation.proceed();
-          }
-          if (ordinal == 1) primaryPaused = true;
-          else delayedPaused = true;
-          if (!(ordinal == 1 ? primary : delayed).await(20, java.util.concurrent.TimeUnit.SECONDS))
-            throw refused();
-          actualInsertCalls.incrementAndGet();
-          try {
-            Object result = invocation.proceed();
-            if (ordinal == 1) primaryCompleted = true;
-            return result;
-          } catch (org.springframework.dao.DuplicateKeyException collision) {
-            if (ordinal == 2) delayedDuplicate = true;
-            throw collision;
-          }
-        }
-        if (staleActive && Thread.currentThread() == thread && method.equals("findAndReplace")) {
-          conditionalWrites.incrementAndGet();
-          if ("tenantAware".equals(activeRepository)) awareAttempted = true;
-          else if ("tenantUnaware".equals(activeRepository)) unawareAttempted = true;
-          else throw refused();
-          Object result = invocation.proceed();
-          if (result == null) {
-            blockedWrites.incrementAndGet();
-            if ("tenantAware".equals(activeRepository)) awareBlocked = true;
-            else unawareBlocked = true;
-          }
-          return result;
-        }
-        if (staleActive && Thread.currentThread() == thread && method.equals("save"))
-          unconditionalWrites.incrementAndGet();
-        return invocation.proceed();
-      });
+      proxy.addAdvice(
+          (org.aopalliance.intercept.MethodInterceptor)
+              invocation -> {
+                Object[] arguments = invocation.getArguments();
+                String method = invocation.getMethod().getName();
+                if (armed
+                    && method.equals("insert")
+                    && arguments.length == 1
+                    && arguments[0] instanceof ConsultingTypeEntity
+                    && Long.valueOf(TENANT)
+                        .equals(((ConsultingTypeEntity) arguments[0]).getTenantId().longValue())) {
+                  int ordinal = insertEntries.incrementAndGet();
+                  if (ordinal > 2) {
+                    actualInsertCalls.incrementAndGet();
+                    return invocation.proceed();
+                  }
+                  if (ordinal == 1) primaryPaused = true;
+                  else delayedPaused = true;
+                  if (!(ordinal == 1 ? primary : delayed)
+                      .await(20, java.util.concurrent.TimeUnit.SECONDS)) throw refused();
+                  actualInsertCalls.incrementAndGet();
+                  try {
+                    Object result = invocation.proceed();
+                    if (ordinal == 1) primaryCompleted = true;
+                    return result;
+                  } catch (org.springframework.dao.DuplicateKeyException collision) {
+                    if (ordinal == 2) delayedDuplicate = true;
+                    throw collision;
+                  }
+                }
+                if (staleActive
+                    && Thread.currentThread() == thread
+                    && method.equals("findAndReplace")) {
+                  conditionalWrites.incrementAndGet();
+                  if ("tenantAware".equals(activeRepository)) awareAttempted = true;
+                  else if ("tenantUnaware".equals(activeRepository)) unawareAttempted = true;
+                  else throw refused();
+                  Object result = invocation.proceed();
+                  if (result == null) {
+                    blockedWrites.incrementAndGet();
+                    if ("tenantAware".equals(activeRepository)) awareBlocked = true;
+                    else unawareBlocked = true;
+                  }
+                  return result;
+                }
+                if (staleActive && Thread.currentThread() == thread && method.equals("save"))
+                  unconditionalWrites.incrementAndGet();
+                return invocation.proceed();
+              });
       return proxy.getProxy();
     }
 
     private void start(org.springframework.context.ConfigurableApplicationContext context) {
       this.context = context;
       mongo = context.getBean(MongoTemplate.class);
-      thread = new Thread(() -> {
-        while (!closed) {
-          try {
-            Path request = directory.resolve("request.json");
-            if (!Files.exists(request)) {
-              Thread.sleep(20);
-              continue;
-            }
-            if (Files.isSymbolicLink(request) || Files.size(request) > 4096) throw refused();
-            JsonNode command = json.readTree(Files.readString(request));
-            String action = checkedCommand(command);
-            long next = command.path("sequence").longValue();
-            if (next == sequence) {
-              Thread.sleep(20);
-              continue;
-            }
-            if (next != sequence + 1) throw refused();
-            execute(action);
-            sequence = next;
-            write("ACK");
-          } catch (InterruptedException interrupted) {
-            Thread.currentThread().interrupt();
-            return;
-          } catch (Exception failure) {
-            try { write("FIXTURE_FAILURE"); } catch (Exception ignored) { /* no raw diagnostics */ }
-            primary.countDown();
-            delayed.countDown();
-            return;
-          }
-        }
-      }, "bounded-paired-bootstrap-control");
+      thread =
+          new Thread(
+              () -> {
+                while (!closed) {
+                  try {
+                    Path request = directory.resolve("request.json");
+                    if (!Files.exists(request)) {
+                      Thread.sleep(20);
+                      continue;
+                    }
+                    if (Files.isSymbolicLink(request) || Files.size(request) > 4096)
+                      throw refused();
+                    JsonNode command = json.readTree(Files.readString(request));
+                    String action = checkedCommand(command);
+                    long next = command.path("sequence").longValue();
+                    if (next == sequence) {
+                      Thread.sleep(20);
+                      continue;
+                    }
+                    if (next != sequence + 1) throw refused();
+                    execute(action);
+                    sequence = next;
+                    write("ACK");
+                  } catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    return;
+                  } catch (Exception failure) {
+                    try {
+                      write("FIXTURE_FAILURE");
+                    } catch (Exception ignored) {
+                      /* no raw diagnostics */
+                    }
+                    primary.countDown();
+                    delayed.countDown();
+                    return;
+                  }
+                }
+              },
+              "bounded-paired-bootstrap-control");
       thread.setDaemon(true);
       thread.start();
     }
@@ -278,9 +313,12 @@ public final class BootstrapV2ReceiverFixture {
       else if (command.equals("RELEASE_DELAYED")) delayed.countDown();
       else if (command.equals("CAPTURE_STALE")) {
         if (!primaryCompleted || !delayedPaused) throw refused();
-        var original = mongo.findOne(org.springframework.data.mongodb.core.query.Query.query(
-            org.springframework.data.mongodb.core.query.Criteria.where("tenantId").is(TENANT)),
-            ConsultingTypeEntity.class);
+        var original =
+            mongo.findOne(
+                org.springframework.data.mongodb.core.query.Query.query(
+                    org.springframework.data.mongodb.core.query.Criteria.where("tenantId")
+                        .is(TENANT)),
+                ConsultingTypeEntity.class);
         if (original == null) throw refused();
         originalAttempt = original.getBootstrapAttempt();
         counterAtCapture = currentCounter();
@@ -298,8 +336,11 @@ public final class BootstrapV2ReceiverFixture {
           for (String name : java.util.List.of("tenantAware", "tenantUnaware")) {
             activeRepository = name;
             try {
-              context.getBean(name,
-                  de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService.class)
+              context
+                  .getBean(
+                      name,
+                      de.caritas.cob.consultingtypeservice.api.consultingtypes
+                          .ConsultingTypeRepositoryService.class)
                   .update(name.equals("tenantAware") ? staleAware : staleUnaware);
             } catch (RuntimeException blocked) {
               staleRefusals++;
@@ -320,8 +361,11 @@ public final class BootstrapV2ReceiverFixture {
         for (Long scope : java.util.List.of(0L, TENANT)) {
           de.caritas.cob.consultingtypeservice.api.tenant.TenantContext.setCurrentTenant(scope);
           for (String name : java.util.List.of("tenantAware", "tenantUnaware")) {
-            var repository = context.getBean(name,
-                de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService.class);
+            var repository =
+                context.getBean(
+                    name,
+                    de.caritas.cob.consultingtypeservice.api.consultingtypes
+                        .ConsultingTypeRepositoryService.class);
             hidden &= hidden(() -> repository.getConsultingTypeById(staleAware.getId()));
             retiredReadChecks++;
             hidden &= hidden(() -> repository.getConsultingTypeBySlug(staleAware.getSlug()));
@@ -330,8 +374,9 @@ public final class BootstrapV2ReceiverFixture {
             retiredReadChecks++;
             hidden &= !repository.hasConsultingTypesForTenant((int) TENANT);
             retiredReadChecks++;
-            hidden &= repository.getListOfConsultingTypes().stream()
-                .noneMatch(value -> value.getId().equals(staleAware.getId()));
+            hidden &=
+                repository.getListOfConsultingTypes().stream()
+                    .noneMatch(value -> value.getId().equals(staleAware.getId()));
             retiredReadChecks++;
           }
         }
@@ -341,40 +386,59 @@ public final class BootstrapV2ReceiverFixture {
       retiredReadsHidden = hidden;
     }
 
-    private boolean hidden(java.util.function.Supplier<de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType> read) {
+    private boolean hidden(
+        java.util.function.Supplier<
+                de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType>
+            read) {
       try {
         var value = read.get();
         return value == null || !value.getId().equals(staleAware.getId());
-      } catch (de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException absent) {
+      } catch (
+          de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException
+              absent) {
         return true;
       }
     }
 
     private void ordinaryControl() {
-      var query = org.springframework.data.mongodb.core.query.Query.query(
-          org.springframework.data.mongodb.core.query.Criteria.where("tenantId").ne(TENANT));
+      var query =
+          org.springframework.data.mongodb.core.query.Query.query(
+              org.springframework.data.mongodb.core.query.Criteria.where("tenantId").ne(TENANT));
       query.with(org.springframework.data.domain.Sort.by("_id"));
       var existing = mongo.findOne(query, ConsultingTypeEntity.class);
       if (existing == null) throw refused();
-      Document before = mongo.findById(existing.getId(), Document.class,
-          mongo.getCollectionName(ConsultingTypeEntity.class));
-      de.caritas.cob.consultingtypeservice.api.tenant.TenantContext.setCurrentTenant(existing.getTenantId().longValue());
+      Document before =
+          mongo.findById(
+              existing.getId(),
+              Document.class,
+              mongo.getCollectionName(ConsultingTypeEntity.class));
+      de.caritas.cob.consultingtypeservice.api.tenant.TenantContext.setCurrentTenant(
+          existing.getTenantId().longValue());
       try {
         for (String name : java.util.List.of("tenantAware", "tenantUnaware")) {
-          var repository = context.getBean(name,
-              de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService.class);
-          ConsultingTypeEntity read = (ConsultingTypeEntity) repository.getConsultingTypeById(existing.getId());
+          var repository =
+              context.getBean(
+                  name,
+                  de.caritas.cob.consultingtypeservice.api.consultingtypes
+                      .ConsultingTypeRepositoryService.class);
+          ConsultingTypeEntity read =
+              (ConsultingTypeEntity) repository.getConsultingTypeById(existing.getId());
           if (repository.update(read) == null) throw refused();
         }
       } finally {
         de.caritas.cob.consultingtypeservice.api.tenant.TenantContext.clear();
       }
-      ordinaryPreserved = before.equals(mongo.findById(existing.getId(), Document.class,
-          mongo.getCollectionName(ConsultingTypeEntity.class)));
+      ordinaryPreserved =
+          before.equals(
+              mongo.findById(
+                  existing.getId(),
+                  Document.class,
+                  mongo.getCollectionName(ConsultingTypeEntity.class)));
     }
 
     private Long currentCounter() {
-      var counter = mongo.findById("consulting-types", Document.class, "consulting_type_id_sequences");
+      var counter =
+          mongo.findById("consulting-types", Document.class, "consulting_type_id_sequences");
       if (counter == null) return null;
       Object value = counter.get("lastId");
       if (!(value instanceof Long || value instanceof Integer)) throw refused();
@@ -402,29 +466,48 @@ public final class BootstrapV2ReceiverFixture {
       values.put("retiredReadChecks", retiredReadChecks);
       values.put("retiredReadsHidden", retiredReadsHidden);
       values.put("ordinaryPreserved", ordinaryPreserved);
-      var query = org.springframework.data.mongodb.core.query.Query.query(
-          org.springframework.data.mongodb.core.query.Criteria.where("tenantId").is(TENANT));
-      values.put("liveTypes", mongo.count(query.addCriteria(
-          org.springframework.data.mongodb.core.query.Criteria.where("bootstrapCompensated").ne(true)),
-          ConsultingTypeEntity.class));
-      var terminal = org.springframework.data.mongodb.core.query.Query.query(
-          org.springframework.data.mongodb.core.query.Criteria.where("tenantId").is(TENANT)
-              .and("bootstrapCompensated").is(true));
+      var query =
+          org.springframework.data.mongodb.core.query.Query.query(
+              org.springframework.data.mongodb.core.query.Criteria.where("tenantId").is(TENANT));
+      values.put(
+          "liveTypes",
+          mongo.count(
+              query.addCriteria(
+                  org.springframework.data.mongodb.core.query.Criteria.where("bootstrapCompensated")
+                      .ne(true)),
+              ConsultingTypeEntity.class));
+      var terminal =
+          org.springframework.data.mongodb.core.query.Query.query(
+              org.springframework.data.mongodb.core.query.Criteria.where("tenantId")
+                  .is(TENANT)
+                  .and("bootstrapCompensated")
+                  .is(true));
       values.put("terminalTypes", mongo.count(terminal, ConsultingTypeEntity.class));
       var live = mongo.findOne(query, ConsultingTypeEntity.class);
-      values.put("newAttemptDistinct", live != null && originalAttempt != null
-          && !originalAttempt.equals(live.getBootstrapAttempt()));
-      values.put("newResultDistinct", live != null && staleAware != null
-          && !live.getId().equals(staleAware.getId()));
+      values.put(
+          "newAttemptDistinct",
+          live != null
+              && originalAttempt != null
+              && !originalAttempt.equals(live.getBootstrapAttempt()));
+      values.put(
+          "newResultDistinct",
+          live != null && staleAware != null && !live.getId().equals(staleAware.getId()));
       Long counter = currentCounter();
       if (counterAtCapture != null && counter == null) throw refused();
-      values.put("counterUnchangedSinceCapture", counterAtCapture != null && counterAtCapture.equals(counter));
+      values.put(
+          "counterUnchangedSinceCapture",
+          counterAtCapture != null && counterAtCapture.equals(counter));
       values.put("counterNeverRewound", counterAtCapture == null || counter >= counterAtCapture);
-      values.put("counterAdvancedExactlyOnce", counterAtCapture != null && counter == counterAtCapture + 1);
+      values.put(
+          "counterAdvancedExactlyOnce",
+          counterAtCapture != null && counter == counterAtCapture + 1);
       Path temporary = directory.resolve("response.tmp");
       Files.writeString(temporary, json.writeValueAsString(values), StandardCharsets.UTF_8);
-      Files.move(temporary, directory.resolve("response.json"),
-          java.nio.file.StandardCopyOption.REPLACE_EXISTING, java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+      Files.move(
+          temporary,
+          directory.resolve("response.json"),
+          java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+          java.nio.file.StandardCopyOption.ATOMIC_MOVE);
     }
 
     private static IllegalStateException refused() {
