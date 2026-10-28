@@ -195,6 +195,27 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getOneTopicPerAgencyEnabled().setValue(settingsPatchDTO.getOneTopicPerAgencyEnabled());
     }
+    if (settingsPatchDTO.getFurtherCounsellingPostcodeMode() != null) {
+      if (entity.getFurtherCounsellingPostcodeMode() == null) {
+        entity.setFurtherCounsellingPostcodeMode(
+            ApplicationSettingsConverter.defaultFurtherCounsellingPostcodeMode());
+      }
+      entity
+          .getFurtherCounsellingPostcodeMode()
+          .setValue(settingsPatchDTO.getFurtherCounsellingPostcodeMode().getValue());
+    }
+    if (settingsPatchDTO.getTopicDuplicateMode() != null) {
+      // The other modes are reserved until ORISO-Frontend#1878 implements them.
+      if (settingsPatchDTO.getTopicDuplicateMode()
+          != ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.INFORM_EXISTING_COUNSELLOR_ONCE) {
+        throw new BadRequestException(
+            "topicDuplicateMode " + settingsPatchDTO.getTopicDuplicateMode() + " is not available");
+      }
+      if (entity.getTopicDuplicateMode() == null) {
+        entity.setTopicDuplicateMode(ApplicationSettingsConverter.defaultTopicDuplicateMode());
+      }
+      entity.getTopicDuplicateMode().setValue(settingsPatchDTO.getTopicDuplicateMode().getValue());
+    }
     if (settingsPatchDTO.getGlobalSmtpEnabled() != null) {
       if (entity.getGlobalSmtpEnabled() == null) {
         entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));

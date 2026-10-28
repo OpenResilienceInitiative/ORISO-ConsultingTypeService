@@ -41,6 +41,17 @@ class DefaultApplicationSettingsInitializerTest {
   }
 
   @Test
+  void init_Should_SeedFurtherCounsellingDefaults() {
+    ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
+
+    assertThat(seeded.getFurtherCounsellingPostcodeMode().getValue()).isEqualTo("SMART");
+    assertThat(seeded.getFurtherCounsellingPostcodeMode().getReadOnly()).isFalse();
+    assertThat(seeded.getTopicDuplicateMode().getValue())
+        .isEqualTo("INFORM_EXISTING_COUNSELLOR_ONCE");
+    assertThat(seeded.getTopicDuplicateMode().getReadOnly()).isFalse();
+  }
+
+  @Test
   void init_Should_NotSeed_When_SettingsAlreadyExist() {
     when(applicationSettingsRepository.findAll())
         .thenReturn(List.of(new ApplicationSettingsEntity()));

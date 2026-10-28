@@ -96,6 +96,9 @@ public class DefaultApplicationSettingsInitializer {
         new GlobalFeatureSystemNotificationEmailsEnabled().withValue(false).withReadOnly(false));
     entity.setOneTopicPerAgencyEnabled(
         new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false));
+    entity.setFurtherCounsellingPostcodeMode(
+        ApplicationSettingsConverter.defaultFurtherCounsellingPostcodeMode());
+    entity.setTopicDuplicateMode(ApplicationSettingsConverter.defaultTopicDuplicateMode());
     entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
     entity.setGlobalSmtpHost(new GlobalSmtpHost().withValue("").withReadOnly(false));
     entity.setGlobalSmtpPort(new GlobalSmtpPort().withValue("587").withReadOnly(false));
