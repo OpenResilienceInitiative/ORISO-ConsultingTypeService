@@ -142,7 +142,12 @@ class TenantBootstrapV2ContextTest {
       throws Exception {
     var checks = new java.util.ArrayList<org.junit.jupiter.api.function.Executable>();
     for (String variant :
-        List.of("original", "registration-flags", "registration-postcode", "groups")) {
+        List.of(
+            "original",
+            "registration-flags",
+            "registration-postcode",
+            "groups",
+            "disabled-welcome")) {
       checks.add(
           () -> {
             var dto = roundTripCommand();
@@ -153,6 +158,11 @@ class TenantBootstrapV2ContextTest {
             if (variant.equals("registration-postcode"))
               dto.getRegistration().setMinPostcodeSize(8);
             if (variant.equals("groups")) dto.setGroups(List.of("owned-bootstrap-group"));
+            if (variant.equals("disabled-welcome"))
+              dto.setWelcomeMessage(
+                  new de.caritas.cob.consultingtypeservice.api.model.WelcomeMessageDTO()
+                      .sendWelcomeMessage(false)
+                      .welcomeMessageText(null));
             assertDoesNotThrow(() -> validator().validateBootstrapCommand(dto), variant);
             var fixture = roundTripFixture();
             String proof = proof(dto);
@@ -168,6 +178,10 @@ class TenantBootstrapV2ContextTest {
               assertEquals(false, response.getRegistration().getAutoSelectPostcode());
             }
             assertEquals(dto.getGroups(), fixture.document().get().get("groups"), variant);
+            if (variant.equals("disabled-welcome")) {
+              assertEquals(false, response.getWelcomeMessage().getSendWelcomeMessage());
+              assertEquals(null, response.getWelcomeMessage().getWelcomeMessageText());
+            }
           });
     }
     org.junit.jupiter.api.Assertions.assertAll(checks);
@@ -411,6 +425,33 @@ class TenantBootstrapV2ContextTest {
     dto.setDescription("foreign-current-body");
     assertThrows(
         AccessDeniedException.class, () -> receiver().requireCompensation(dto, compensation));
+  }
+
+  @Test
+  void disabledWelcomeCompensationReachesTheOwnedClaimAfterValidation() throws Exception {
+    var dto = roundTripCommand();
+    dto.setWelcomeMessage(
+        new de.caritas.cob.consultingtypeservice.api.model.WelcomeMessageDTO()
+            .sendWelcomeMessage(false)
+            .welcomeMessageText(null));
+    var mongo = mock(MongoTemplate.class);
+    var ids = mock(ConsultingTypeIdAllocator.class);
+    var reachedMongo = new IllegalStateException("finite compensation claim observation");
+    when(mongo.findById(eq("42:0123456789abcdef0123456789abcdef"), eq(TenantBootstrapClaim.class)))
+        .thenThrow(reachedMongo);
+    var service =
+        new TenantBootstrapService(
+            mongo, new ConsultingTypeConverter(), receiver(), ids, validator());
+    var claims =
+        (com.fasterxml.jackson.databind.node.ObjectNode) TaskContextProof.verify(KEY, proof(dto));
+    claims.put("operation", "tenant.consulting-type.compensate");
+    claims.put("target", "tenant/42/consulting-type/default/compensation");
+    String compensation = TaskContextProof.sign(KEY, claims);
+
+    assertSame(
+        reachedMongo,
+        assertThrows(IllegalStateException.class, () -> service.compensate(dto, compensation)));
+    verifyNoInteractions(ids);
   }
 
   @Test

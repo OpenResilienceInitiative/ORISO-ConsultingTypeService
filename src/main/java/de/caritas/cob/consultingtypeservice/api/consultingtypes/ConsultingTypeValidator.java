@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.caritas.cob.consultingtypeservice.api.exception.UnexpectedErrorException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
+import de.caritas.cob.consultingtypeservice.api.model.WelcomeMessageDTO;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
 import java.io.File;
 import java.io.FileInputStream;
@@ -59,12 +60,19 @@ public class ConsultingTypeValidator {
       String json =
           new ObjectMapper()
               .setSerializationInclusion(JsonInclude.Include.NON_NULL)
+              .addMixIn(WelcomeMessageDTO.class, WelcomeMessageValidation.class)
               .writeValueAsString(command);
       buildSchema(true).validate(new JSONObject(json));
     } catch (ValidationException | JsonProcessingException | org.json.JSONException invalid) {
       throw new BadRequestException(
           "Tenant bootstrap configuration violates the consulting type schema");
     }
+  }
+
+  private abstract static class WelcomeMessageValidation {
+    // This required field accepts null in the persistence schema.
+    @JsonInclude(JsonInclude.Include.ALWAYS)
+    public abstract String getWelcomeMessageText();
   }
 
   private Schema buildSchema() {
