@@ -187,6 +187,53 @@ class ApplicationSettingsServiceFacadeTest {
   }
 
   @Test
+  void patchApplicationSettings_Should_CreateTrimmedSupportEmail_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail("  support@example.org ");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getSupportEmail().getValue()).isEqualTo("support@example.org");
+    assertThat(captor.getValue().getSupportEmail().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ClearSupportEmail_When_BlankValueIsSent() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setSupportEmail(
+        new de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail()
+            .withValue("support@example.org")
+            .withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail("   ");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getSupportEmail().getValue()).isEmpty();
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {"nope", "a@b", "a@example.org;b@example.org", "<a@example.org>"})
+  void patchApplicationSettings_Should_RejectAndNotSave_When_SupportEmailIsInvalid(String invalid) {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail(invalid);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+    assertThat(entity.getSupportEmail()).isNull();
+  }
+
+  @Test
   void getGlobalSmtpCredentials_Should_DecryptPasswordAndReturnUsername() {
     // given
     var entity = new ApplicationSettingsEntity();
