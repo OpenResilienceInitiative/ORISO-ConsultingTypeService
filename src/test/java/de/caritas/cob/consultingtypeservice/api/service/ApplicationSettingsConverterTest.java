@@ -67,6 +67,16 @@ class ApplicationSettingsConverterTest {
   }
 
   @Test
+  void toDTO_Should_ReturnFurtherCounsellingDefaults_When_EntityLacksThem() {
+    ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
+
+    assertThat(dto.getFurtherCounsellingPostcodeMode().getValue()).isEqualTo("SMART");
+    assertThat(dto.getFurtherCounsellingPostcodeMode().getReadOnly()).isFalse();
+    assertThat(dto.getTopicDuplicateMode().getValue()).isEqualTo("INFORM_EXISTING_COUNSELLOR_ONCE");
+    assertThat(dto.getTopicDuplicateMode().getReadOnly()).isFalse();
+  }
+
+  @Test
   void toDTO_Should_ConvertToDTOAllSettings() {
     // given
     ApplicationSettingsEntity applicationSettings = giveApplicationSettings();
