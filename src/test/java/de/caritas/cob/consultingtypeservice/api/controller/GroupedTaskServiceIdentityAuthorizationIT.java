@@ -51,10 +51,9 @@ import org.springframework.web.context.WebApplicationContext;
     })
 class GroupedTaskServiceIdentityAuthorizationIT {
   private static final List<String> MAIL_ROLES =
-      List.of(
-          "smtp-sync", "system-email-delivery", "notification-dispatch", "notifications-technical");
+      List.of("system-email-delivery", "notification-dispatch", "notifications-technical");
   private static final List<String> SETUP_ROLES =
-      List.of("config-wizard", "invitation-reservations", "consultant-import");
+      List.of("config-wizard", "invitation-reservations", "consultant-import", "smtp-sync");
   private static final com.fasterxml.jackson.databind.ObjectMapper JSON =
       new com.fasterxml.jackson.databind.ObjectMapper();
   @Autowired private WebApplicationContext context;
@@ -540,7 +539,7 @@ class GroupedTaskServiceIdentityAuthorizationIT {
   }
 
   @Test
-  void groupedMailAcknowledgesOnlyTheExactSavedRevisionAndCannotWriteSettings() throws Exception {
+  void groupedSetupAcknowledgesOnlyTheExactSavedRevisionAndCannotWriteSettings() throws Exception {
     var entity = settings.findAll().get(0);
     entity.setSmtpRevision(7);
     entity.setSmtpPendingRevision(7L);
@@ -548,7 +547,9 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     entity.setSmtpSyncStatus(
         de.caritas.cob.consultingtypeservice.api.service.SmtpSynchronizationStatus.PENDING);
     settings.save(entity);
-    var mail = actor("mail-subject", "backend-mail", MAIL_ROLES);
+    var mail = actor("setup-subject", "backend-setup", SETUP_ROLES);
+    mvc.perform(ack(actor("mail-subject", "backend-mail", MAIL_ROLES), 7))
+        .andExpect(status().isForbidden());
     for (long revision : List.of(6L, 8L)) {
       mvc.perform(ack(mail, revision)).andExpect(status().isConflict());
     }
@@ -562,7 +563,7 @@ class GroupedTaskServiceIdentityAuthorizationIT {
     mvc.perform(
             org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch(
                     "/settingsadmin")
-                .with(mail)
+                .with(actor("mail-subject", "backend-mail", MAIL_ROLES))
                 .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                 .content("{}")
                 .header("csrfHeader", "test")
@@ -792,7 +793,6 @@ class GroupedTaskServiceIdentityAuthorizationIT {
                 "mail-subject",
                 "backend-mail",
                 List.of(
-                    "smtp-sync",
                     "system-email-delivery",
                     "notification-dispatch",
                     "notifications-technical",
@@ -825,14 +825,14 @@ class GroupedTaskServiceIdentityAuthorizationIT {
       String subject, String client, List<String> roles) {
     var audiences =
         "backend-setup".equals(client)
-            ? List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice")
+            ? List.of(
+                "tenantservice",
+                "agencyservice",
+                "consultingtypeservice",
+                "userservice",
+                "oriso-task-commands")
             : "backend-mail".equals(client)
-                ? List.of(
-                    "tenantservice",
-                    "agencyservice",
-                    "consultingtypeservice",
-                    "userservice",
-                    "oriso-task-commands")
+                ? List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice")
                 : List.of("consultingtypeservice");
     return org.springframework.security.oauth2.jwt.Jwt.withTokenValue("synthetic-no-wire-token")
         .header("alg", "RS256")

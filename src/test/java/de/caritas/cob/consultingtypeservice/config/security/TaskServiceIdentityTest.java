@@ -55,7 +55,11 @@ class TaskServiceIdentityTest {
               identity.allows(
                   groupedCaller(
                       List.of(
-                          "config-wizard", "invitation-reservations", "consultant-import", grant)),
+                          "config-wizard",
+                          "invitation-reservations",
+                          "consultant-import",
+                          "smtp-sync",
+                          grant)),
                   "CONFIG_WIZARD"))
           .isFalse();
     }
@@ -87,7 +91,8 @@ class TaskServiceIdentityTest {
   void groupedActorCannotInheritDefaultClientRoles() {
     var identity = new TaskServiceIdentity(groupedBindings("CONFIG_WIZARD"));
     var actor =
-        groupedCaller(List.of("config-wizard", "invitation-reservations", "consultant-import"));
+        groupedCaller(
+            List.of("config-wizard", "invitation-reservations", "consultant-import", "smtp-sync"));
     var jwt =
         Jwt.withTokenValue("fixture")
             .headers(headers -> headers.putAll(actor.getToken().getHeaders()))
@@ -118,7 +123,8 @@ class TaskServiceIdentityTest {
   void groupedActorCannotActivateAnUndeclaredReceiverPurpose() {
     var identity = new TaskServiceIdentity(groupedBindings("CONFIG_WIZARD"));
     var caller =
-        groupedCaller(List.of("config-wizard", "invitation-reservations", "consultant-import"));
+        groupedCaller(
+            List.of("config-wizard", "invitation-reservations", "consultant-import", "smtp-sync"));
 
     assertThat(identity.allows(caller, "CONFIG_WIZARD")).isTrue();
     assertThat(identity.allows(caller, "INVITE_RESERVATIONS")).isFalse();
@@ -146,7 +152,12 @@ class TaskServiceIdentityTest {
             .subject("setup-subject")
             .claim("azp", "backend-setup")
             .audience(
-                List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice"))
+                List.of(
+                    "tenantservice",
+                    "agencyservice",
+                    "consultingtypeservice",
+                    "userservice",
+                    "oriso-task-commands"))
             .expiresAt(Instant.now().plusSeconds(60))
             .claim("realm_access", Map.of("roles", roles))
             .build(),
@@ -169,13 +180,22 @@ class TaskServiceIdentityTest {
             .subject("setup-subject")
             .claim("azp", "backend-setup")
             .audience(
-                List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice"))
+                List.of(
+                    "tenantservice",
+                    "agencyservice",
+                    "consultingtypeservice",
+                    "userservice",
+                    "oriso-task-commands"))
             .expiresAt(Instant.now().plusSeconds(60))
             .claim(
                 "realm_access",
                 Map.of(
                     "roles",
-                    List.of("config-wizard", "invitation-reservations", "consultant-import")))
+                    List.of(
+                        "config-wizard",
+                        "invitation-reservations",
+                        "consultant-import",
+                        "smtp-sync")))
             .build();
     var caller = new JwtAuthenticationToken(actor, List.of());
 
@@ -367,25 +387,21 @@ class TaskServiceIdentityTest {
             "SETUP",
             "backend-setup",
             "setup-subject",
-            List.of("config-wizard", "invitation-reservations", "consultant-import"),
-            List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice"),
-            List.of("CONFIG_WIZARD", "INVITE_RESERVATIONS")),
-        new AudienceVector(
-            "MAIL",
-            "backend-mail",
-            "mail-subject",
-            List.of(
-                "smtp-sync",
-                "system-email-delivery",
-                "notification-dispatch",
-                "notifications-technical"),
+            List.of("config-wizard", "invitation-reservations", "consultant-import", "smtp-sync"),
             List.of(
                 "tenantservice",
                 "agencyservice",
                 "consultingtypeservice",
                 "userservice",
                 "oriso-task-commands"),
-            List.of("SMTP_SYNC", "SYSTEM_EMAIL_DELIVERY", "NOTIFICATION_DISPATCH")),
+            List.of("CONFIG_WIZARD", "INVITE_RESERVATIONS", "SMTP_SYNC")),
+        new AudienceVector(
+            "MAIL",
+            "backend-mail",
+            "mail-subject",
+            List.of("system-email-delivery", "notification-dispatch", "notifications-technical"),
+            List.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice"),
+            List.of("SYSTEM_EMAIL_DELIVERY", "NOTIFICATION_DISPATCH")),
         new AudienceVector(
             "RUNTIME",
             "backend-runtime",

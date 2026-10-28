@@ -81,10 +81,10 @@ class RealTaskTokenAuthorizationIT {
     if (!groupedFixture(fixture())) {
       return purpose;
     }
-    if (List.of("CONFIG_WIZARD", "INVITE_RESERVATIONS").contains(purpose)) {
+    if (List.of("CONFIG_WIZARD", "INVITE_RESERVATIONS", "SMTP_SYNC").contains(purpose)) {
       return "SETUP";
     }
-    if (List.of("NOTIFICATION_DISPATCH", "SYSTEM_EMAIL_DELIVERY", "SMTP_SYNC").contains(purpose)) {
+    if (List.of("NOTIFICATION_DISPATCH", "SYSTEM_EMAIL_DELIVERY").contains(purpose)) {
       return "MAIL";
     }
     if (List.of("RUNTIME_POLICY", "MATRIX_AGENCY").contains(purpose)) {
@@ -234,7 +234,7 @@ class RealTaskTokenAuthorizationIT {
   }
 
   @Test
-  void actualMailAcknowledgesOnlyTheSavedSnapshotRevisionIdempotently() throws Exception {
+  void actualSetupAcknowledgesOnlyTheSavedSnapshotRevisionIdempotently() throws Exception {
     var entity = settings.findAll().get(0);
     entity.setSmtpRevision(7);
     entity.setSmtpPendingRevision(7L);
@@ -253,7 +253,7 @@ class RealTaskTokenAuthorizationIT {
     String body = "{\"revision\":7,\"status\":\"APPLIED\"}";
     assertThat(call("POST", ack, mail, body).statusCode()).isEqualTo(204);
     assertThat(call("POST", ack, mail, body).statusCode()).isEqualTo(204);
-    assertThat(call("POST", ack, token("CONFIG_WIZARD"), body).statusCode()).isEqualTo(403);
+    assertThat(call("POST", ack, token("SYSTEM_EMAIL_DELIVERY"), body).statusCode()).isEqualTo(403);
     assertThat(call("POST", ack, token("ACCOUNT_MAINTENANCE"), body).statusCode()).isEqualTo(403);
   }
 
