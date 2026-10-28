@@ -220,7 +220,15 @@ class ApplicationSettingsServiceFacadeTest {
 
   @org.junit.jupiter.params.ParameterizedTest
   @org.junit.jupiter.params.provider.ValueSource(
-      strings = {"nope", "a@b", "a@example.org;b@example.org", "<a@example.org>"})
+      strings = {
+        "nope",
+        "a@b",
+        "a@example.org;b@example.org",
+        "<a@example.org>",
+        "support..team@example.org",
+        ".support@example.org",
+        "support.@example.org"
+      })
   void patchApplicationSettings_Should_RejectAndNotSave_When_SupportEmailIsInvalid(String invalid) {
     var entity = new ApplicationSettingsEntity();
     when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));

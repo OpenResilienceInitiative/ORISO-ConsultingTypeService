@@ -284,10 +284,11 @@ public class ApplicationSettingsServiceFacade {
   }
 
   private static final int SUPPORT_EMAIL_MAX_LENGTH = 254;
-  // One address only: no whitespace, no list separators, no display name.
+  // One address only: no whitespace, no list separators, no display name; dots in the
+  // local part only between characters (no leading, trailing or doubled dots).
   private static final Pattern SUPPORT_EMAIL_PATTERN =
       Pattern.compile(
-          "^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]+@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+          "^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
               + "(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$");
 
   private static boolean isValidSupportEmail(String value) {
