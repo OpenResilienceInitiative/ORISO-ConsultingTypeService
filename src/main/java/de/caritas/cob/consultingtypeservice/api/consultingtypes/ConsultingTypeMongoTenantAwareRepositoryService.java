@@ -13,6 +13,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
 /** Repository for {@link ConsultingType}. */
@@ -27,6 +28,7 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
   private static final Long TECHNICAL_TENANT_ID = 0L;
   private @NonNull ConsultingTypeTenantAwareRepository consultingTypeMongoTenantAwareRepository;
   private @NonNull ConsultingTypeConverter consultingTypeConverter;
+  private final @NonNull ConsultingTypeIdAllocator ids;
 
   /**
    * Get a complete list of all {@link ConsultingType}.
@@ -120,7 +122,12 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
     } else {
       final ConsultingTypeEntity consultingTypeEntity = new ConsultingTypeEntity();
       BeanUtils.copyProperties(consultingType, consultingTypeEntity);
-      return Optional.of(this.consultingTypeMongoTenantAwareRepository.save(consultingTypeEntity));
+      try {
+        return Optional.of(
+            this.consultingTypeMongoTenantAwareRepository.insert(consultingTypeEntity));
+      } catch (DuplicateKeyException concurrentCreation) {
+        return Optional.empty();
+      }
     }
   }
 
@@ -132,12 +139,7 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
 
   @Override
   public Integer getNextId() {
-    final ConsultingTypeEntity consultingType =
-        consultingTypeMongoTenantAwareRepository.findFirstByOrderByIdDesc();
-    if (consultingType == null) {
-      return 0;
-    }
-    return consultingType.getId() + 1;
+    return ids.reserve();
   }
 
   @Override

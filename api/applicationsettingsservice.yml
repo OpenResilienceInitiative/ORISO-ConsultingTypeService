@@ -207,6 +207,20 @@ components:
             most one topic. Defaults to false.
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
+        furtherCounsellingPostcodeMode:
+          description: >-
+            ORISO-Frontend#1876: postcode prefill when an asker requests further counselling.
+            SMART (default) takes the postcode the asker typed last; ALWAYS_EMPTY leaves it
+            empty.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        topicDuplicateMode:
+          description: >-
+            ORISO-Frontend#1876: what happens when an asker holds two accepted conversations on
+            the same topic. One of INFORM_EXISTING_COUNSELLOR_ONCE (default), INFORM_BOTH_ONCE,
+            INFORM_BOTH_EVERY_MESSAGE, FORBID.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
         globalSmtpEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
@@ -245,6 +259,16 @@ components:
           type: boolean
         oneTopicPerAgencyEnabled:
           type: boolean
+        furtherCounsellingPostcodeMode:
+          type: string
+          enum: [SMART, ALWAYS_EMPTY]
+          description: Platform admin only. Omit to leave unchanged.
+        topicDuplicateMode:
+          type: string
+          enum: [INFORM_EXISTING_COUNSELLOR_ONCE, INFORM_BOTH_ONCE, INFORM_BOTH_EVERY_MESSAGE, FORBID]
+          description: >-
+            Platform admin only. Omit to leave unchanged. Only INFORM_EXISTING_COUNSELLOR_ONCE is
+            accepted for now; the other values answer 400 until ORISO-Frontend#1878.
         globalSmtpEnabled:
           type: boolean
         globalSmtpHost:
