@@ -77,6 +77,14 @@ class ApplicationSettingsConverterTest {
   }
 
   @Test
+  void toDTO_Should_ReturnEmptySupportEmail_When_EntityLacksIt() {
+    ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
+
+    assertThat(dto.getSupportEmail().getValue()).isEmpty();
+    assertThat(dto.getSupportEmail().getReadOnly()).isFalse();
+  }
+
+  @Test
   void toDTO_Should_ConvertToDTOAllSettings() {
     // given
     ApplicationSettingsEntity applicationSettings = giveApplicationSettings();

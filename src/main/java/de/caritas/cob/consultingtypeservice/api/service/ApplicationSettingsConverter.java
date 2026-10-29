@@ -14,6 +14,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail;
 import de.caritas.cob.consultingtypeservice.schemas.model.TopicDuplicateMode;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
@@ -70,6 +71,11 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getTopicDuplicateMode() != null
                         ? applicationSettings.getTopicDuplicateMode()
                         : defaultTopicDuplicateMode()))
+            .supportEmail(
+                toSettingDTO(
+                    applicationSettings.getSupportEmail() != null
+                        ? applicationSettings.getSupportEmail()
+                        : defaultSupportEmail()))
             .globalSmtpEnabled(
                 toFeatureToggleDTO(
                     applicationSettings.getGlobalSmtpEnabled() != null
@@ -113,6 +119,10 @@ public class ApplicationSettingsConverter {
     return new FurtherCounsellingPostcodeMode()
         .withValue(DEFAULT_FURTHER_COUNSELLING_POSTCODE_MODE)
         .withReadOnly(false);
+  }
+
+  public static SupportEmail defaultSupportEmail() {
+    return new SupportEmail().withValue("").withReadOnly(false);
   }
 
   public static TopicDuplicateMode defaultTopicDuplicateMode() {

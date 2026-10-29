@@ -99,6 +99,7 @@ public class DefaultApplicationSettingsInitializer {
     entity.setFurtherCounsellingPostcodeMode(
         ApplicationSettingsConverter.defaultFurtherCounsellingPostcodeMode());
     entity.setTopicDuplicateMode(ApplicationSettingsConverter.defaultTopicDuplicateMode());
+    entity.setSupportEmail(ApplicationSettingsConverter.defaultSupportEmail());
     entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
     entity.setGlobalSmtpHost(new GlobalSmtpHost().withValue("").withReadOnly(false));
     entity.setGlobalSmtpPort(new GlobalSmtpPort().withValue("587").withReadOnly(false));
