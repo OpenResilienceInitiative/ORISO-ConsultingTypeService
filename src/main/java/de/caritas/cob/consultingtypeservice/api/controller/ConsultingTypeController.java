@@ -158,6 +158,13 @@ public class ConsultingTypeController implements ConsultingtypesApi {
         consultingTypeService.createInitialConsultingTypeForTenant(consultingTypeDTO));
   }
 
+  @Override
+  @PreAuthorize("@taskServiceIdentity.allows(authentication, 'CONFIG_WIZARD')")
+  public ResponseEntity<Void> compensateTenantBootstrap(final ConsultingTypeDTO dto) {
+    bootstrap.compensate(dto, request.getHeader(TenantCreationContext.HEADER));
+    return ResponseEntity.noContent().build();
+  }
+
   private static boolean callerHasAuthority(String authority) {
     var authentication = SecurityContextHolder.getContext().getAuthentication();
     return authentication != null
