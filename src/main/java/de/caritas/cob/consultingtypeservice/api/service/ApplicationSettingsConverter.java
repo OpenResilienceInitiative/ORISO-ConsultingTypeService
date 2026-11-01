@@ -18,12 +18,24 @@ import de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail;
 import de.caritas.cob.consultingtypeservice.schemas.model.TopicDuplicateMode;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 
 @Component
 @Slf4j
 public class ApplicationSettingsConverter {
+
+  private final ReleaseToggleOverrides releaseToggleOverrides;
+
+  public ApplicationSettingsConverter() {
+    this(ReleaseToggleOverrides.none());
+  }
+
+  @Autowired
+  public ApplicationSettingsConverter(ReleaseToggleOverrides releaseToggleOverrides) {
+    this.releaseToggleOverrides = releaseToggleOverrides;
+  }
 
   public ApplicationSettingsDTO toDTO(ApplicationSettingsEntity applicationSettings) {
     var settingsDTO =
@@ -109,6 +121,7 @@ public class ApplicationSettingsConverter {
             .releaseToggles(Maps.newHashMap());
 
     settingsDTO.getReleaseToggles().putAll(applicationSettings.getReleaseToggles());
+    releaseToggleOverrides.applyTo(settingsDTO.getReleaseToggles());
     return settingsDTO;
   }
 
