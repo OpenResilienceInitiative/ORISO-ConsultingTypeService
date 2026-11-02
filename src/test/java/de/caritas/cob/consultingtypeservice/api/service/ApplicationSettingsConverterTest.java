@@ -27,6 +27,32 @@ class ApplicationSettingsConverterTest {
   ApplicationSettingsConverter converter = new ApplicationSettingsConverter();
 
   @Test
+  void toDTO_Should_ServeEnvironmentReleaseToggleOverrides_When_Configured() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setReleaseToggles("enableNewNotifications", false);
+    entity.setReleaseToggles("featureToggleTenantCreationEnabled", true);
+
+    var dto =
+        new ApplicationSettingsConverter(new ReleaseToggleOverrides("enableNewNotifications=true"))
+            .toDTO(entity);
+
+    assertThat(dto.getReleaseToggles())
+        .containsEntry("enableNewNotifications", true)
+        .containsEntry("featureToggleTenantCreationEnabled", true);
+    // The override is served, never written back: removing it restores the stored value.
+    assertThat(entity.getReleaseToggles()).containsEntry("enableNewNotifications", false);
+  }
+
+  @Test
+  void toDTO_Should_ServeStoredReleaseToggles_When_NoOverrideConfigured() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setReleaseToggles("enableNewNotifications", false);
+
+    assertThat(converter.toDTO(entity).getReleaseToggles())
+        .containsEntry("enableNewNotifications", false);
+  }
+
+  @Test
   void toDTO_Should_NotExposeSmtpCredentials_When_EntityContainsCredentials() {
     // given
     ApplicationSettingsEntity applicationSettings = new ApplicationSettingsEntity();
