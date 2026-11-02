@@ -187,6 +187,36 @@ class ApplicationSettingsServiceFacadeTest {
   }
 
   @Test
+  void patchApplicationSettings_Should_StoreDisabledFormatsInEnumOrder_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatComposerDisabledFormats(
+        java.util.List.of(
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.HEADING,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE));
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getChatComposerDisabledFormats().getValue()).isEqualTo("heading,underline");
+    assertThat(entity.getChatMessageMaxWidthDesktop()).isNull();
+    assertThat(entity.getChatMessageCollapseThreshold()).isNull();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_CollapseThresholdIsOutOfRange() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatMessageCollapseThreshold(10);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+  }
+
+  @Test
   void patchApplicationSettings_Should_CreateTrimmedSupportEmail_When_EntityHasNone() {
     var entity = new ApplicationSettingsEntity();
     when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));

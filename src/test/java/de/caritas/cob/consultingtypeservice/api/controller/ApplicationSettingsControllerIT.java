@@ -520,6 +520,87 @@ class ApplicationSettingsControllerIT {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void getApplicationSettings_Should_ReturnTodaysChatBehaviour_When_NeverConfigured()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setChatComposerDisabledFormats(null);
+    entity.setChatMessageMaxWidthDesktop(null);
+    entity.setChatMessageCollapseThreshold(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""))
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("770"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("300"));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_DisableAndReEnableFormats_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[\"underline\",\"bold\"]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreWidthAndCollapseOff_When_PlatformAdminSaves()
+      throws Exception {
+    patchSettings(
+            platformAdmin(),
+            "{\"chatMessageMaxWidthDesktop\":900,\"chatMessageCollapseThreshold\":0}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("900"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("0"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"blink\"]}",
+        "{\"chatMessageMaxWidthDesktop\":319}",
+        "{\"chatMessageMaxWidthDesktop\":1601}",
+        "{\"chatMessageCollapseThreshold\":-1}",
+        "{\"chatMessageCollapseThreshold\":49}",
+        "{\"chatMessageCollapseThreshold\":100001}"
+      })
+  void patchApplicationSettings_Should_ReturnBadRequest_When_ChatSettingIsInvalid(String body)
+      throws Exception {
+    patchSettings(platformAdmin(), body).andExpect(status().isBadRequest());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"bold\"]}",
+        "{\"chatMessageMaxWidthDesktop\":900}",
+        "{\"chatMessageCollapseThreshold\":0}"
+      })
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesChatSetting(
+      String body) throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, body).andExpect(status().isForbidden());
+  }
+
   private static Authentication platformAdmin() {
     return new AuthenticationMockBuilder()
         .withUserRole(TENANT_ADMIN.getValue())
