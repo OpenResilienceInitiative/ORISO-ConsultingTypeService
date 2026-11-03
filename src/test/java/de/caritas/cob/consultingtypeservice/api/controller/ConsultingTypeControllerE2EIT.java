@@ -32,7 +32,10 @@ import jakarta.servlet.http.Cookie;
 import java.util.Arrays;
 import java.util.HashSet;
 import org.jeasy.random.EasyRandom;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -59,6 +62,11 @@ class ConsultingTypeControllerE2EIT {
 
   private static final Integer EXISTING_ID = 1;
 
+  /** Belongs to {@link #OWNED_TENANT_ID}; the seeded types belong to no organisation. */
+  private static final Integer OWNED_ID = 1000;
+
+  private static final Integer OWNED_TENANT_ID = 1000;
+
   private static final ObjectMapper objectMapper = new ObjectMapper();
 
   @Autowired private MockMvc mvc;
@@ -67,6 +75,27 @@ class ConsultingTypeControllerE2EIT {
   @Autowired private ConsultingTypeRepository consultingTypeRepository;
 
   @MockitoBean AuthenticatedUser authenticatedUser;
+
+  @BeforeEach
+  void storeOwnedConsultingType() {
+    removeOwnedConsultingType();
+    ConsultingType owned =
+        consultingTypeConverter.convert(
+            easyRandom.nextObject(ConsultingTypeDTO.class).tenantId(OWNED_TENANT_ID).slug("owned"));
+    owned.setId(OWNED_ID);
+    owned.setLanguageFormal(true);
+    owned.setIsVideoCallAllowed(false);
+    var entity = new ConsultingTypeEntity();
+    BeanUtils.copyProperties(owned, entity);
+    consultingTypeRepository.insert(entity);
+  }
+
+  @AfterEach
+  void removeOwnedConsultingType() {
+    consultingTypeRepository.findAll().stream()
+        .filter(type -> OWNED_ID.equals(type.getId()))
+        .forEach(consultingTypeRepository::delete);
+  }
 
   @Test
   void createConsultingType_Should_returnOk_When_requiredConsultingTypeDTOIsGiven()
@@ -84,7 +113,9 @@ class ConsultingTypeControllerE2EIT {
     this.mvc
         .perform(
             post(ROOT_PATH)
-                .with(authentication(builder.withUserRole(TENANT_ADMIN.getValue()).build()))
+                .with(
+                    authentication(
+                        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build()))
                 .cookie(CSRF_COOKIE)
                 .header(CSRF_HEADER, CSRF_VALUE)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -111,7 +142,10 @@ class ConsultingTypeControllerE2EIT {
 
     objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
     Authentication authentication =
-        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
 
     // when
     MvcResult mvcResult =
@@ -142,7 +176,7 @@ class ConsultingTypeControllerE2EIT {
     permissions.add(AuthorityValue.LIMITED_PATCH_CONSULTING_TYPE);
     when(authenticatedUser.getGrantedAuthorities()).thenReturn(permissions);
     ConsultingTypeEntity byConsultingTypeId =
-        consultingTypeRepository.findByConsultingTypeId(EXISTING_ID);
+        consultingTypeRepository.findByConsultingTypeId(OWNED_ID);
     boolean existingVideoCallSetting = byConsultingTypeId.getIsVideoCallAllowed();
     boolean existingLanguageFormal = byConsultingTypeId.getLanguageFormal();
 
@@ -159,11 +193,12 @@ class ConsultingTypeControllerE2EIT {
     // when
     this.mvc
         .perform(
-            patch(ROOT_PATH + "/" + EXISTING_ID)
+            patch(ROOT_PATH + "/" + OWNED_ID)
                 .with(
                     authentication(
                         new AuthenticationMockBuilder()
                             .withUserRole(SINGLE_TENANT_ADMIN.getValue())
+                            .withTenantId(String.valueOf(OWNED_TENANT_ID))
                             .build()))
                 .cookie(CSRF_COOKIE)
                 .header(CSRF_HEADER, CSRF_VALUE)
@@ -171,7 +206,7 @@ class ConsultingTypeControllerE2EIT {
                 .content(objectMapper.writeValueAsString(consultingTypeDTO)))
         // then
         .andExpect(status().isOk())
-        .andExpect(jsonPath("id").value(EXISTING_ID))
+        .andExpect(jsonPath("id").value(OWNED_ID))
         .andExpect(jsonPath("isVideoCallAllowed").value(existingVideoCallSetting))
         .andExpect(jsonPath("languageFormal").value(existingLanguageFormal))
         .andExpect(jsonPath("welcomeMessage.sendWelcomeMessage").value(true))
@@ -189,7 +224,7 @@ class ConsultingTypeControllerE2EIT {
     permissions.add(AuthorityValue.LIMITED_PATCH_CONSULTING_TYPE);
     when(authenticatedUser.getGrantedAuthorities()).thenReturn(permissions);
     ConsultingTypeEntity byConsultingTypeId =
-        consultingTypeRepository.findByConsultingTypeId(EXISTING_ID);
+        consultingTypeRepository.findByConsultingTypeId(OWNED_ID);
     boolean existingVideoCallSetting = byConsultingTypeId.getIsVideoCallAllowed();
     boolean existingLanguageFormal = byConsultingTypeId.getLanguageFormal();
     ConsultingTypePatchDTO consultingTypeDTO =
@@ -206,11 +241,12 @@ class ConsultingTypeControllerE2EIT {
     MvcResult mvcResult =
         this.mvc
             .perform(
-                patch(ROOT_PATH + "/" + EXISTING_ID)
+                patch(ROOT_PATH + "/" + OWNED_ID)
                     .with(
                         authentication(
                             new AuthenticationMockBuilder()
                                 .withUserRole(SINGLE_TENANT_ADMIN.getValue())
+                                .withTenantId(String.valueOf(OWNED_TENANT_ID))
                                 .build()))
                     .cookie(CSRF_COOKIE)
                     .header(CSRF_HEADER, CSRF_VALUE)

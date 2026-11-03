@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import de.caritas.cob.consultingtypeservice.api.auth.AuthenticatedUser;
 import de.caritas.cob.consultingtypeservice.api.auth.Authority.AuthorityValue;
+import de.caritas.cob.consultingtypeservice.api.auth.ConsultingTypeAccessGuard;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeRepositoryService;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
@@ -36,6 +37,7 @@ public class ConsultingTypeService {
   private final @NonNull ConsultingTypeConverter consultingTypeConverter;
 
   private final @NonNull AuthenticatedUser authenticatedUser;
+  private final @NonNull ConsultingTypeAccessGuard accessGuard;
 
   @Value("${feature.multitenancy.with.single.domain.enabled}")
   private boolean multitenancyWithSingleDomainEnabled;
@@ -159,10 +161,14 @@ public class ConsultingTypeService {
     ConsultingType consultingType =
         consultingTypeRepositoryService.getConsultingTypeById(consultingTypeId);
 
+    accessGuard.assertMayPatch(consultingTypeId, consultingType);
+
     if (hasOnlyLimitedPatchPriviliges()) {
       assertChangesAreAllowedForUsersWithLimitedPatchPermission(
           consultingTypePatchDTO, consultingType);
     }
+
+    accessGuard.assertEditingNotLocked(consultingType, consultingTypePatchDTO);
 
     consultingType = consultingTypeConverter.convert(consultingType, consultingTypePatchDTO);
     var updated = consultingTypeRepositoryService.update(consultingType);
