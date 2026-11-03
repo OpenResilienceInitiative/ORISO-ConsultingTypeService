@@ -51,6 +51,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.WebApplicationContext;
 
 /**
@@ -100,7 +101,7 @@ class ConsultingTypeWriteAuthorizationIT {
     tenantApiClient = mock(ApiClient.class);
     when(tenantApi.getApiClient()).thenReturn(tenantApiClient);
     reset(tenantServiceFactory);
-    when(tenantServiceFactory.createControllerApi()).thenReturn(tenantApi);
+    when(tenantServiceFactory.createControllerApi(any(RestTemplate.class))).thenReturn(tenantApi);
   }
 
   @AfterEach
@@ -217,11 +218,16 @@ class ConsultingTypeWriteAuthorizationIT {
   }
 
   @Test
-  void patch_Should_beForbidden_When_theTokenNamesNoOrganisation() throws Exception {
+  void patch_Should_answerLikeAMissingId_When_theTokenNamesNoOrganisation() throws Exception {
     token(null, ORGANISATION_ADMIN);
 
-    patchType(OWN_TYPE, formOfAddressChange()).andExpect(status().isForbidden());
+    MvcResult existing = patchType(OWN_TYPE, formOfAddressChange()).andReturn();
+    MvcResult missing = patchType(UNKNOWN_TYPE, formOfAddressChange()).andReturn();
 
+    assertThat(existing.getResponse().getStatus()).isEqualTo(404);
+    assertThat(missing.getResponse().getStatus()).isEqualTo(404);
+    assertThat(existing.getResponse().getContentAsString())
+        .isEqualTo(missing.getResponse().getContentAsString());
     assertThat(storedFormOfAddress(OWN_TYPE)).isTrue();
   }
 
@@ -399,12 +405,24 @@ class ConsultingTypeWriteAuthorizationIT {
   }
 
   @Test
-  void create_Should_succeed_When_organisationAdminCreatesForOwnOrganisation() throws Exception {
+  void create_Should_beForbidden_When_organisationAdminCreatesForOwnOrganisation()
+      throws Exception {
     token(String.valueOf(OWN_TENANT), ORGANISATION_ADMIN);
+    policy(false, PermissionPolicyMode.ENFORCED);
 
-    create(OWN_TENANT, "second-own").andExpect(status().isOk());
+    create(OWN_TENANT, "second-own").andExpect(status().isForbidden());
 
-    assertThat(typesOf(OWN_TENANT)).isEqualTo(2);
+    assertThat(typesOf(OWN_TENANT)).isEqualTo(1);
+    verifyNoInteractions(tenantApi);
+  }
+
+  @Test
+  void create_Should_beForbidden_When_theTokenNamesNoOrganisation() throws Exception {
+    token(null, ORGANISATION_ADMIN);
+
+    create(OWN_TENANT, "no-claim").andExpect(status().isForbidden());
+
+    assertThat(typesOf(OWN_TENANT)).isEqualTo(1);
   }
 
   @Test

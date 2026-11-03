@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -17,7 +18,9 @@ import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.Te
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.restclient.RestTemplateBuilder;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 class AppearanceLockTest {
@@ -29,11 +32,12 @@ class AppearanceLockTest {
   private final AuthorisationService authorisation = mock(AuthorisationService.class);
   private final TenantControllerApi api = mock(TenantControllerApi.class);
   private final ApiClient apiClient = mock(ApiClient.class);
-  private final AppearanceLock lock = new AppearanceLock(factory, authorisation);
+  private final AppearanceLock lock =
+      new AppearanceLock(factory, authorisation, new RestTemplateBuilder(), 3000, 8000);
 
   @BeforeEach
   void setup() {
-    when(factory.createControllerApi()).thenReturn(api);
+    when(factory.createControllerApi(any(RestTemplate.class))).thenReturn(api);
     when(api.getApiClient()).thenReturn(apiClient);
     when(authorisation.findAccessToken()).thenReturn(Optional.of("caller-token"));
   }

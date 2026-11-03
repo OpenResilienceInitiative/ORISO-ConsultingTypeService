@@ -150,7 +150,7 @@ public class ConsultingTypeController implements ConsultingtypesApi {
   public ResponseEntity<FullConsultingTypeResponseDTO> createConsultingType(
       final ConsultingTypeDTO consultingTypeDTO) {
     if (callerHasAuthority(AuthorityValue.CREATE_CONSULTING_TYPE)) {
-      accessGuard.assertMayCreateFor(consultingTypeDTO.getTenantId());
+      accessGuard.assertMayCreate();
       return ResponseEntity.ok(consultingTypeService.createConsultingType(consultingTypeDTO));
     }
     if (taskIdentity != null && taskIdentity.current("CONFIG_WIZARD")) {

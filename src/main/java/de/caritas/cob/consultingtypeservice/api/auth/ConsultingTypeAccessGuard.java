@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
  * admin, and only the tenant in the token tells them apart (0 = platform). So:
  *
  * <ul>
- *   <li>the platform admin may write every consulting type;
+ *   <li>the platform admin may write every consulting type, and is the only one to create them;
  *   <li>any other caller may write only the consulting types of the organisation in its token, and
  *       a consulting type of another organisation is answered exactly like one that does not exist;
  *   <li>and while the platform admin has locked the organisation's editing rights, not change the
@@ -32,40 +32,31 @@ public class ConsultingTypeAccessGuard {
   private final @NonNull AppearanceLock appearanceLock;
 
   /**
-   * @param tenantId the organisation the new consulting type is created for
-   * @throws AccessDeniedException when the caller is not the platform admin and not an admin of
-   *     that organisation
+   * Creating a consulting type is the platform admin's act: TenantService does it at tenant
+   * creation with the platform admin's token. An organisation admin has no use for it, and a second
+   * consulting type for a tenant breaks the lookup by tenant, with no route to repair it.
+   *
+   * @throws AccessDeniedException when the caller is not the platform admin
    */
-  public void assertMayCreateFor(Integer tenantId) {
-    if (authorisationService.isSuperAdmin()) {
-      return;
-    }
-    boolean ownOrganisation =
-        tenantId != null
-            && authorisationService
-                .findTenantIdInAccessToken()
-                .filter(own -> own == tenantId.longValue())
-                .isPresent();
-    if (!ownOrganisation) {
-      throw new AccessDeniedException("Not allowed to create a consulting type for this tenant");
+  public void assertMayCreate() {
+    if (!authorisationService.isSuperAdmin()) {
+      throw new AccessDeniedException("Only the platform admin may create a consulting type");
     }
   }
 
   /**
    * @param consultingTypeId the id the caller asked for
    * @param existing the stored consulting type with that id
-   * @throws NotFoundException when it belongs to another organisation
-   * @throws AccessDeniedException when the caller names no organisation
+   * @throws NotFoundException when it belongs to another organisation, or the token names none
    */
   public void assertMayPatch(Integer consultingTypeId, ConsultingType existing) {
     if (authorisationService.isSuperAdmin()) {
       return;
     }
-    Long ownTenant =
-        authorisationService
-            .findTenantIdInAccessToken()
-            .orElseThrow(() -> new AccessDeniedException("The token names no organisation"));
-    if (existing.getTenantId() == null || existing.getTenantId().longValue() != ownTenant) {
+    Long ownTenant = authorisationService.findTenantIdInAccessToken().orElse(null);
+    if (ownTenant == null
+        || existing.getTenantId() == null
+        || existing.getTenantId().longValue() != ownTenant) {
       // The same answer as for an id that does not exist, so the id reveals nothing.
       throw new NotFoundException(
           String.format("Consulting type with id %s not found.", consultingTypeId));

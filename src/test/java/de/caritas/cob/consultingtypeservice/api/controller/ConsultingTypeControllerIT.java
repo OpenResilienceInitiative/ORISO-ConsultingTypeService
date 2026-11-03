@@ -293,7 +293,7 @@ class ConsultingTypeControllerIT {
         // then
         .andExpect(status().isOk());
 
-    verify(accessGuard).assertMayCreateFor(consultingTypeDTO.getTenantId());
+    verify(accessGuard).assertMayCreate();
     verify(consultingTypeService).createConsultingType(consultingTypeDTO);
   }
 
