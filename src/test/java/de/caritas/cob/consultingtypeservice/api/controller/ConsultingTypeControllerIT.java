@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import de.caritas.cob.consultingtypeservice.api.auth.ConsultingTypeAccessGuard;
 import de.caritas.cob.consultingtypeservice.api.auth.RoleAuthorizationAuthorityMapper;
 import de.caritas.cob.consultingtypeservice.api.consultingtypes.ConsultingTypeConverter;
 import de.caritas.cob.consultingtypeservice.api.exception.UnexpectedErrorException;
@@ -69,6 +70,7 @@ class ConsultingTypeControllerIT {
   @MockitoBean private ConsultingTypeGroupService consultingTypeGroupService;
   @MockitoBean private LinkDiscoverers linkDiscoverers;
   @MockitoBean private TenantResolver tenantResolver;
+  @MockitoBean private ConsultingTypeAccessGuard accessGuard;
 
   @BeforeEach
   public void setup() {
@@ -291,6 +293,7 @@ class ConsultingTypeControllerIT {
         // then
         .andExpect(status().isOk());
 
+    verify(accessGuard).assertMayCreateFor(consultingTypeDTO.getTenantId());
     verify(consultingTypeService).createConsultingType(consultingTypeDTO);
   }
 
