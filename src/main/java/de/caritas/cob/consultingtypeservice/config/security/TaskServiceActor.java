@@ -32,7 +32,8 @@ enum TaskServiceActor {
           "matrix-agency",
           "matrix-agency-provision",
           "appointment-sync",
-          "appointment-participant-cleanup"),
+          "appointment-participant-cleanup",
+          "deletion-audit-read"),
       Set.of("tenantservice", "agencyservice", "appointmentservice"));
 
   private final Set<String> purposes;

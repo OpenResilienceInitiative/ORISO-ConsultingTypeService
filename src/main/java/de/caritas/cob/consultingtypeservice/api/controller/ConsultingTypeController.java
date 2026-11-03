@@ -1,6 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
 import de.caritas.cob.consultingtypeservice.api.auth.Authority.AuthorityValue;
+import de.caritas.cob.consultingtypeservice.api.auth.ConsultingTypeAccessGuard;
 import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeGroupResponseDTO;
@@ -40,6 +41,7 @@ public class ConsultingTypeController implements ConsultingtypesApi {
 
   private final @NonNull ConsultingTypeService consultingTypeService;
   private final @NonNull ConsultingTypeGroupService consultingTypeGroupService;
+  private final @NonNull ConsultingTypeAccessGuard accessGuard;
 
   /**
    * Returns a list of all consulting types with basic properties.
@@ -148,6 +150,7 @@ public class ConsultingTypeController implements ConsultingtypesApi {
   public ResponseEntity<FullConsultingTypeResponseDTO> createConsultingType(
       final ConsultingTypeDTO consultingTypeDTO) {
     if (callerHasAuthority(AuthorityValue.CREATE_CONSULTING_TYPE)) {
+      accessGuard.assertMayCreate();
       return ResponseEntity.ok(consultingTypeService.createConsultingType(consultingTypeDTO));
     }
     if (taskIdentity != null && taskIdentity.current("CONFIG_WIZARD")) {

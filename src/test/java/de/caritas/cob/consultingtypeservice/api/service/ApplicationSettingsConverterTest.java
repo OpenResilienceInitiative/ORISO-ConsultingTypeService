@@ -27,6 +27,32 @@ class ApplicationSettingsConverterTest {
   ApplicationSettingsConverter converter = new ApplicationSettingsConverter();
 
   @Test
+  void toDTO_Should_ServeEnvironmentReleaseToggleOverrides_When_Configured() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setReleaseToggles("enableNewNotifications", false);
+    entity.setReleaseToggles("featureToggleTenantCreationEnabled", true);
+
+    var dto =
+        new ApplicationSettingsConverter(new ReleaseToggleOverrides("enableNewNotifications=true"))
+            .toDTO(entity);
+
+    assertThat(dto.getReleaseToggles())
+        .containsEntry("enableNewNotifications", true)
+        .containsEntry("featureToggleTenantCreationEnabled", true);
+    // The override is served, never written back: removing it restores the stored value.
+    assertThat(entity.getReleaseToggles()).containsEntry("enableNewNotifications", false);
+  }
+
+  @Test
+  void toDTO_Should_ServeStoredReleaseToggles_When_NoOverrideConfigured() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setReleaseToggles("enableNewNotifications", false);
+
+    assertThat(converter.toDTO(entity).getReleaseToggles())
+        .containsEntry("enableNewNotifications", false);
+  }
+
+  @Test
   void toDTO_Should_NotExposeSmtpCredentials_When_EntityContainsCredentials() {
     // given
     ApplicationSettingsEntity applicationSettings = new ApplicationSettingsEntity();
@@ -64,6 +90,24 @@ class ApplicationSettingsConverterTest {
     assertThat(applicationSettingsDTO.getUseOverviewPage()).isNull();
     assertThat(applicationSettingsDTO.getLegalContentChangesBySingleTenantAdminsAllowed()).isNull();
     assertThat(applicationSettingsDTO.getDocumentationEnabled()).isNull();
+  }
+
+  @Test
+  void toDTO_Should_ReturnFurtherCounsellingDefaults_When_EntityLacksThem() {
+    ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
+
+    assertThat(dto.getFurtherCounsellingPostcodeMode().getValue()).isEqualTo("SMART");
+    assertThat(dto.getFurtherCounsellingPostcodeMode().getReadOnly()).isFalse();
+    assertThat(dto.getTopicDuplicateMode().getValue()).isEqualTo("INFORM_EXISTING_COUNSELLOR_ONCE");
+    assertThat(dto.getTopicDuplicateMode().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void toDTO_Should_ReturnEmptySupportEmail_When_EntityLacksIt() {
+    ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
+
+    assertThat(dto.getSupportEmail().getValue()).isEmpty();
+    assertThat(dto.getSupportEmail().getReadOnly()).isFalse();
   }
 
   @Test

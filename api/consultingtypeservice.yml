@@ -177,7 +177,7 @@ paths:
     post:
       tags:
         - consulting-type-controller
-      summary: 'Create a consulting type [Authorization: Role: tenant-admin, or Role: technical for the first consulting type of a new tenant]'
+      summary: 'Create a consulting type [Authorization: Role: tenant-admin for the platform admin only (an organisation admin is refused), or Role: technical for the first consulting type of a new tenant]'
       operationId: createConsultingType
       requestBody:
         content:
@@ -195,7 +195,7 @@ paths:
         400:
           description: BAD REQUEST - invalid/incomplete request or body object
         403:
-          description: FORBIDDEN - no/invalid CSRF token
+          description: FORBIDDEN - no/invalid CSRF token, or the caller is not the platform admin
         409:
           description: CONFLICT - tenant already has a consulting type
         500:
@@ -227,7 +227,7 @@ paths:
     patch:
       tags:
         - consulting-type-controller
-      summary: 'Updates a consulting type [Authorization: Role: tenant-admin]'
+      summary: 'Updates a consulting type [Authorization: Role: tenant-admin or single-tenant-admin; an organisation admin only for its own tenant, the platform admin for any]'
       operationId: patchConsultingType
       parameters:
         - name: id
@@ -250,10 +250,16 @@ paths:
                 $ref: '#/components/schemas/FullConsultingTypeResponseDTO'
         401:
           description: UNAUTHORIZED - no/invalid Keycloak token
+        403:
+          description: FORBIDDEN - not allowed to make this change, e.g. the form of address of a locked organisation
+        404:
+          description: NOT FOUND - no such consulting type, or it belongs to another organisation
         409:
           description: CONFLICT - unique constraint validation fails
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+        503:
+          description: SERVICE UNAVAILABLE - the organisation's editing lock could not be read, nothing was changed
 
 components:
   schemas:
