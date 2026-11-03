@@ -5,6 +5,7 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.FeatureToggleDTO;
 import de.caritas.cob.consultingtypeservice.api.model.SettingDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.FurtherCounsellingPostcodeMode;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
@@ -13,6 +14,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.TopicDuplicateMode;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -58,6 +60,16 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getOneTopicPerAgencyEnabled() != null
                         ? applicationSettings.getOneTopicPerAgencyEnabled()
                         : new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false)))
+            .furtherCounsellingPostcodeMode(
+                toSettingDTO(
+                    applicationSettings.getFurtherCounsellingPostcodeMode() != null
+                        ? applicationSettings.getFurtherCounsellingPostcodeMode()
+                        : defaultFurtherCounsellingPostcodeMode()))
+            .topicDuplicateMode(
+                toSettingDTO(
+                    applicationSettings.getTopicDuplicateMode() != null
+                        ? applicationSettings.getTopicDuplicateMode()
+                        : defaultTopicDuplicateMode()))
             .globalSmtpEnabled(
                 toFeatureToggleDTO(
                     applicationSettings.getGlobalSmtpEnabled() != null
@@ -92,6 +104,19 @@ public class ApplicationSettingsConverter {
 
     settingsDTO.getReleaseToggles().putAll(applicationSettings.getReleaseToggles());
     return settingsDTO;
+  }
+
+  public static final String DEFAULT_FURTHER_COUNSELLING_POSTCODE_MODE = "SMART";
+  public static final String DEFAULT_TOPIC_DUPLICATE_MODE = "INFORM_EXISTING_COUNSELLOR_ONCE";
+
+  public static FurtherCounsellingPostcodeMode defaultFurtherCounsellingPostcodeMode() {
+    return new FurtherCounsellingPostcodeMode()
+        .withValue(DEFAULT_FURTHER_COUNSELLING_POSTCODE_MODE)
+        .withReadOnly(false);
+  }
+
+  public static TopicDuplicateMode defaultTopicDuplicateMode() {
+    return new TopicDuplicateMode().withValue(DEFAULT_TOPIC_DUPLICATE_MODE).withReadOnly(false);
   }
 
   private SettingDTO toSettingDTO(Object setting) {

@@ -245,6 +245,38 @@
         "readOnly"
       ]
     },
+    "furtherCounsellingPostcodeMode": {
+      "description": "ORISO-Frontend#1876: postcode prefill for a further counselling request. SMART (default) or ALWAYS_EMPTY.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "readOnly"
+      ]
+    },
+    "topicDuplicateMode": {
+      "description": "ORISO-Frontend#1876: reaction to two accepted conversations on the same topic. INFORM_EXISTING_COUNSELLOR_ONCE (default); INFORM_BOTH_ONCE, INFORM_BOTH_EVERY_MESSAGE and FORBID are reserved for ORISO-Frontend#1878.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "readOnly"
+      ]
+    },
     "globalFeatureSystemNotificationEmailsEnabled": {
       "type": "object",
       "properties": {

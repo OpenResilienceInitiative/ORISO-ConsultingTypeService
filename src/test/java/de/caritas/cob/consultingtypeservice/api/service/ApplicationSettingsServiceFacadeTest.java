@@ -151,6 +151,42 @@ class ApplicationSettingsServiceFacadeTest {
   }
 
   @Test
+  void patchApplicationSettings_Should_CreateFurtherCounsellingSettings_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setFurtherCounsellingPostcodeMode(
+        ApplicationSettingsPatchDTO.FurtherCounsellingPostcodeModeEnum.ALWAYS_EMPTY);
+    patchDTO.setTopicDuplicateMode(
+        ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.INFORM_EXISTING_COUNSELLOR_ONCE);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getFurtherCounsellingPostcodeMode().getValue())
+        .isEqualTo("ALWAYS_EMPTY");
+    assertThat(captor.getValue().getFurtherCounsellingPostcodeMode().getReadOnly()).isFalse();
+    assertThat(captor.getValue().getTopicDuplicateMode().getValue())
+        .isEqualTo("INFORM_EXISTING_COUNSELLOR_ONCE");
+    assertThat(captor.getValue().getTopicDuplicateMode().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_TopicDuplicateModeIsReserved() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setTopicDuplicateMode(ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.FORBID);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+    assertThat(entity.getTopicDuplicateMode()).isNull();
+  }
+
+  @Test
   void getGlobalSmtpCredentials_Should_DecryptPasswordAndReturnUsername() {
     // given
     var entity = new ApplicationSettingsEntity();

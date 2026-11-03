@@ -80,7 +80,9 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
   @Override
   @PreAuthorize(
       "@authorisationService.isSuperAdmin() "
-          + "or hasAuthority('AUTHORIZATION_TECHNICAL_DEFAULT')")
+          + "or hasAuthority('AUTHORIZATION_TECHNICAL_DEFAULT')"
+          + " or @taskServiceIdentity.allows(authentication, 'SYSTEM_EMAIL_DELIVERY')"
+          + " or @taskServiceIdentity.allows(authentication, 'SMTP_SYNC')")
   public ResponseEntity<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
     var snapshot = applicationSettingsServiceFacade.getGlobalSmtpSnapshot();
     return snapshot.isPresent()
@@ -108,7 +110,9 @@ public class ApplicationSettingsController implements ApplicationsettingsControl
 
   /** Keycloak SMTP sync Job reports the revision it wrote; never a newer pending save. */
   @Override
-  @PreAuthorize("hasAuthority('AUTHORIZATION_TECHNICAL_DEFAULT')")
+  @PreAuthorize(
+      "hasAuthority('AUTHORIZATION_TECHNICAL_DEFAULT')"
+          + " or @taskServiceIdentity.allows(authentication, 'SMTP_SYNC')")
   public ResponseEntity<Void> acknowledgeSmtpSync(
       SmtpSynchronizationAcknowledgementDTO acknowledgement) {
     return applicationSettingsServiceFacade.acknowledgeSmtpSynchronization(
