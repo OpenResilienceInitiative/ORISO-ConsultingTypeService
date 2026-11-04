@@ -8,6 +8,16 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class ConsultingTypeEntity extends ConsultingType {
   private String bootstrapAttempt;
   private String bootstrapPayloadDigest;
+  private Boolean bootstrapCompensated;
+
+  @JsonIgnore
+  public Boolean getBootstrapCompensated() {
+    return bootstrapCompensated;
+  }
+
+  public void setBootstrapCompensated(Boolean terminal) {
+    this.bootstrapCompensated = terminal;
+  }
 
   @JsonIgnore
   public String getBootstrapAttempt() {

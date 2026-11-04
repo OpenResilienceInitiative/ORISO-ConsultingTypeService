@@ -39,7 +39,7 @@ import org.springframework.test.context.TestPropertySource;
       "csrf.header.property=csrfHeader",
       "csrf.cookie.property=csrfCookie",
       "TASK_IDENTITY_AUDIENCE=consultingtypeservice",
-      "ORISO_TENANT_CREATION_CONTEXT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+      "ORISO_TASK_CONTEXT_KEY=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
       "settings.smtp.password.encryption.secret=synthetic-smtp-encryption-key"
     })
 class RealTaskTokenAuthorizationIT {
@@ -81,10 +81,10 @@ class RealTaskTokenAuthorizationIT {
     if (!groupedFixture(fixture())) {
       return purpose;
     }
-    if (List.of("CONFIG_WIZARD", "INVITE_RESERVATIONS").contains(purpose)) {
+    if (List.of("CONFIG_WIZARD", "INVITE_RESERVATIONS", "SMTP_SYNC").contains(purpose)) {
       return "SETUP";
     }
-    if (List.of("NOTIFICATION_DISPATCH", "SYSTEM_EMAIL_DELIVERY", "SMTP_SYNC").contains(purpose)) {
+    if (List.of("NOTIFICATION_DISPATCH", "SYSTEM_EMAIL_DELIVERY").contains(purpose)) {
       return "MAIL";
     }
     if (List.of("RUNTIME_POLICY", "MATRIX_AGENCY").contains(purpose)) {
@@ -92,6 +92,9 @@ class RealTaskTokenAuthorizationIT {
     }
     if ("ACCOUNT_MAINTENANCE".equals(purpose)) {
       return "ACCOUNT_ADMIN";
+    }
+    if ("ACCOUNT_PROVISIONING".equals(purpose)) {
+      return "ACCOUNT_CREATE";
     }
     throw new IllegalArgumentException("Unsupported receiver purpose fixture");
   }
@@ -191,7 +194,8 @@ class RealTaskTokenAuthorizationIT {
     String body = JSON.writeValueAsString(dto);
     String wizard = token("CONFIG_WIZARD");
     assertThat(call("POST", "/consultingtypes", wizard, body).statusCode()).isEqualTo(403);
-    String proof = proof(7719);
+    String nonce = java.util.UUID.randomUUID().toString().replace("-", "");
+    String proof = proof(7719, body, nonce);
     var created = call("POST", "/consultingtypes", wizard, body, proof);
     assertThat(created.statusCode()).isEqualTo(200);
     var recovered = call("POST", "/consultingtypes", wizard, body, proof);
@@ -199,12 +203,15 @@ class RealTaskTokenAuthorizationIT {
     assertThat(JSON.readTree(recovered.body()).path("tenantId").asInt()).isEqualTo(7719);
     assertThat(JSON.readTree(recovered.body()).path("id"))
         .isEqualTo(JSON.readTree(created.body()).path("id"));
-    assertThat(call("POST", "/consultingtypes", wizard, body, proof(7720)).statusCode())
+    assertThat(call("POST", "/consultingtypes", wizard, body, proof(7720, body)).statusCode())
         .isEqualTo(403);
     var changed = (com.fasterxml.jackson.databind.node.ObjectNode) JSON.readTree(body);
     changed.put("slug", "other");
+    String changedBody = JSON.writeValueAsString(changed);
+    assertThat(call("POST", "/consultingtypes", wizard, changedBody, proof).statusCode())
+        .isEqualTo(403);
     assertThat(
-            call("POST", "/consultingtypes", wizard, JSON.writeValueAsString(changed), proof)
+            call("POST", "/consultingtypes", wizard, changedBody, proof(7719, changedBody, nonce))
                 .statusCode())
         .isEqualTo(409);
     assertThat(call("PATCH", "/consultingtypes/1", wizard, body, proof).statusCode())
@@ -227,14 +234,18 @@ class RealTaskTokenAuthorizationIT {
           .isEqualTo(403);
       assertThat(call("PATCH", "/settingsadmin", actor, "{}").statusCode()).isEqualTo(403);
     }
-    for (String key : List.of("CONFIG_WIZARD", "RUNTIME_POLICY", "ACCOUNT_MAINTENANCE")) {
+    assertThat(
+            call("GET", "/settingsadmin/smtp-credentials", token("CONFIG_WIZARD"), null)
+                .statusCode())
+        .isEqualTo(200);
+    for (String key : List.of("ACCOUNT_PROVISIONING", "RUNTIME_POLICY", "ACCOUNT_MAINTENANCE")) {
       assertThat(call("GET", "/settingsadmin/smtp-credentials", token(key), null).statusCode())
           .isEqualTo(403);
     }
   }
 
   @Test
-  void actualMailAcknowledgesOnlyTheSavedSnapshotRevisionIdempotently() throws Exception {
+  void actualSetupAcknowledgesOnlyTheSavedSnapshotRevisionIdempotently() throws Exception {
     var entity = settings.findAll().get(0);
     entity.setSmtpRevision(7);
     entity.setSmtpPendingRevision(7L);
@@ -253,7 +264,7 @@ class RealTaskTokenAuthorizationIT {
     String body = "{\"revision\":7,\"status\":\"APPLIED\"}";
     assertThat(call("POST", ack, mail, body).statusCode()).isEqualTo(204);
     assertThat(call("POST", ack, mail, body).statusCode()).isEqualTo(204);
-    assertThat(call("POST", ack, token("CONFIG_WIZARD"), body).statusCode()).isEqualTo(403);
+    assertThat(call("POST", ack, token("SYSTEM_EMAIL_DELIVERY"), body).statusCode()).isEqualTo(403);
     assertThat(call("POST", ack, token("ACCOUNT_MAINTENANCE"), body).statusCode()).isEqualTo(403);
   }
 
@@ -280,7 +291,7 @@ class RealTaskTokenAuthorizationIT {
       String actor =
           fixture().path("variants").path(fixtureKey("CONFIG_WIZARD")).path(fault).asText();
       assertThat(actor).isNotBlank();
-      assertThat(call("POST", "/consultingtypes", actor, body, proof(7719)).statusCode())
+      assertThat(call("POST", "/consultingtypes", actor, body, proof(7719, body)).statusCode())
           .isEqualTo(403);
     }
   }
@@ -297,7 +308,8 @@ class RealTaskTokenAuthorizationIT {
         .isEqualTo(401);
   }
 
-  private String proof(long tenant, long now) throws Exception {
+  private String proof(long tenant, String body, String nonce) throws Exception {
+    long now = java.time.Instant.now().getEpochSecond();
     Map<String, Object> claims = new java.util.TreeMap<>();
     JsonNode wizard = null;
     for (JsonNode task : fixture().path("tasks")) {
@@ -314,24 +326,24 @@ class RealTaskTokenAuthorizationIT {
     claims.put("exp", now + 60);
     claims.put("iat", now);
     claims.put("iss", "tenantservice");
-    claims.put("nonce", java.util.UUID.randomUUID().toString());
+    claims.put("actor", "SETUP");
+    claims.put("purpose", "CONFIG_WIZARD");
+    claims.put("operation", "tenant.consulting-type.bootstrap");
+    claims.put("method", "POST");
+    claims.put("target", "tenant/" + tenant + "/consulting-type/default");
+    claims.put(
+        "payloadDigest",
+        de.caritas.cob.consultingtypeservice.config.security.TaskContextProof.digest(
+            new byte[32], JSON.readValue(body, ConsultingTypeDTO.class)));
+    claims.put("nonce", nonce);
     claims.put("tenantId", tenant);
     claims.put("tokenIssuer", fixture().path("issuer").asText());
-    claims.put("v", 1);
-    String encoded =
-        java.util.Base64.getUrlEncoder()
-            .withoutPadding()
-            .encodeToString(JSON.writeValueAsBytes(claims));
-    var mac = javax.crypto.Mac.getInstance("HmacSHA256");
-    mac.init(new javax.crypto.spec.SecretKeySpec(new byte[32], "HmacSHA256"));
-    return encoded
-        + "."
-        + java.util.Base64.getUrlEncoder()
-            .withoutPadding()
-            .encodeToString(mac.doFinal(encoded.getBytes(StandardCharsets.US_ASCII)));
+    claims.put("v", 2);
+    return de.caritas.cob.consultingtypeservice.config.security.TaskContextProof.sign(
+        new byte[32], claims);
   }
 
-  private String proof(long tenant) throws Exception {
-    return proof(tenant, java.time.Instant.now().getEpochSecond());
+  private String proof(long tenant, String body) throws Exception {
+    return proof(tenant, body, java.util.UUID.randomUUID().toString().replace("-", ""));
   }
 }

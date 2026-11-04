@@ -7,8 +7,8 @@ import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.schemas.model.ConsultingType;
 import java.util.List;
 import java.util.Optional;
-import lombok.AllArgsConstructor;
 import lombok.NonNull;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
@@ -20,7 +20,7 @@ import org.springframework.stereotype.Repository;
 @Repository("tenantAware")
 @Primary
 @ConditionalOnExpression("${multitenancy.enabled:true}")
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Slf4j
 public class ConsultingTypeMongoTenantAwareRepositoryService
     implements ConsultingTypeRepositoryService {
@@ -29,6 +29,12 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
   private @NonNull ConsultingTypeTenantAwareRepository consultingTypeMongoTenantAwareRepository;
   private @NonNull ConsultingTypeConverter consultingTypeConverter;
   private final @NonNull ConsultingTypeIdAllocator ids;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private org.springframework.data.mongodb.core.MongoTemplate mongo;
+
+  @org.springframework.beans.factory.annotation.Autowired
+  private org.springframework.core.env.Environment environment;
 
   /**
    * Get a complete list of all {@link ConsultingType}.
@@ -133,6 +139,28 @@ public class ConsultingTypeMongoTenantAwareRepositoryService
 
   @Override
   public ConsultingTypeEntity update(ConsultingType consultingType) {
+    if (environment != null
+        && de.caritas.cob.consultingtypeservice.config.security.TaskContextProof.grouped(
+            environment)) {
+      var current = (ConsultingTypeEntity) consultingType;
+      var criteria =
+          org.springframework.data.mongodb.core.query.Criteria.where("_id")
+              .is(current.getId())
+              .and("bootstrapCompensated")
+              .ne(true);
+      if (!isTechnicalTenantContext())
+        criteria.and("tenantId").is(TenantContext.getCurrentTenant());
+      var changed =
+          mongo.findAndReplace(
+              org.springframework.data.mongodb.core.query.Query.query(criteria),
+              current,
+              org.springframework.data.mongodb.core.FindAndReplaceOptions.options().returnNew(),
+              ConsultingTypeEntity.class,
+              mongo.getCollectionName(ConsultingTypeEntity.class),
+              ConsultingTypeEntity.class);
+      if (changed == null) throw new NotFoundException("Consulting type is absent or terminal");
+      return changed;
+    }
     return this.consultingTypeMongoTenantAwareRepository.save(
         (ConsultingTypeEntity) consultingType);
   }
