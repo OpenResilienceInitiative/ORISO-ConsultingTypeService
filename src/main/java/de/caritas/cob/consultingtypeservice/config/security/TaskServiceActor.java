@@ -5,26 +5,19 @@ import java.util.Set;
 /** One credential per actor; purposes remain separate receiver operation contracts. */
 enum TaskServiceActor {
   SETUP(
-      Set.of("CONFIG_WIZARD", "INVITE_RESERVATIONS", "CONSULTANT_IMPORT", "SMTP_SYNC"),
-      Set.of("config-wizard", "invitation-reservations", "consultant-import", "smtp-sync"),
-      Set.of(
-          "tenantservice",
-          "agencyservice",
-          "consultingtypeservice",
-          "userservice",
-          "oriso-task-commands")),
-  ACCOUNT_CREATE(
-      Set.of("ACCOUNT_PROVISIONING"),
-      Set.of("account-provisioning", "account-read"),
-      Set.of("userservice", "oriso-account-lifecycle")),
+      Set.of("CONFIG_WIZARD", "INVITE_RESERVATIONS", "CONSULTANT_IMPORT"),
+      Set.of("config-wizard", "invitation-reservations", "consultant-import")),
+  ACCOUNT_CREATE(Set.of("ACCOUNT_PROVISIONING"), Set.of("account-provisioning", "account-read")),
   ACCOUNT_ADMIN(
       Set.of("ACCOUNT_MAINTENANCE", "OTP", "SESSION_EXCHANGE"),
-      Set.of("account-maintenance", "account-read", "otp-config-admin", "session-exchange"),
-      Set.of("userservice", "oriso-account-lifecycle", "oriso-otp")),
+      Set.of("account-maintenance", "account-read", "otp-config-admin", "session-exchange")),
   MAIL(
-      Set.of("SYSTEM_EMAIL_DELIVERY", "NOTIFICATION_DISPATCH"),
-      Set.of("system-email-delivery", "notification-dispatch", "notifications-technical"),
-      Set.of("tenantservice", "agencyservice", "consultingtypeservice", "userservice")),
+      Set.of("SMTP_SYNC", "SYSTEM_EMAIL_DELIVERY", "NOTIFICATION_DISPATCH"),
+      Set.of(
+          "smtp-sync",
+          "system-email-delivery",
+          "notification-dispatch",
+          "notifications-technical")),
   RUNTIME(
       Set.of("RUNTIME_POLICY", "MATRIX_AGENCY", "APPOINTMENT_SYNC", "APPOINTMENT_CLEANUP"),
       Set.of(
@@ -33,25 +26,19 @@ enum TaskServiceActor {
           "matrix-agency-provision",
           "appointment-sync",
           "appointment-participant-cleanup",
-          "deletion-audit-read"),
-      Set.of("tenantservice", "agencyservice", "appointmentservice"));
+          // AgencyService deletion-log outbox (OBP 2.1 #130); exact-union check only here.
+          "deletion-audit-read"));
 
   private final Set<String> purposes;
   private final Set<String> roles;
-  private final Set<String> audiences;
 
-  TaskServiceActor(Set<String> purposes, Set<String> roles, Set<String> audiences) {
+  TaskServiceActor(Set<String> purposes, Set<String> roles) {
     this.purposes = purposes;
     this.roles = roles;
-    this.audiences = audiences;
   }
 
   Set<String> roles() {
     return roles;
-  }
-
-  Set<String> audiences() {
-    return audiences;
   }
 
   static TaskServiceActor forPurpose(String purpose) {
