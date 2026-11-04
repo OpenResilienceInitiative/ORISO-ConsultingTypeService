@@ -25,9 +25,7 @@ public class ConsultingTypeGroupRepositoryImpl implements ConsultingTypeGroupRep
    *
    * @return a {@link Map} with with the grouped {@link ConsultingType} instances.
    */
-  @Cacheable(
-      cacheNames = CacheManagerConfig.CONSULTING_TYPE_GROUPS_CACHE,
-      condition = "@environment.getProperty('TASK_IDENTITY_MODEL', '') != 'FIVE_ACTORS'")
+  @Cacheable(cacheNames = CacheManagerConfig.CONSULTING_TYPE_GROUPS_CACHE)
   public Map<String, List<ConsultingType>> getConsultingTypesGroupMap() {
     var consultingTypeEntities = consultingTypeRepository.findAll();
     var consultingTypesGroupMap = new HashMap<String, List<ConsultingType>>();
