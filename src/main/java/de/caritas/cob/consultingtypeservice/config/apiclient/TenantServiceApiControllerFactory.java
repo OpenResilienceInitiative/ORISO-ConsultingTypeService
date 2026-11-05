@@ -15,7 +15,13 @@ public class TenantServiceApiControllerFactory {
   @Autowired private RestTemplate restTemplate;
 
   public TenantControllerApi createControllerApi() {
-    var apiClient = new TenantServiceApiClient(restTemplate).setBasePath(this.tenantServiceApiUrl);
+    return createControllerApi(restTemplate);
+  }
+
+  /** For a caller that needs its own timeouts instead of the shared template's. */
+  public TenantControllerApi createControllerApi(RestTemplate callersRestTemplate) {
+    var apiClient =
+        new TenantServiceApiClient(callersRestTemplate).setBasePath(this.tenantServiceApiUrl);
     return new TenantControllerApi(apiClient);
   }
 }

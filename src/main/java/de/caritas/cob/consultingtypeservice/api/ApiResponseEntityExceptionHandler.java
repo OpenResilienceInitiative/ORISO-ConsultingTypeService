@@ -4,6 +4,7 @@ import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadReque
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ServiceUnavailableException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
 import jakarta.validation.ConstraintViolationException;
 import java.net.UnknownHostException;
@@ -169,6 +170,22 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
       final NotFoundException ex, final WebRequest request) {
 
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+  }
+
+  /**
+   * 503 - Service unavailable: a dependency the decision needs did not answer. Not a refusal (403).
+   *
+   * @param ex {@link ServiceUnavailableException}
+   * @param request WebRequest
+   * @return a ResponseEntity instance
+   */
+  @ExceptionHandler({ServiceUnavailableException.class})
+  public ResponseEntity<Object> handleInternal(
+      final ServiceUnavailableException ex, final WebRequest request) {
+    ex.executeLogging();
+
+    return handleExceptionInternal(
+        EMPTY_EXCEPTION, null, new HttpHeaders(), HttpStatus.SERVICE_UNAVAILABLE, request);
   }
 
   /**

@@ -14,15 +14,28 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail;
 import de.caritas.cob.consultingtypeservice.schemas.model.TopicDuplicateMode;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 
 @Component
 @Slf4j
 public class ApplicationSettingsConverter {
+
+  private final ReleaseToggleOverrides releaseToggleOverrides;
+
+  public ApplicationSettingsConverter() {
+    this(ReleaseToggleOverrides.none());
+  }
+
+  @Autowired
+  public ApplicationSettingsConverter(ReleaseToggleOverrides releaseToggleOverrides) {
+    this.releaseToggleOverrides = releaseToggleOverrides;
+  }
 
   public ApplicationSettingsDTO toDTO(ApplicationSettingsEntity applicationSettings) {
     var settingsDTO =
@@ -70,6 +83,11 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getTopicDuplicateMode() != null
                         ? applicationSettings.getTopicDuplicateMode()
                         : defaultTopicDuplicateMode()))
+            .supportEmail(
+                toSettingDTO(
+                    applicationSettings.getSupportEmail() != null
+                        ? applicationSettings.getSupportEmail()
+                        : defaultSupportEmail()))
             .globalSmtpEnabled(
                 toFeatureToggleDTO(
                     applicationSettings.getGlobalSmtpEnabled() != null
@@ -103,6 +121,7 @@ public class ApplicationSettingsConverter {
             .releaseToggles(Maps.newHashMap());
 
     settingsDTO.getReleaseToggles().putAll(applicationSettings.getReleaseToggles());
+    releaseToggleOverrides.applyTo(settingsDTO.getReleaseToggles());
     return settingsDTO;
   }
 
@@ -113,6 +132,10 @@ public class ApplicationSettingsConverter {
     return new FurtherCounsellingPostcodeMode()
         .withValue(DEFAULT_FURTHER_COUNSELLING_POSTCODE_MODE)
         .withReadOnly(false);
+  }
+
+  public static SupportEmail defaultSupportEmail() {
+    return new SupportEmail().withValue("").withReadOnly(false);
   }
 
   public static TopicDuplicateMode defaultTopicDuplicateMode() {

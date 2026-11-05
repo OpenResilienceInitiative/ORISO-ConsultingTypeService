@@ -49,6 +49,11 @@ public class AuthorisationService {
     return tenantId.isPresent() && tenantId.get().equals(0L) && hasRealmRole(TENANT_ADMIN_ROLE);
   }
 
+  /** The caller's own bearer token, to ask another service on the caller's behalf. */
+  public Optional<String> findAccessToken() {
+    return findJwt().map(Jwt::getTokenValue);
+  }
+
   @SuppressWarnings("unchecked")
   private boolean hasRealmRole(String role) {
     return findJwt()

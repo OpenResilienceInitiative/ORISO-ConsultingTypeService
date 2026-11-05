@@ -67,4 +67,18 @@ class AuthorisationServiceTest {
   void isSuperAdmin_Should_ReturnFalse_When_NoAuthenticationIsPresent() {
     assertThat(authorisationService.isSuperAdmin()).isFalse();
   }
+
+  @Test
+  void findAccessToken_Should_ReturnTheCallersToken() {
+    var authentication =
+        new AuthenticationMockBuilder().withUserRole("tenant-admin").withTenantId("1").build();
+    SecurityContextHolder.getContext().setAuthentication(authentication);
+
+    assertThat(authorisationService.findAccessToken()).contains("token");
+  }
+
+  @Test
+  void findAccessToken_Should_BeEmpty_When_NoAuthenticationIsPresent() {
+    assertThat(authorisationService.findAccessToken()).isEmpty();
+  }
 }

@@ -52,6 +52,14 @@ class DefaultApplicationSettingsInitializerTest {
   }
 
   @Test
+  void init_Should_SeedEmptySupportEmail() {
+    ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
+
+    assertThat(seeded.getSupportEmail().getValue()).isEmpty();
+    assertThat(seeded.getSupportEmail().getReadOnly()).isFalse();
+  }
+
+  @Test
   void init_Should_NotSeed_When_SettingsAlreadyExist() {
     when(applicationSettingsRepository.findAll())
         .thenReturn(List.of(new ApplicationSettingsEntity()));
