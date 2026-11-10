@@ -52,6 +52,71 @@ class TopicConverterTest {
     assertThat(actual.getTitles().getLong()).isEqualTo("tl");
   }
 
+  @Test
+  void toEntityUpdate_Should_keepStoredValues_When_dtoOmitsOptionalFields() {
+    // given: a stored topic with slug, titles, welcome message and fallback agency
+    final var stored = new TopicEntity();
+    stored.setSlug("debt");
+    stored.setTitlesShort("{\"de\":\"ts\"}");
+    stored.setTitlesLong("{\"de\":\"tl\"}");
+    stored.setTitlesWelcome("tw");
+    stored.setTitlesDropdown("td");
+    stored.setWelcomeMessage("welcome");
+    stored.setFallbackAgencyId(42);
+    stored.setFallbackUrl("https://example.org");
+
+    // and an update body shaped like the Admin form: no slug, titles or fallback fields
+    final var update =
+        new TopicMultilingualDTO()
+            .status(TopicStatus.ACTIVE.toString())
+            .internalIdentifier("identifier")
+            .name(translateableMapWithGermanEntryFor("name"))
+            .description(translateableMapWithGermanEntryFor("new desc"));
+
+    // when
+    final var entity = topicConverter.toEntity(stored, update);
+
+    // then
+    assertThat(entity.getSlug()).isEqualTo("debt");
+    assertThat(entity.getTitlesShort()).isEqualTo("{\"de\":\"ts\"}");
+    assertThat(entity.getTitlesLong()).isEqualTo("{\"de\":\"tl\"}");
+    assertThat(entity.getTitlesWelcome()).isEqualTo("tw");
+    assertThat(entity.getTitlesDropdown()).isEqualTo("td");
+    assertThat(entity.getWelcomeMessage()).isEqualTo("welcome");
+    assertThat(entity.getFallbackAgencyId()).isEqualTo(42);
+    assertThat(entity.getFallbackUrl()).isEqualTo("https://example.org");
+    assertThat(entity.getDescription()).contains("new desc");
+  }
+
+  @Test
+  void toEntityUpdate_Should_overwriteStoredValues_When_dtoCarriesThem() {
+    // given
+    final var stored = new TopicEntity();
+    stored.setSlug("debt");
+    stored.setWelcomeMessage("welcome");
+    stored.setFallbackAgencyId(42);
+    stored.setFallbackUrl("https://example.org");
+
+    final var update =
+        new TopicMultilingualDTO()
+            .status(TopicStatus.ACTIVE.toString())
+            .name(translateableMapWithGermanEntryFor("name"))
+            .description(translateableMapWithGermanEntryFor("desc"))
+            .slug("debt-advice")
+            .welcomeMessage("hello")
+            .fallbackAgencyId(7)
+            .fallbackUrl("https://example.com");
+
+    // when
+    final var entity = topicConverter.toEntity(stored, update);
+
+    // then
+    assertThat(entity.getSlug()).isEqualTo("debt-advice");
+    assertThat(entity.getWelcomeMessage()).isEqualTo("hello");
+    assertThat(entity.getFallbackAgencyId()).isEqualTo(7);
+    assertThat(entity.getFallbackUrl()).isEqualTo("https://example.com");
+  }
+
   private static Map<String, String> translateableMapWithGermanEntryFor(String value) {
     final Map<String, String> description = new HashMap<>();
     description.put("de", value);
