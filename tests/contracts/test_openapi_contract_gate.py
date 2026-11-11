@@ -61,7 +61,7 @@ class OpenApiContractGateTest(unittest.TestCase):
             workflow.count("uses: actions/checkout@v6"),
             workflow.count("persist-credentials: false"),
         )
-        self.assertIn("a213d5546e2cdbcbd1f641291661f11cbbca2cfc", workflow)
+        self.assertIn("d4f3686e6136611846154db45be5990214a3538a", workflow)
 
     def test_tenant_contract_is_checked_as_a_consumer_dependency(self):
         workflow = (

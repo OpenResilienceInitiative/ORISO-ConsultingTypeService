@@ -126,6 +126,43 @@ class TopicAdminControllerIT {
   }
 
   @Test
+  void updateTopic_Should_keepStoredSlug_When_payloadOmitsSlug() throws Exception {
+    final Authentication authentication = givenMockAuthentication(UserRole.TOPIC_ADMIN);
+    final MultilingualTopicTestDataBuilder builder =
+        new MultilingualTopicTestDataBuilder()
+            .topicDTO()
+            .withName("name")
+            .withDescription("desc")
+            .withInternalIdentifier("ident")
+            .withStatus(TopicStatus.ACTIVE.toString())
+            .withTitles(
+                new TitlesMultilingualDTO()
+                    ._short(translateableMapWithGermanEntryFor("s"))
+                    ._long(translateableMapWithGermanEntryFor("l"))
+                    .welcome("w")
+                    .registrationDropdown("dd"));
+
+    mockMvc
+        .perform(
+            put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
+                .with(authentication(authentication))
+                .contentType(APPLICATION_JSON)
+                .content(builder.withSlug("debt").jsonify()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value("debt"));
+
+    // The Admin form does not send a slug; saving it must not erase the stored one.
+    mockMvc
+        .perform(
+            put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
+                .with(authentication(authentication))
+                .contentType(APPLICATION_JSON)
+                .content(builder.withSlug(null).jsonify()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value("debt"));
+  }
+
+  @Test
   void updateTopic_Should_returnStatusOk_When_featureToggleIsDisabled() throws Exception {
     givenTopicFeatureEnabled(false);
     final String payload =
