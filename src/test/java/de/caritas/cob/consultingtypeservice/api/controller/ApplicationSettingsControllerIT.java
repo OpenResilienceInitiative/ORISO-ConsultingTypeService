@@ -461,6 +461,65 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("SMART"));
   }
 
+  @Test
+  void getApplicationSettings_Should_ReturnEmptySupportEmail_When_NeverConfigured()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSupportEmail(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value(""))
+        .andExpect(jsonPath("$.supportEmail.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreAndClearSupportEmail_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"supportEmail\":\" support@example.org \"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value("support@example.org"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.supportEmail.value").value("support@example.org"));
+
+    patchSettings(authentication, "{\"supportEmail\":\"\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value(""));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"not-an-email", "a@b", "a@example.org, b@example.org", "a b@example.org"})
+  void patchApplicationSettings_Should_ReturnBadRequest_When_SupportEmailIsInvalid(String invalid)
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"supportEmail\":\"" + invalid + "\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_SupportEmailIsTooLong()
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"supportEmail\":\"" + "a".repeat(250) + "@example.org\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesSupportEmail()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"supportEmail\":\"support@example.org\"}")
+        .andExpect(status().isForbidden());
+  }
+
   private static Authentication platformAdmin() {
     return new AuthenticationMockBuilder()
         .withUserRole(TENANT_ADMIN.getValue())

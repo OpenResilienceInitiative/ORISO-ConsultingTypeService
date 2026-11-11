@@ -19,6 +19,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
@@ -216,6 +217,16 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getTopicDuplicateMode().setValue(settingsPatchDTO.getTopicDuplicateMode().getValue());
     }
+    if (settingsPatchDTO.getSupportEmail() != null) {
+      var supportEmail = settingsPatchDTO.getSupportEmail().trim();
+      if (!supportEmail.isEmpty() && !isValidSupportEmail(supportEmail)) {
+        throw new BadRequestException("supportEmail is not a valid e-mail address");
+      }
+      if (entity.getSupportEmail() == null) {
+        entity.setSupportEmail(ApplicationSettingsConverter.defaultSupportEmail());
+      }
+      entity.getSupportEmail().setValue(supportEmail);
+    }
     if (settingsPatchDTO.getGlobalSmtpEnabled() != null) {
       if (entity.getGlobalSmtpEnabled() == null) {
         entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
@@ -270,6 +281,19 @@ public class ApplicationSettingsServiceFacade {
           .getGlobalSmtpEmailThemeColor()
           .setValue(settingsPatchDTO.getGlobalSmtpEmailThemeColor());
     }
+  }
+
+  private static final int SUPPORT_EMAIL_MAX_LENGTH = 254;
+  // One address only: no whitespace, no list separators, no display name; dots in the
+  // local part only between characters (no leading, trailing or doubled dots).
+  private static final Pattern SUPPORT_EMAIL_PATTERN =
+      Pattern.compile(
+          "^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+              + "(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$");
+
+  private static boolean isValidSupportEmail(String value) {
+    return value.length() <= SUPPORT_EMAIL_MAX_LENGTH
+        && SUPPORT_EMAIL_PATTERN.matcher(value).matches();
   }
 
   /**

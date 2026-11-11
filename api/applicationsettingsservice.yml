@@ -221,6 +221,14 @@ components:
             INFORM_BOTH_EVERY_MESSAGE, FORBID.
           allOf:
             - $ref: '#/components/schemas/SettingDTO'
+        supportEmail:
+          description: >-
+            ORISO-Frontend#1915: fallback support e-mail address shown to counsellors when a
+            counselling centre has no admin reachable by chat. Empty string = not configured.
+            Public (served unauthenticated by GET /settings), so it must be a shared mailbox,
+            never a personal address.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
         globalSmtpEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
@@ -269,6 +277,12 @@ components:
           description: >-
             Platform admin only. Omit to leave unchanged. Only INFORM_EXISTING_COUNSELLOR_ONCE is
             accepted for now; the other values answer 400 until ORISO-Frontend#1878.
+        supportEmail:
+          type: string
+          maxLength: 254
+          description: >-
+            Platform admin only. Omit to leave unchanged; an empty string clears the address.
+            Otherwise a single valid e-mail address (max 254 characters).
         globalSmtpEnabled:
           type: boolean
         globalSmtpHost:
