@@ -100,6 +100,12 @@ public class DefaultApplicationSettingsInitializer {
         ApplicationSettingsConverter.defaultFurtherCounsellingPostcodeMode());
     entity.setTopicDuplicateMode(ApplicationSettingsConverter.defaultTopicDuplicateMode());
     entity.setSupportEmail(ApplicationSettingsConverter.defaultSupportEmail());
+    entity.setChatComposerDisabledFormats(
+        ApplicationSettingsConverter.defaultChatComposerDisabledFormats());
+    entity.setChatMessageMaxWidthDesktop(
+        ApplicationSettingsConverter.defaultChatMessageMaxWidthDesktop());
+    entity.setChatMessageCollapseThreshold(
+        ApplicationSettingsConverter.defaultChatMessageCollapseThreshold());
     entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
     entity.setGlobalSmtpHost(new GlobalSmtpHost().withValue("").withReadOnly(false));
     entity.setGlobalSmtpPort(new GlobalSmtpPort().withValue("587").withReadOnly(false));

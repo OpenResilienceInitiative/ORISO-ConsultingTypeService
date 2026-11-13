@@ -293,6 +293,54 @@
         "readOnly"
       ]
     },
+    "chatComposerDisabledFormats": {
+      "description": "Comma-separated format keys the chat composer does not offer. Empty = all offered. Never affects rendering of existing messages.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "readOnly"
+      ]
+    },
+    "chatMessageMaxWidthDesktop": {
+      "description": "Widest chat message bubble on desktop in CSS pixels.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "readOnly"
+      ]
+    },
+    "chatMessageCollapseThreshold": {
+      "description": "Characters above which a chat message collapses behind show more. 0 = never.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "string"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "readOnly"
+      ]
+    },
     "globalFeatureSystemNotificationEmailsEnabled": {
       "type": "object",
       "properties": {

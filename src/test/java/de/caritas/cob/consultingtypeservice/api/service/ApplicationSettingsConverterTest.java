@@ -103,6 +103,16 @@ class ApplicationSettingsConverterTest {
   }
 
   @Test
+  void toDTO_Should_ReturnTodaysChatBehaviour_When_EntityLacksTheChatSettings() {
+    ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
+
+    assertThat(dto.getChatComposerDisabledFormats().getValue()).isEmpty();
+    assertThat(dto.getChatComposerDisabledFormats().getReadOnly()).isFalse();
+    assertThat(dto.getChatMessageMaxWidthDesktop().getValue()).isEqualTo("770");
+    assertThat(dto.getChatMessageCollapseThreshold().getValue()).isEqualTo("300");
+  }
+
+  @Test
   void toDTO_Should_ReturnEmptySupportEmail_When_EntityLacksIt() {
     ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
 

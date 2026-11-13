@@ -52,6 +52,15 @@ class DefaultApplicationSettingsInitializerTest {
   }
 
   @Test
+  void init_Should_SeedTodaysChatBehaviour() {
+    ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
+
+    assertThat(seeded.getChatComposerDisabledFormats().getValue()).isEmpty();
+    assertThat(seeded.getChatMessageMaxWidthDesktop().getValue()).isEqualTo("770");
+    assertThat(seeded.getChatMessageCollapseThreshold().getValue()).isEqualTo("300");
+  }
+
+  @Test
   void init_Should_SeedEmptySupportEmail() {
     ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
 

@@ -229,6 +229,25 @@ components:
             never a personal address.
           allOf:
             - $ref: '#/components/schemas/SettingDTO'
+        chatComposerDisabledFormats:
+          description: >-
+            Formats the chat composer's formats menu does not offer on this platform, as a
+            comma-separated list of format keys. Empty string (default) = every format is offered.
+            Only hides the formats while composing: existing messages keep rendering them.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        chatMessageMaxWidthDesktop:
+          description: >-
+            Widest a chat message bubble may grow on desktop, in CSS pixels, as a string.
+            Default "770".
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        chatMessageCollapseThreshold:
+          description: >-
+            Length in characters above which a chat message collapses behind "show more", as a
+            string. "0" = never collapse. Default "300".
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
         globalSmtpEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
@@ -283,6 +302,27 @@ components:
           description: >-
             Platform admin only. Omit to leave unchanged; an empty string clears the address.
             Otherwise a single valid e-mail address (max 254 characters).
+        chatComposerDisabledFormats:
+          type: array
+          items:
+            type: string
+            enum: [heading, bulletList, orderedList, taskList, blockquote, codeBlock, bold, italic, strike, code, underline, highlight, link, superscript, subscript, image, dateTime]
+          description: >-
+            Platform admin only. Omit to leave unchanged; an empty array offers every format again.
+        chatMessageMaxWidthDesktop:
+          type: integer
+          format: int32
+          minimum: 320
+          maximum: 1600
+          description: Platform admin only. Omit to leave unchanged. CSS pixels, 320 to 1600.
+        chatMessageCollapseThreshold:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100000
+          description: >-
+            Platform admin only. Omit to leave unchanged. 0 switches collapsing off; otherwise 50
+            to 100000 characters.
         globalSmtpEnabled:
           type: boolean
         globalSmtpHost:

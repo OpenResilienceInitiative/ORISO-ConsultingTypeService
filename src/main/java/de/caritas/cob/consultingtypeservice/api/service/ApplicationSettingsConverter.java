@@ -5,6 +5,9 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.FeatureToggleDTO;
 import de.caritas.cob.consultingtypeservice.api.model.SettingDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatComposerDisabledFormats;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatMessageCollapseThreshold;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatMessageMaxWidthDesktop;
 import de.caritas.cob.consultingtypeservice.schemas.model.FurtherCounsellingPostcodeMode;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
@@ -88,6 +91,21 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getSupportEmail() != null
                         ? applicationSettings.getSupportEmail()
                         : defaultSupportEmail()))
+            .chatComposerDisabledFormats(
+                toSettingDTO(
+                    applicationSettings.getChatComposerDisabledFormats() != null
+                        ? applicationSettings.getChatComposerDisabledFormats()
+                        : defaultChatComposerDisabledFormats()))
+            .chatMessageMaxWidthDesktop(
+                toSettingDTO(
+                    applicationSettings.getChatMessageMaxWidthDesktop() != null
+                        ? applicationSettings.getChatMessageMaxWidthDesktop()
+                        : defaultChatMessageMaxWidthDesktop()))
+            .chatMessageCollapseThreshold(
+                toSettingDTO(
+                    applicationSettings.getChatMessageCollapseThreshold() != null
+                        ? applicationSettings.getChatMessageCollapseThreshold()
+                        : defaultChatMessageCollapseThreshold()))
             .globalSmtpEnabled(
                 toFeatureToggleDTO(
                     applicationSettings.getGlobalSmtpEnabled() != null
@@ -136,6 +154,22 @@ public class ApplicationSettingsConverter {
 
   public static SupportEmail defaultSupportEmail() {
     return new SupportEmail().withValue("").withReadOnly(false);
+  }
+
+  public static ChatComposerDisabledFormats defaultChatComposerDisabledFormats() {
+    return new ChatComposerDisabledFormats().withValue("").withReadOnly(false);
+  }
+
+  public static ChatMessageMaxWidthDesktop defaultChatMessageMaxWidthDesktop() {
+    return new ChatMessageMaxWidthDesktop()
+        .withValue(ChatMessageSettings.DEFAULT_MAX_WIDTH_DESKTOP)
+        .withReadOnly(false);
+  }
+
+  public static ChatMessageCollapseThreshold defaultChatMessageCollapseThreshold() {
+    return new ChatMessageCollapseThreshold()
+        .withValue(ChatMessageSettings.DEFAULT_COLLAPSE_THRESHOLD)
+        .withReadOnly(false);
   }
 
   public static TopicDuplicateMode defaultTopicDuplicateMode() {
