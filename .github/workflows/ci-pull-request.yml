@@ -10,7 +10,7 @@ env:
 jobs:
   validate:
     name: test, build and Docker validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout repository
@@ -30,7 +30,7 @@ jobs:
 
   required-integration-tests:
     name: required integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout repository
@@ -43,7 +43,7 @@ jobs:
 
   contract-tests:
     name: CI contract tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout repository
@@ -64,7 +64,7 @@ jobs:
     name: required PreDev CI
     if: always()
     needs: [validate, required-integration-tests, contract-tests]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Report the aggregate required conclusion
@@ -89,7 +89,7 @@ jobs:
   # changes (version bump / consumer sign-off) is agreed.
   api-contract-diff:
     name: api-contract-diff (non-blocking)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     continue-on-error: true
 
     steps:
