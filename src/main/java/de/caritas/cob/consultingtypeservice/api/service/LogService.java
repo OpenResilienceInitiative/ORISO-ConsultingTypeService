@@ -2,7 +2,6 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.apache.commons.lang3.exception.ExceptionUtils.getStackTrace;
 
-import com.github.jknack.handlebars.internal.text.TextStringBuilder;
 import org.everit.json.schema.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,14 +89,15 @@ public class LogService {
    */
   public static void logJsonSchemaValidationException(
       String message, String filename, ValidationException validationException) {
-    var textStringBuilder = new TextStringBuilder();
-    textStringBuilder.appendNewLine();
-    textStringBuilder.appendln(message);
-    textStringBuilder.appendln(
-        String.format("%s in file %s", validationException.getMessage(), filename));
+    var details = new StringBuilder();
+    details.append(System.lineSeparator());
+    details.append(message).append(System.lineSeparator());
+    details
+        .append(String.format("%s in file %s", validationException.getMessage(), filename))
+        .append(System.lineSeparator());
     validationException.getCausingExceptions().stream()
         .map(ValidationException::getMessage)
-        .forEach(textStringBuilder::appendln);
-    LOGGER.error("{}{}", MESSAGE_CONSULTING_TYPE_SERVICE_API, textStringBuilder);
+        .forEach(causeMessage -> details.append(causeMessage).append(System.lineSeparator()));
+    LOGGER.error("{}{}", MESSAGE_CONSULTING_TYPE_SERVICE_API, details);
   }
 }
