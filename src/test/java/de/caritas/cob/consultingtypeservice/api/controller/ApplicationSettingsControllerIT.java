@@ -387,6 +387,220 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
   }
 
+  @Test
+  void getApplicationSettings_Should_ReturnFurtherCounsellingDefaults_When_SettingsWereNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-Frontend#1876 do not carry the fields
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setFurtherCounsellingPostcodeMode(null);
+    entity.setTopicDuplicateMode(null);
+    applicationSettingsRepository.save(entity);
+
+    // when / then
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("SMART"))
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.readOnly").value(false))
+        .andExpect(jsonPath("$.topicDuplicateMode.value").value("INFORM_EXISTING_COUNSELLOR_ONCE"))
+        .andExpect(jsonPath("$.topicDuplicateMode.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreFurtherCounsellingSettings_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(
+            authentication,
+            "{\"furtherCounsellingPostcodeMode\":\"ALWAYS_EMPTY\","
+                + "\"topicDuplicateMode\":\"INFORM_EXISTING_COUNSELLOR_ONCE\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("ALWAYS_EMPTY"))
+        .andExpect(jsonPath("$.topicDuplicateMode.value").value("INFORM_EXISTING_COUNSELLOR_ONCE"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("ALWAYS_EMPTY"));
+
+    // clean up
+    patchSettings(authentication, "{\"furtherCounsellingPostcodeMode\":\"SMART\"}")
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("SMART"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"INFORM_BOTH_ONCE", "INFORM_BOTH_EVERY_MESSAGE", "FORBID"})
+  void patchApplicationSettings_Should_ReturnBadRequest_When_TopicDuplicateModeIsReserved(
+      String reservedMode) throws Exception {
+    patchSettings(platformAdmin(), "{\"topicDuplicateMode\":\"" + reservedMode + "\"}")
+        .andExpect(status().isBadRequest());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.topicDuplicateMode.value").value("INFORM_EXISTING_COUNSELLOR_ONCE"));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_PostcodeModeIsUnknown()
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"furtherCounsellingPostcodeMode\":\"SOMETIMES\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesFurtherCounselling()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"furtherCounsellingPostcodeMode\":\"ALWAYS_EMPTY\"}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("SMART"));
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnEmptySupportEmail_When_NeverConfigured()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSupportEmail(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value(""))
+        .andExpect(jsonPath("$.supportEmail.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreAndClearSupportEmail_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"supportEmail\":\" support@example.org \"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value("support@example.org"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.supportEmail.value").value("support@example.org"));
+
+    patchSettings(authentication, "{\"supportEmail\":\"\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value(""));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"not-an-email", "a@b", "a@example.org, b@example.org", "a b@example.org"})
+  void patchApplicationSettings_Should_ReturnBadRequest_When_SupportEmailIsInvalid(String invalid)
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"supportEmail\":\"" + invalid + "\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_SupportEmailIsTooLong()
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"supportEmail\":\"" + "a".repeat(250) + "@example.org\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesSupportEmail()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"supportEmail\":\"support@example.org\"}")
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnTodaysChatBehaviour_When_NeverConfigured()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setChatComposerDisabledFormats(null);
+    entity.setChatMessageMaxWidthDesktop(null);
+    entity.setChatMessageCollapseThreshold(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""))
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("770"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("300"));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_DisableAndReEnableFormats_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[\"underline\",\"bold\"]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreWidthAndCollapseOff_When_PlatformAdminSaves()
+      throws Exception {
+    patchSettings(
+            platformAdmin(),
+            "{\"chatMessageMaxWidthDesktop\":900,\"chatMessageCollapseThreshold\":0}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("900"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("0"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"blink\"]}",
+        "{\"chatMessageMaxWidthDesktop\":319}",
+        "{\"chatMessageMaxWidthDesktop\":1601}",
+        "{\"chatMessageCollapseThreshold\":-1}",
+        "{\"chatMessageCollapseThreshold\":49}",
+        "{\"chatMessageCollapseThreshold\":100001}"
+      })
+  void patchApplicationSettings_Should_ReturnBadRequest_When_ChatSettingIsInvalid(String body)
+      throws Exception {
+    patchSettings(platformAdmin(), body).andExpect(status().isBadRequest());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"bold\"]}",
+        "{\"chatMessageMaxWidthDesktop\":900}",
+        "{\"chatMessageCollapseThreshold\":0}"
+      })
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesChatSetting(
+      String body) throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, body).andExpect(status().isForbidden());
+  }
+
   private static Authentication platformAdmin() {
     return new AuthenticationMockBuilder()
         .withUserRole(TENANT_ADMIN.getValue())

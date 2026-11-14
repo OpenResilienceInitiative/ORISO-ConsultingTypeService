@@ -5,6 +5,10 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.FeatureToggleDTO;
 import de.caritas.cob.consultingtypeservice.api.model.SettingDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatComposerDisabledFormats;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatMessageCollapseThreshold;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatMessageMaxWidthDesktop;
+import de.caritas.cob.consultingtypeservice.schemas.model.FurtherCounsellingPostcodeMode;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
@@ -13,14 +17,28 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail;
+import de.caritas.cob.consultingtypeservice.schemas.model.TopicDuplicateMode;
 import java.lang.reflect.Field;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.util.ReflectionUtils;
 
 @Component
 @Slf4j
 public class ApplicationSettingsConverter {
+
+  private final ReleaseToggleOverrides releaseToggleOverrides;
+
+  public ApplicationSettingsConverter() {
+    this(ReleaseToggleOverrides.none());
+  }
+
+  @Autowired
+  public ApplicationSettingsConverter(ReleaseToggleOverrides releaseToggleOverrides) {
+    this.releaseToggleOverrides = releaseToggleOverrides;
+  }
 
   public ApplicationSettingsDTO toDTO(ApplicationSettingsEntity applicationSettings) {
     var settingsDTO =
@@ -58,6 +76,36 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getOneTopicPerAgencyEnabled() != null
                         ? applicationSettings.getOneTopicPerAgencyEnabled()
                         : new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false)))
+            .furtherCounsellingPostcodeMode(
+                toSettingDTO(
+                    applicationSettings.getFurtherCounsellingPostcodeMode() != null
+                        ? applicationSettings.getFurtherCounsellingPostcodeMode()
+                        : defaultFurtherCounsellingPostcodeMode()))
+            .topicDuplicateMode(
+                toSettingDTO(
+                    applicationSettings.getTopicDuplicateMode() != null
+                        ? applicationSettings.getTopicDuplicateMode()
+                        : defaultTopicDuplicateMode()))
+            .supportEmail(
+                toSettingDTO(
+                    applicationSettings.getSupportEmail() != null
+                        ? applicationSettings.getSupportEmail()
+                        : defaultSupportEmail()))
+            .chatComposerDisabledFormats(
+                toSettingDTO(
+                    applicationSettings.getChatComposerDisabledFormats() != null
+                        ? applicationSettings.getChatComposerDisabledFormats()
+                        : defaultChatComposerDisabledFormats()))
+            .chatMessageMaxWidthDesktop(
+                toSettingDTO(
+                    applicationSettings.getChatMessageMaxWidthDesktop() != null
+                        ? applicationSettings.getChatMessageMaxWidthDesktop()
+                        : defaultChatMessageMaxWidthDesktop()))
+            .chatMessageCollapseThreshold(
+                toSettingDTO(
+                    applicationSettings.getChatMessageCollapseThreshold() != null
+                        ? applicationSettings.getChatMessageCollapseThreshold()
+                        : defaultChatMessageCollapseThreshold()))
             .globalSmtpEnabled(
                 toFeatureToggleDTO(
                     applicationSettings.getGlobalSmtpEnabled() != null
@@ -91,7 +139,41 @@ public class ApplicationSettingsConverter {
             .releaseToggles(Maps.newHashMap());
 
     settingsDTO.getReleaseToggles().putAll(applicationSettings.getReleaseToggles());
+    releaseToggleOverrides.applyTo(settingsDTO.getReleaseToggles());
     return settingsDTO;
+  }
+
+  public static final String DEFAULT_FURTHER_COUNSELLING_POSTCODE_MODE = "SMART";
+  public static final String DEFAULT_TOPIC_DUPLICATE_MODE = "INFORM_EXISTING_COUNSELLOR_ONCE";
+
+  public static FurtherCounsellingPostcodeMode defaultFurtherCounsellingPostcodeMode() {
+    return new FurtherCounsellingPostcodeMode()
+        .withValue(DEFAULT_FURTHER_COUNSELLING_POSTCODE_MODE)
+        .withReadOnly(false);
+  }
+
+  public static SupportEmail defaultSupportEmail() {
+    return new SupportEmail().withValue("").withReadOnly(false);
+  }
+
+  public static ChatComposerDisabledFormats defaultChatComposerDisabledFormats() {
+    return new ChatComposerDisabledFormats().withValue("").withReadOnly(false);
+  }
+
+  public static ChatMessageMaxWidthDesktop defaultChatMessageMaxWidthDesktop() {
+    return new ChatMessageMaxWidthDesktop()
+        .withValue(ChatMessageSettings.DEFAULT_MAX_WIDTH_DESKTOP)
+        .withReadOnly(false);
+  }
+
+  public static ChatMessageCollapseThreshold defaultChatMessageCollapseThreshold() {
+    return new ChatMessageCollapseThreshold()
+        .withValue(ChatMessageSettings.DEFAULT_COLLAPSE_THRESHOLD)
+        .withReadOnly(false);
+  }
+
+  public static TopicDuplicateMode defaultTopicDuplicateMode() {
+    return new TopicDuplicateMode().withValue(DEFAULT_TOPIC_DUPLICATE_MODE).withReadOnly(false);
   }
 
   private SettingDTO toSettingDTO(Object setting) {

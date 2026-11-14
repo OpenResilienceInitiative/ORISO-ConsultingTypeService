@@ -151,6 +151,127 @@ class ApplicationSettingsServiceFacadeTest {
   }
 
   @Test
+  void patchApplicationSettings_Should_CreateFurtherCounsellingSettings_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setFurtherCounsellingPostcodeMode(
+        ApplicationSettingsPatchDTO.FurtherCounsellingPostcodeModeEnum.ALWAYS_EMPTY);
+    patchDTO.setTopicDuplicateMode(
+        ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.INFORM_EXISTING_COUNSELLOR_ONCE);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getFurtherCounsellingPostcodeMode().getValue())
+        .isEqualTo("ALWAYS_EMPTY");
+    assertThat(captor.getValue().getFurtherCounsellingPostcodeMode().getReadOnly()).isFalse();
+    assertThat(captor.getValue().getTopicDuplicateMode().getValue())
+        .isEqualTo("INFORM_EXISTING_COUNSELLOR_ONCE");
+    assertThat(captor.getValue().getTopicDuplicateMode().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_TopicDuplicateModeIsReserved() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setTopicDuplicateMode(ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.FORBID);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+    assertThat(entity.getTopicDuplicateMode()).isNull();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreDisabledFormatsInEnumOrder_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatComposerDisabledFormats(
+        java.util.List.of(
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.HEADING,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE));
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getChatComposerDisabledFormats().getValue()).isEqualTo("heading,underline");
+    assertThat(entity.getChatMessageMaxWidthDesktop()).isNull();
+    assertThat(entity.getChatMessageCollapseThreshold()).isNull();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_CollapseThresholdIsOutOfRange() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatMessageCollapseThreshold(10);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_CreateTrimmedSupportEmail_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail("  support@example.org ");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getSupportEmail().getValue()).isEqualTo("support@example.org");
+    assertThat(captor.getValue().getSupportEmail().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ClearSupportEmail_When_BlankValueIsSent() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setSupportEmail(
+        new de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail()
+            .withValue("support@example.org")
+            .withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail("   ");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getSupportEmail().getValue()).isEmpty();
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {
+        "nope",
+        "a@b",
+        "a@example.org;b@example.org",
+        "<a@example.org>",
+        "support..team@example.org",
+        ".support@example.org",
+        "support.@example.org"
+      })
+  void patchApplicationSettings_Should_RejectAndNotSave_When_SupportEmailIsInvalid(String invalid) {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail(invalid);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+    assertThat(entity.getSupportEmail()).isNull();
+  }
+
+  @Test
   void getGlobalSmtpCredentials_Should_DecryptPasswordAndReturnUsername() {
     // given
     var entity = new ApplicationSettingsEntity();

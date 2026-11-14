@@ -80,13 +80,19 @@ class TenantDefaultConsultingTypeAuthorizationIT {
   }
 
   private void tokenWithRealmRoles(String... roles) {
-    Jwt jwt =
+    tokenWithRealmRolesAndTenant(null, roles);
+  }
+
+  private void tokenWithRealmRolesAndTenant(String tenantClaim, String... roles) {
+    Jwt.Builder builder =
         Jwt.withTokenValue("test-token")
             .header("alg", "none")
             .claim("sub", "subject")
-            .claim("realm_access", Map.of("roles", List.of(roles)))
-            .build();
-    when(jwtDecoder.decode(any(String.class))).thenReturn(jwt);
+            .claim("realm_access", Map.of("roles", List.of(roles)));
+    if (tenantClaim != null) {
+      builder.claim("tenantId", tenantClaim);
+    }
+    when(jwtDecoder.decode(any(String.class))).thenReturn(builder.build());
   }
 
   private static ConsultingTypeDTO consultingTypeFor(Integer tenantId, String slug) {
@@ -97,7 +103,12 @@ class TenantDefaultConsultingTypeAuthorizationIT {
   }
 
   private ResultActions create(String role, ConsultingTypeDTO dto) throws Exception {
-    tokenWithRealmRoles(role);
+    return create(null, role, dto);
+  }
+
+  private ResultActions create(String tenantClaim, String role, ConsultingTypeDTO dto)
+      throws Exception {
+    tokenWithRealmRolesAndTenant(tenantClaim, role);
     return mockMvc.perform(
         post(ROOT_PATH)
             .header("Authorization", "Bearer test-token")
@@ -139,12 +150,12 @@ class TenantDefaultConsultingTypeAuthorizationIT {
   }
 
   @Test
-  void create_Should_stayUnchanged_When_tenantAdminAddsToATenantThatAlreadyHasOne()
+  void create_Should_stayUnchanged_When_platformAdminAddsToATenantThatAlreadyHasOne()
       throws Exception {
-    create("tenant-admin", consultingTypeFor(SECOND_TENANT_ID, "tenant-7702-first"))
+    create("0", "tenant-admin", consultingTypeFor(SECOND_TENANT_ID, "tenant-7702-first"))
         .andExpect(status().isOk());
 
-    create("tenant-admin", consultingTypeFor(SECOND_TENANT_ID, "tenant-7702-second"))
+    create("0", "tenant-admin", consultingTypeFor(SECOND_TENANT_ID, "tenant-7702-second"))
         .andExpect(status().isOk());
   }
 

@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
 /** Repository for {@link ConsultingType}. */
@@ -21,6 +22,7 @@ public class ConsultingTypeMongoRepositoryService implements ConsultingTypeRepos
 
   private final @NonNull ConsultingTypeRepository consultingTypeRepository;
   private final @NonNull ConsultingTypeConverter consultingTypeConverter;
+  private final @NonNull ConsultingTypeIdAllocator ids;
 
   @Value("${feature.multitenancy.with.single.domain.enabled}")
   private boolean multitenancyWithSingleDomainEnabled;
@@ -98,17 +100,17 @@ public class ConsultingTypeMongoRepositoryService implements ConsultingTypeRepos
     } else {
       final var consultingTypeEntity = new ConsultingTypeEntity();
       BeanUtils.copyProperties(consultingType, consultingTypeEntity);
-      return Optional.of(this.consultingTypeRepository.save(consultingTypeEntity));
+      try {
+        return Optional.of(this.consultingTypeRepository.insert(consultingTypeEntity));
+      } catch (DuplicateKeyException concurrentCreation) {
+        return Optional.empty();
+      }
     }
   }
 
   @Override
   public Integer getNextId() {
-    final ConsultingTypeEntity consultingType = consultingTypeRepository.findFirstByOrderByIdDesc();
-    if (consultingType == null) {
-      return 0;
-    }
-    return consultingType.getId() + 1;
+    return ids.reserve();
   }
 
   @Override

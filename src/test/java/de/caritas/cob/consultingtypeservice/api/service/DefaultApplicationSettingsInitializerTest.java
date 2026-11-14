@@ -41,6 +41,34 @@ class DefaultApplicationSettingsInitializerTest {
   }
 
   @Test
+  void init_Should_SeedFurtherCounsellingDefaults() {
+    ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
+
+    assertThat(seeded.getFurtherCounsellingPostcodeMode().getValue()).isEqualTo("SMART");
+    assertThat(seeded.getFurtherCounsellingPostcodeMode().getReadOnly()).isFalse();
+    assertThat(seeded.getTopicDuplicateMode().getValue())
+        .isEqualTo("INFORM_EXISTING_COUNSELLOR_ONCE");
+    assertThat(seeded.getTopicDuplicateMode().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void init_Should_SeedTodaysChatBehaviour() {
+    ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
+
+    assertThat(seeded.getChatComposerDisabledFormats().getValue()).isEmpty();
+    assertThat(seeded.getChatMessageMaxWidthDesktop().getValue()).isEqualTo("770");
+    assertThat(seeded.getChatMessageCollapseThreshold().getValue()).isEqualTo("300");
+  }
+
+  @Test
+  void init_Should_SeedEmptySupportEmail() {
+    ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
+
+    assertThat(seeded.getSupportEmail().getValue()).isEmpty();
+    assertThat(seeded.getSupportEmail().getReadOnly()).isFalse();
+  }
+
+  @Test
   void init_Should_NotSeed_When_SettingsAlreadyExist() {
     when(applicationSettingsRepository.findAll())
         .thenReturn(List.of(new ApplicationSettingsEntity()));

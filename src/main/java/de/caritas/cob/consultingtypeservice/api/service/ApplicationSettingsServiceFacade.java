@@ -19,6 +19,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.Value;
@@ -195,6 +196,38 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getOneTopicPerAgencyEnabled().setValue(settingsPatchDTO.getOneTopicPerAgencyEnabled());
     }
+    if (settingsPatchDTO.getFurtherCounsellingPostcodeMode() != null) {
+      if (entity.getFurtherCounsellingPostcodeMode() == null) {
+        entity.setFurtherCounsellingPostcodeMode(
+            ApplicationSettingsConverter.defaultFurtherCounsellingPostcodeMode());
+      }
+      entity
+          .getFurtherCounsellingPostcodeMode()
+          .setValue(settingsPatchDTO.getFurtherCounsellingPostcodeMode().getValue());
+    }
+    if (settingsPatchDTO.getTopicDuplicateMode() != null) {
+      // The other modes are reserved until ORISO-Frontend#1878 implements them.
+      if (settingsPatchDTO.getTopicDuplicateMode()
+          != ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.INFORM_EXISTING_COUNSELLOR_ONCE) {
+        throw new BadRequestException(
+            "topicDuplicateMode " + settingsPatchDTO.getTopicDuplicateMode() + " is not available");
+      }
+      if (entity.getTopicDuplicateMode() == null) {
+        entity.setTopicDuplicateMode(ApplicationSettingsConverter.defaultTopicDuplicateMode());
+      }
+      entity.getTopicDuplicateMode().setValue(settingsPatchDTO.getTopicDuplicateMode().getValue());
+    }
+    if (settingsPatchDTO.getSupportEmail() != null) {
+      var supportEmail = settingsPatchDTO.getSupportEmail().trim();
+      if (!supportEmail.isEmpty() && !isValidSupportEmail(supportEmail)) {
+        throw new BadRequestException("supportEmail is not a valid e-mail address");
+      }
+      if (entity.getSupportEmail() == null) {
+        entity.setSupportEmail(ApplicationSettingsConverter.defaultSupportEmail());
+      }
+      entity.getSupportEmail().setValue(supportEmail);
+    }
+    convertPatchedChatMessageSettings(settingsPatchDTO, entity);
     if (settingsPatchDTO.getGlobalSmtpEnabled() != null) {
       if (entity.getGlobalSmtpEnabled() == null) {
         entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
@@ -249,6 +282,52 @@ public class ApplicationSettingsServiceFacade {
           .getGlobalSmtpEmailThemeColor()
           .setValue(settingsPatchDTO.getGlobalSmtpEmailThemeColor());
     }
+  }
+
+  private void convertPatchedChatMessageSettings(
+      ApplicationSettingsPatchDTO settingsPatchDTO, ApplicationSettingsEntity entity) {
+    if (settingsPatchDTO.getChatComposerDisabledFormats() != null) {
+      var disabledFormats =
+          ChatMessageSettings.toStoredDisabledFormats(
+              settingsPatchDTO.getChatComposerDisabledFormats());
+      if (entity.getChatComposerDisabledFormats() == null) {
+        entity.setChatComposerDisabledFormats(
+            ApplicationSettingsConverter.defaultChatComposerDisabledFormats());
+      }
+      entity.getChatComposerDisabledFormats().setValue(disabledFormats);
+    }
+    if (settingsPatchDTO.getChatMessageMaxWidthDesktop() != null) {
+      var maxWidth =
+          ChatMessageSettings.toStoredMaxWidth(settingsPatchDTO.getChatMessageMaxWidthDesktop());
+      if (entity.getChatMessageMaxWidthDesktop() == null) {
+        entity.setChatMessageMaxWidthDesktop(
+            ApplicationSettingsConverter.defaultChatMessageMaxWidthDesktop());
+      }
+      entity.getChatMessageMaxWidthDesktop().setValue(maxWidth);
+    }
+    if (settingsPatchDTO.getChatMessageCollapseThreshold() != null) {
+      var threshold =
+          ChatMessageSettings.toStoredCollapseThreshold(
+              settingsPatchDTO.getChatMessageCollapseThreshold());
+      if (entity.getChatMessageCollapseThreshold() == null) {
+        entity.setChatMessageCollapseThreshold(
+            ApplicationSettingsConverter.defaultChatMessageCollapseThreshold());
+      }
+      entity.getChatMessageCollapseThreshold().setValue(threshold);
+    }
+  }
+
+  private static final int SUPPORT_EMAIL_MAX_LENGTH = 254;
+  // One address only: no whitespace, no list separators, no display name; dots in the
+  // local part only between characters (no leading, trailing or doubled dots).
+  private static final Pattern SUPPORT_EMAIL_PATTERN =
+      Pattern.compile(
+          "^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+              + "(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$");
+
+  private static boolean isValidSupportEmail(String value) {
+    return value.length() <= SUPPORT_EMAIL_MAX_LENGTH
+        && SUPPORT_EMAIL_PATTERN.matcher(value).matches();
   }
 
   /**

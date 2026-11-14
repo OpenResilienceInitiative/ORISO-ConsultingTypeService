@@ -14,7 +14,7 @@ env:
 jobs:
   required-integration-tests:
     name: required integration tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
     - name: Checkout repository
@@ -28,7 +28,7 @@ jobs:
   publish:
     name: test, build and publish image
     needs: required-integration-tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: read
