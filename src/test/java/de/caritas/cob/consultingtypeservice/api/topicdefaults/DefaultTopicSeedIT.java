@@ -45,6 +45,7 @@ class DefaultTopicSeedIT {
   @Autowired private TopicRepository topicRepository;
   @Autowired private TopicGroupRepository topicGroupRepository;
   @Autowired private DefaultTopicSeeder defaultTopicSeeder;
+  @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
   @MockitoBean TenantService tenantService;
 
@@ -155,6 +156,35 @@ class DefaultTopicSeedIT {
                 .accept(MediaType.APPLICATION_JSON))
         .andExpect(jsonPath("$[0].name").value("Alte Schwangerschaft"))
         .andExpect(jsonPath("$[0].icon").doesNotExist());
+  }
+
+  @Test
+  void categoryFromAnOlderSeed_getsItsPictureAndTheCaritasTopicOrder() throws Exception {
+    givenNoTopicsAtAll();
+    defaultTopicSeeder.seedOrFillGaps();
+    var migration =
+        topicGroupRepository.findAll().stream()
+            .filter(group -> group.getName().contains("\"de\":\"Migration\""))
+            .findFirst()
+            .orElseThrow();
+    migration.setIcon(null);
+    topicGroupRepository.save(migration);
+    jdbcTemplate.update(
+        "UPDATE topic_group_x_topic SET sort_order = 0 WHERE group_id = ?", migration.getId());
+
+    defaultTopicSeeder.seedOrFillGaps();
+
+    var firstInCaritasOrder =
+        topicRepository.findAll().stream()
+            .filter(topic -> "initial-return-further-migration".equals(topic.getSlug()))
+            .findFirst()
+            .orElseThrow()
+            .getId();
+    mockMvc
+        .perform(get("/topic-groups").accept(MediaType.APPLICATION_JSON))
+        .andExpect(jsonPath("$.data.items[4].name").value("Migration"))
+        .andExpect(jsonPath("$.data.items[4].icon").value(ICON_BASE + "cat-03.png"))
+        .andExpect(jsonPath("$.data.items[4].topicIds[0]").value(firstInCaritasOrder.intValue()));
   }
 
   @Test

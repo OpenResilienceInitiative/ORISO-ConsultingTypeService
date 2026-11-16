@@ -42,8 +42,9 @@ public class TopicAdminController implements TopicadminApi {
   }
 
   @Override
-  @PreAuthorize(
-      "hasAuthority('AUTHORIZATION_UPDATE_TOPIC') or @authorisationService.isSuperAdmin()")
+  // Categories are platform-wide: only the platform admin may change them, never a tenant's
+  // topic-admin, whose tenant filter would see only part of each category.
+  @PreAuthorize("@authorisationService.isSuperAdmin()")
   public ResponseEntity<TopicCatalogueDTO> saveTopicCatalogue(
       final TopicCatalogueDTO topicCatalogueDTO) {
     log.info("Saving the topic catalogue by user {}", authenticatedUser.getUsername());

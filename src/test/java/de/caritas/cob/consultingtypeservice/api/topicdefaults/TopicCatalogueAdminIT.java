@@ -221,6 +221,48 @@ class TopicCatalogueAdminIT {
   }
 
   @Test
+  void tenantTopicAdmin_cannotSaveThePlatformWideCategories() throws Exception {
+    var change = objectMapper.createObjectNode();
+    change.set("groups", objectMapper.createArrayNode());
+    change.set("topics", objectMapper.createArrayNode());
+
+    mockMvc
+        .perform(
+            put(CATALOGUE)
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole("topic-admin")
+                            .withTenantId("5")
+                            .build()))
+                .contentType(APPLICATION_JSON)
+                .content(change.toString()))
+        .andExpect(status().isForbidden());
+    assertThat(topicGroupRepository.count()).isEqualTo(6);
+  }
+
+  @Test
+  void categoryNames_areCleanedOfMarkup() throws Exception {
+    var catalogue = catalogue();
+    var first = (ObjectNode) catalogue.get("groups").get(0);
+    ((ObjectNode) first.get("name")).put("en", "<script>alert(1)</script>Ageing");
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode());
+
+    mockMvc
+        .perform(
+            put(CATALOGUE)
+                .with(authentication(platformAdmin()))
+                .contentType(APPLICATION_JSON)
+                .content(change.toString()))
+        .andExpect(status().isOk());
+
+    assertThat(catalogue().get("groups").get(0).get("name").get("en").asText())
+        .doesNotContain("<script>");
+  }
+
+  @Test
   void traegerAdmin_cannotSaveTheCatalogue() throws Exception {
     var change = objectMapper.createObjectNode();
     change.set("groups", objectMapper.createArrayNode());

@@ -12,6 +12,7 @@ import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicGroupRepository;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.TopicIconPolicy;
+import de.caritas.cob.consultingtypeservice.api.validation.InputSanitizer;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -40,6 +41,7 @@ public class TopicCatalogueService {
   private final @NonNull TopicServiceFacade topicServiceFacade;
   private final @NonNull DefaultTopicSeeder defaultTopicSeeder;
   private final @NonNull TopicGroupOrder topicGroupOrder;
+  private final @NonNull InputSanitizer inputSanitizer;
 
   @Transactional(readOnly = true)
   public TopicCatalogueDTO getCatalogue() {
@@ -92,7 +94,7 @@ public class TopicCatalogueService {
           dto.getId() != null && existing.containsKey(dto.getId())
               ? existing.get(dto.getId())
               : TopicGroupEntity.builder().createDate(now).build();
-      entity.setName(convertToJson(dto.getName()));
+      entity.setName(convertToJson(inputSanitizer.sanitize(dto.getName())));
       entity.setIcon(resolveIcon(dto));
       entity.setSortOrder(position);
       entity.setCustomized(true);
@@ -119,6 +121,9 @@ public class TopicCatalogueService {
       TopicCatalogueGroupDTO group, Map<Long, TopicEntity> topicsById) {
     if (group.getName() == null || group.getName().isEmpty()) {
       throw new BadRequestException("A category needs a name");
+    }
+    if (group.getName().values().stream().anyMatch(name -> name == null || name.length() > 200)) {
+      throw new BadRequestException("A category name has at most 200 characters per language");
     }
     if (group.getTopicIds() == null) {
       throw new BadRequestException("A category needs a topic list");
