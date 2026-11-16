@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd">
+    <!-- Topic icon (shipped default address or the platform admin's own data URL) and the marker
+         that a platform admin saved the topic, so the default seed never overwrites it. -->
+    <changeSet author="oriso" id="0012_topic_icon_and_customized">
+        <sqlFile path="db/changelog/changeset/0012_topic_icon_and_customized/0012_topic_icon_and_customized.sql" stripComments="true"/>
+        <rollback>
+            <sqlFile path="db/changelog/changeset/0012_topic_icon_and_customized/0012_topic_icon_and_customized-rollback.sql" stripComments="true"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

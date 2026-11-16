@@ -280,6 +280,12 @@ components:
     WelcomeMessage:
       type: string
       maxLength: 200
+    TopicIcon:
+      type: string
+      description: >-
+        Address of the topic's icon (the shipped default icons live under
+        /service/topic/public/icons/) or the platform admin's own icon as a data URL
+        (PNG or SVG). On update, an empty string removes the own icon and restores the default.
     FallBackUrl:
       type: string
       maxLength: 200
@@ -325,6 +331,8 @@ components:
           $ref: '#/components/schemas/WelcomeMessage'
         titles:
           $ref: '#/components/schemas/TitlesDTO'
+        icon:
+          $ref: '#/components/schemas/TopicIcon'
 
     TopicMultilingualDTO:
       type: object
@@ -368,6 +376,8 @@ components:
           $ref: '#/components/schemas/WelcomeMessage'
         titles:
           $ref: '#/components/schemas/TitlesMultilingualDTO'
+        icon:
+          $ref: '#/components/schemas/TopicIcon'
 
     Translation:
       type: object
