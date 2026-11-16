@@ -66,6 +66,9 @@ CREATE TABLE IF NOT EXISTS topic_group
     `create_date` timestamp     NOT NULL,
     `tenant_id`   bigint   NULL,
     `update_date` timestamp     NOT NULL,
+    `sort_order`  int DEFAULT 0 NOT NULL,
+    `icon`        clob NULL,
+    `customized`  boolean DEFAULT FALSE NOT NULL,
     PRIMARY KEY (`id`)
 );
 
@@ -77,6 +80,7 @@ CREATE TABLE IF NOT EXISTS topic_group_x_topic
 (
     group_id bigint NOT NULL,
     topic_id bigint NOT NULL,
+    sort_order int DEFAULT 0 NOT NULL,
     foreign key (group_id) references topic_group (id) ON UPDATE CASCADE ON DELETE CASCADE,
     foreign key (topic_id) references topic (id) ON UPDATE CASCADE ON DELETE CASCADE
 );

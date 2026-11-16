@@ -2,7 +2,6 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import de.caritas.cob.consultingtypeservice.api.converter.TopicConverter;
 import de.caritas.cob.consultingtypeservice.api.exception.TopicNotFoundException;
-import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.model.TopicDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
@@ -10,10 +9,10 @@ import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.TopicIconPolicy;
 import de.caritas.cob.consultingtypeservice.api.validation.TopicInputSanitizer;
 import de.caritas.cob.consultingtypeservice.api.validation.TopicValidationService;
 import java.util.List;
-import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,14 +22,6 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 @Slf4j
 public class TopicServiceFacade {
-
-  /** Base64 data URLs only: they render through an img tag, where SVG cannot run scripts. */
-  private static final Pattern ALLOWED_ICON =
-      Pattern.compile(
-          "^(/service/topic/public/icons/[a-z0-9-]+\\.png"
-              + "|data:image/(png|jpeg|webp|svg\\+xml);base64,[A-Za-z0-9+/=]+)$");
-
-  private static final int MAX_ICON_LENGTH = 700_000;
 
   private final @NonNull TopicService topicService;
   private final @NonNull TopicConverter topicConverter;
@@ -53,6 +44,9 @@ public class TopicServiceFacade {
     topicValidationService.validate(topicDTO);
     final TopicMultilingualDTO sanitizedTopicDTO = topicInputSanitizer.sanitize(topicDTO);
     final var topicEntity = topicConverter.toEntity(sanitizedTopicDTO);
+    if (topicEntity.getIcon() != null) {
+      TopicIconPolicy.assertAllowed(topicEntity.getIcon());
+    }
     final var savedTopic = topicService.createTopic(topicEntity);
     return topicConverter.toMultilingualDTO(savedTopic);
   }
@@ -106,10 +100,7 @@ public class TopicServiceFacade {
                   .orElse(null));
       return;
     }
-    if (!ALLOWED_ICON.matcher(icon).matches() || icon.length() > MAX_ICON_LENGTH) {
-      throw new BadRequestException(
-          "Topic icon must be a shipped icon or a PNG, JPEG, WebP or SVG data URL up to 512 KB");
-    }
+    TopicIconPolicy.assertAllowed(icon);
     topic.setIcon(icon);
   }
 

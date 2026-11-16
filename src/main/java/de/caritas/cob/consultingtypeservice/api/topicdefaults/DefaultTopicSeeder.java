@@ -8,16 +8,22 @@ import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicGroupRepository;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicRepository;
+import de.caritas.cob.consultingtypeservice.api.service.TopicGroupOrder;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue.DefaultGroup;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue.DefaultTopic;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue.Placement;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -49,6 +55,7 @@ public class DefaultTopicSeeder implements ApplicationRunner {
   private final TopicRepository topicRepository;
   private final TopicGroupRepository topicGroupRepository;
   private final TransactionTemplate transactionTemplate;
+  private final TopicGroupOrder topicGroupOrder;
 
   @Value("${topics.defaults.enabled:true}")
   private boolean enabled;
@@ -101,21 +108,29 @@ public class DefaultTopicSeeder implements ApplicationRunner {
                 Collectors.toMap(
                     TopicEntity::getSlug, Function.identity(), (a, b) -> a, LinkedHashMap::new));
     if (topicGroupRepository.count() == 0) {
-      catalogue
-          .groups()
-          .forEach(
-              group ->
-                  topicGroupRepository.save(
-                      TopicGroupEntity.builder()
-                          .name(convertToJson(group.getName()))
-                          .createDate(now)
-                          .updateDate(now)
-                          .topicEntities(
-                              group.getTopics().stream()
-                                  .map(placement -> bySlug.get(placement.getSlug()))
-                                  .filter(Objects::nonNull)
-                                  .collect(Collectors.toCollection(HashSet::new)))
-                          .build()));
+      var groups = catalogue.groups();
+      for (int position = 0; position < groups.size(); position++) {
+        var group = groups.get(position);
+        var ordered =
+            group.getTopics().stream()
+                .map(placement -> bySlug.get(placement.getSlug()))
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+        var saved =
+            topicGroupRepository.saveAndFlush(
+                TopicGroupEntity.builder()
+                    .name(convertToJson(group.getName()))
+                    .icon(iconBaseUrl + group.getIcon())
+                    .sortOrder(position)
+                    .customized(false)
+                    .createDate(now)
+                    .updateDate(now)
+                    .topicEntities(new HashSet<>(ordered))
+                    .build());
+        topicGroupOrder.store(
+            saved.getId(), ordered.stream().map(TopicEntity::getId).collect(Collectors.toList()));
+      }
     }
     log.info(
         "Seeded {} default topics and {} categories", bySlug.size(), catalogue.groups().size());
@@ -156,6 +171,82 @@ public class DefaultTopicSeeder implements ApplicationRunner {
     if (filled > 0) {
       log.info("Added missing icons or languages to {} default topics", filled);
     }
+    fillGroupGaps();
+  }
+
+  /**
+   * Categories from an older seed that no platform admin saved get the Caritas picture, missing
+   * languages and the Caritas order of their topics. Which topics they hold stays as it is.
+   */
+  private void fillGroupGaps() {
+    var defaults = catalogue.groups();
+    for (TopicGroupEntity group : topicGroupRepository.findAll()) {
+      if (Boolean.TRUE.equals(group.getCustomized())) {
+        continue;
+      }
+      var german = germanName(group.getName());
+      for (int position = 0; position < defaults.size(); position++) {
+        var defaultGroup = defaults.get(position);
+        if (!defaultGroup.getName().get("de").equals(german)) {
+          continue;
+        }
+        boolean changed = false;
+        if (group.getIcon() == null || group.getIcon().isBlank()) {
+          group.setIcon(iconBaseUrl + defaultGroup.getIcon());
+          changed = true;
+        }
+        changed |= addMissingLanguages(group.getName(), defaultGroup.getName(), group::setName);
+        sortLikeDefault(group, defaultGroup);
+        if (!Integer.valueOf(position).equals(group.getSortOrder())) {
+          group.setSortOrder(position);
+          changed = true;
+        }
+        if (changed) {
+          topicGroupRepository.save(group);
+        }
+      }
+    }
+  }
+
+  /**
+   * Puts the category's topics into the Caritas order; topics the default does not know go last.
+   */
+  private void sortLikeDefault(TopicGroupEntity group, DefaultGroup defaultGroup) {
+    var order =
+        defaultGroup.getTopics().stream().map(Placement::getSlug).collect(Collectors.toList());
+    var slugById =
+        group.getTopicEntities().stream()
+            .filter(Objects::nonNull)
+            .collect(
+                Collectors.toMap(TopicEntity::getId, topic -> String.valueOf(topic.getSlug())));
+    var current = topicGroupOrder.topicIdsInOrder(group);
+    var sorted = new ArrayList<>(current);
+    sorted.sort(
+        Comparator.comparingInt(
+            id -> {
+              int index = order.indexOf(slugById.get(id));
+              return index < 0 ? Integer.MAX_VALUE : index;
+            }));
+    topicGroupOrder.store(group.getId(), sorted);
+  }
+
+  private static String germanName(String nameJson) {
+    if (nameJson == null || nameJson.isBlank()) {
+      return "";
+    }
+    var trimmed = nameJson.trim();
+    return trimmed.startsWith("{") ? convertMapFromJson(trimmed).getOrDefault("de", "") : trimmed;
+  }
+
+  /** The shipped picture of the Caritas category with this name, if it is one. */
+  public Optional<String> defaultGroupIcon(Map<String, String> name) {
+    if (name == null) {
+      return Optional.empty();
+    }
+    return catalogue.groups().stream()
+        .filter(group -> group.getName().get("de").equals(name.get("de")))
+        .map(group -> iconBaseUrl + group.getIcon())
+        .findFirst();
   }
 
   private boolean fillGaps(TopicEntity topic, DefaultTopic defaultTopic) {

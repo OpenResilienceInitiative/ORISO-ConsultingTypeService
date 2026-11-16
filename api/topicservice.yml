@@ -148,6 +148,54 @@ paths:
           description: UNAUTHORIZED - no/invalid Keycloak token
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+  /topicadmin/catalogue:
+    get:
+      tags:
+        - topic-admin-controller
+      summary: 'The topic catalogue for the platform admin: every topic with all translations
+        and icon, and the categories with their names, picture and topic order
+        [Authorization: platform admin or role topic-admin]'
+      operationId: getTopicCatalogue
+      responses:
+        200:
+          description: OK - successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicCatalogueDTO'
+        401:
+          description: UNAUTHORIZED - no/invalid token
+        403:
+          description: FORBIDDEN - no/invalid role/authorization
+    put:
+      tags:
+        - topic-admin-controller
+      summary: 'Saves the categories (order, names, pictures, topic order) and the given changed
+        topics in one go. Categories missing from the list are removed; their topics stay.
+        [Authorization: platform admin or role topic-admin]'
+      operationId: saveTopicCatalogue
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TopicCatalogueDTO'
+        required: true
+      responses:
+        200:
+          description: OK - successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TopicCatalogueDTO'
+        400:
+          description: BAD REQUEST - unknown topic id, invalid icon or invalid body
+        401:
+          description: UNAUTHORIZED - no/invalid token
+        403:
+          description: FORBIDDEN - no/invalid role/authorization
+        409:
+          description: CONFLICT - the change would hide the last visible topic
+
   /topicadmin/{id}:
     summary: Represents a topic
     description: This resource represents an individual topic in a system.
@@ -270,6 +318,9 @@ components:
                     type: string
                     example: "Topic group name"
                     maxLength: 100
+                  icon:
+                    type: string
+                    description: Address or data URL of the category picture
                   topicIds:
                     type: array
                     items:
@@ -280,6 +331,44 @@ components:
     WelcomeMessage:
       type: string
       maxLength: 200
+    TopicCatalogueDTO:
+      type: object
+      required:
+        - groups
+        - topics
+      properties:
+        groups:
+          type: array
+          description: The categories in display order.
+          items:
+            $ref: '#/components/schemas/TopicCatalogueGroupDTO'
+        topics:
+          type: array
+          description: On GET every topic; on PUT only the topics that changed.
+          items:
+            $ref: '#/components/schemas/TopicMultilingualDTO'
+    TopicCatalogueGroupDTO:
+      type: object
+      required:
+        - name
+        - topicIds
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: Empty for a new category.
+        name:
+          type: object
+          additionalProperties:
+            type: string
+        icon:
+          $ref: '#/components/schemas/TopicIcon'
+        topicIds:
+          type: array
+          description: The topics of the category in display order.
+          items:
+            type: integer
+            format: int64
     TopicIcon:
       type: string
       description: >-

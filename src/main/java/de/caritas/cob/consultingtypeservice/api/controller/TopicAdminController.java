@@ -1,8 +1,10 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
 import de.caritas.cob.consultingtypeservice.api.auth.AuthenticatedUser;
+import de.caritas.cob.consultingtypeservice.api.model.TopicCatalogueDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
+import de.caritas.cob.consultingtypeservice.api.service.TopicCatalogueService;
 import de.caritas.cob.consultingtypeservice.api.service.TopicFeatureAuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.service.TopicServiceFacade;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.TopicadminApi;
@@ -29,6 +31,24 @@ public class TopicAdminController implements TopicadminApi {
   @Autowired private AuthenticatedUser authenticatedUser;
 
   @Autowired private TopicFeatureAuthorisationService topicFeatureAuthorisationService;
+
+  @Autowired private TopicCatalogueService topicCatalogueService;
+
+  @Override
+  @PreAuthorize(
+      "hasAuthority('AUTHORIZATION_GET_ALL_TOPICS') or @authorisationService.isSuperAdmin()")
+  public ResponseEntity<TopicCatalogueDTO> getTopicCatalogue() {
+    return ResponseEntity.ok(topicCatalogueService.getCatalogue());
+  }
+
+  @Override
+  @PreAuthorize(
+      "hasAuthority('AUTHORIZATION_UPDATE_TOPIC') or @authorisationService.isSuperAdmin()")
+  public ResponseEntity<TopicCatalogueDTO> saveTopicCatalogue(
+      final TopicCatalogueDTO topicCatalogueDTO) {
+    log.info("Saving the topic catalogue by user {}", authenticatedUser.getUsername());
+    return ResponseEntity.ok(topicCatalogueService.saveCatalogue(topicCatalogueDTO));
+  }
 
   @Override
   @PreAuthorize(

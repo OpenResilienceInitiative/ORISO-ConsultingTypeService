@@ -30,4 +30,5 @@
   <include file="db/changelog/changeset/0010_change_topic_and_topic_groups_to_be_i18n_aware/0010_change_topic_and_topic_groups_to_be_i18n_aware.xml"/>
   <include file="db/changelog/changeset/0011_add_english_topic_names/0011_add_english_topic_names.xml"/>
   <include file="db/changelog/changeset/0012_topic_icon_and_customized/0012_topic_icon_and_customized.xml"/>
+  <include file="db/changelog/changeset/0013_topic_group_order_icon/0013_topic_group_order_icon.xml"/>
 </databaseChangeLog>

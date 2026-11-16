@@ -176,6 +176,22 @@ class PlatformAdminTopicOverrideIT {
   }
 
   @Test
+  void newTopicWithAnIconThatIsNoImage_isRefused() throws Exception {
+    var topic = storedTopic(idOf("pregnancy"));
+    topic.remove("id");
+    topic.put("slug", "new-topic");
+    topic.put("icon", "javascript:alert(1)");
+
+    mockMvc
+        .perform(
+            org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/topicadmin")
+                .with(authentication(platformAdmin()))
+                .contentType(APPLICATION_JSON)
+                .content(topic.toString()))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   void hidingTheLastVisibleTopic_isRefused() throws Exception {
     var lastId = idOf("debt");
     for (TopicEntity other : topicRepository.findAll()) {
