@@ -2,11 +2,18 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import de.caritas.cob.consultingtypeservice.api.converter.TopicConverter;
 import de.caritas.cob.consultingtypeservice.api.exception.TopicNotFoundException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.model.TopicDTO;
+import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
+import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import de.caritas.cob.consultingtypeservice.api.validation.TopicInputSanitizer;
 import de.caritas.cob.consultingtypeservice.api.validation.TopicValidationService;
 import java.util.List;
+import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,10 +24,20 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class TopicServiceFacade {
 
+  /** Base64 data URLs only: they render through an img tag, where SVG cannot run scripts. */
+  private static final Pattern ALLOWED_ICON =
+      Pattern.compile(
+          "^(/service/topic/public/icons/[a-z0-9-]+\\.png"
+              + "|data:image/(png|jpeg|webp|svg\\+xml);base64,[A-Za-z0-9+/=]+)$");
+
+  private static final int MAX_ICON_LENGTH = 700_000;
+
   private final @NonNull TopicService topicService;
   private final @NonNull TopicConverter topicConverter;
   private final @NonNull TopicInputSanitizer topicInputSanitizer;
   private final @NonNull TopicValidationService topicValidationService;
+  private final @NonNull DefaultTopicCatalogue defaultTopicCatalogue;
+  private final @NonNull DefaultTopicSeeder defaultTopicSeeder;
 
   public List<TopicDTO> getAllTopics() {
     final var topicEntities = topicService.getAllTopics();
@@ -46,12 +63,54 @@ public class TopicServiceFacade {
     if (topicById.isPresent()) {
       log.info("Found topic with id {}", topicById);
       final var sanitizedTopicDTO = topicInputSanitizer.sanitize(topicDTO);
+      assertNotHidingLastVisibleTopic(topicById.get(), sanitizedTopicDTO);
       final var topicEntity = topicConverter.toEntity(topicById.get(), sanitizedTopicDTO);
+      applyIcon(topicEntity, sanitizedTopicDTO.getIcon());
+      // From now on this is the platform admin's version; the default seed leaves it alone.
+      topicEntity.setCustomized(true);
       final var updatedEntity = topicService.updateTopic(topicEntity);
       return topicConverter.toMultilingualDTO(updatedEntity);
     } else {
       throw new TopicNotFoundException("Topic with given id could not be found : " + id);
     }
+  }
+
+  private void assertNotHidingLastVisibleTopic(
+      final TopicEntity stored, final TopicMultilingualDTO update) {
+    final boolean hides =
+        TopicStatus.ACTIVE.equals(stored.getStatus())
+            && update.getStatus() != null
+            && !TopicStatus.ACTIVE.name().equalsIgnoreCase(update.getStatus());
+    if (hides && topicService.getAllActiveTopics().size() <= 1) {
+      // An installation must always offer at least one topic in the registration.
+      throw new ConflictException(
+          "Topic " + stored.getId() + " is the last visible topic and cannot be hidden");
+    }
+  }
+
+  /**
+   * Not sent: the stored icon stays. Empty: the own icon is removed, and a default topic shows its
+   * shipped Caritas icon again. Anything else: the platform admin's own icon.
+   */
+  private void applyIcon(final TopicEntity topic, final String icon) {
+    if (icon == null) {
+      return;
+    }
+    if (icon.isEmpty()) {
+      topic.setIcon(
+          topic.getSlug() == null
+              ? null
+              : defaultTopicCatalogue
+                  .findBySlug(topic.getSlug())
+                  .map(defaultTopicSeeder::iconUrl)
+                  .orElse(null));
+      return;
+    }
+    if (!ALLOWED_ICON.matcher(icon).matches() || icon.length() > MAX_ICON_LENGTH) {
+      throw new BadRequestException(
+          "Topic icon must be a shipped icon or a PNG, JPEG, WebP or SVG data URL up to 512 KB");
+    }
+    topic.setIcon(icon);
   }
 
   public List<TopicMultilingualDTO> getAllTopicsMultilingual() {

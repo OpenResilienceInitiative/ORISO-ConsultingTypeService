@@ -202,7 +202,7 @@ public class DefaultTopicSeeder implements ApplicationRunner {
     return changed;
   }
 
-  String iconUrl(DefaultTopic defaultTopic) {
+  public String iconUrl(DefaultTopic defaultTopic) {
     return iconBaseUrl + defaultTopic.getIcon();
   }
 }
