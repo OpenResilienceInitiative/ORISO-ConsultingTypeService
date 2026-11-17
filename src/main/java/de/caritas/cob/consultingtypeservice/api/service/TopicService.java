@@ -1,7 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
-import static de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver.TECHNICAL_TENANT_ID;
-
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
@@ -21,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class TopicService {
 
   private @NonNull TopicRepository topicRepository;
+  private @NonNull AuthorisationService authorisationService;
 
   @Value("${multitenancy.enabled}")
   private boolean multitenancy;
@@ -34,14 +34,15 @@ public class TopicService {
   }
 
   /**
-   * The topics of the catalogue: the platform admin (technical tenant 0) sees the topics of every
-   * tenant, anyone else only those of the own tenant.
+   * The topics of the catalogue: the platform admin sees the topics of every tenant, anyone else
+   * only those of the tenant context. The cross-tenant read follows the authenticated identity
+   * (token tenant 0 and the tenant-admin role), never the tenant context alone.
    */
   public Collection<TopicEntity> getCatalogueTopics() {
-    if (multitenancy && !TECHNICAL_TENANT_ID.equals(TenantContext.getCurrentTenant())) {
-      return topicRepository.findAllForTenant(TenantContext.getCurrentTenant());
+    if (!multitenancy || authorisationService.isSuperAdmin()) {
+      return topicRepository.findAll();
     }
-    return topicRepository.findAll();
+    return topicRepository.findAllForTenant(TenantContext.getCurrentTenant());
   }
 
   /** Active topics of the tenant the given topic belongs to. */

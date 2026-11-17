@@ -2,7 +2,9 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicRepository;
@@ -13,6 +15,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class TopicServiceTest {
@@ -20,6 +23,30 @@ class TopicServiceTest {
   @InjectMocks TopicService topicService;
 
   @Mock TopicRepository topicRepository;
+
+  @Mock AuthorisationService authorisationService;
+
+  @Test
+  void catalogueTopics_spanAllTenants_onlyForThePlatformAdmin() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+    when(authorisationService.isSuperAdmin()).thenReturn(true);
+
+    topicService.getCatalogueTopics();
+
+    verify(topicRepository).findAll();
+  }
+
+  @Test
+  void catalogueTopics_stayInTheTenantContext_forAnyoneElse_evenUnderTenantZero() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+    when(authorisationService.isSuperAdmin()).thenReturn(false);
+
+    topicService.getCatalogueTopics();
+
+    verify(topicRepository).findAllForTenant(0L);
+  }
 
   @AfterEach
   void tearDown() {
