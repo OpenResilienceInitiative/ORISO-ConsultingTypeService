@@ -85,9 +85,15 @@ class TopicCatalogueMultitenancyIT {
   }
 
   private ObjectNode catalogue() throws Exception {
+    return catalogueInTenant("0");
+  }
+
+  /** The platform admin's catalogue, requested with the given tenant header. */
+  private ObjectNode catalogueInTenant(String tenantId) throws Exception {
     var body =
         mockMvc
-            .perform(get(CATALOGUE).header("tenantId", "0").with(authentication(platformAdmin())))
+            .perform(
+                get(CATALOGUE).header("tenantId", tenantId).with(authentication(platformAdmin())))
             .andExpect(status().isOk())
             .andReturn()
             .getResponse()
@@ -147,6 +153,49 @@ class TopicCatalogueMultitenancyIT {
     var savedFirstGroup = saved.get("groups").get(0).get("topicIds");
     assertThat(savedFirstGroup.get(savedFirstGroup.size() - 1).asLong()).isEqualTo(created.getId());
     assertThat(topicRepository.findAll()).extracting(TopicEntity::getTenantId).doesNotContainNull();
+  }
+
+  private static int placements(JsonNode catalogue) {
+    var count = 0;
+    for (JsonNode group : catalogue.get("groups")) {
+      count += group.get("topicIds").size();
+    }
+    return count;
+  }
+
+  /**
+   * The request's tenant (subdomain or header) feeds the Hibernate tenant filter. The platform
+   * admin's catalogue must ignore it: a filtered save would rewrite every category from only that
+   * tenant's topics and silently drop the default topics from all categories.
+   */
+  @Test
+  void thePlatformAdmin_inAnotherTenantsRequest_seesAndSavesTheWholeCatalogue() throws Exception {
+    var catalogue = catalogueInTenant("5");
+    assertThat(catalogue.get("topics")).hasSize(20);
+    var placementsBefore = placements(catalogue);
+    assertThat(placementsBefore).isPositive();
+    var newTopic = objectMapper.createObjectNode();
+    newTopic.put("id", -1);
+    newTopic.set("name", objectMapper.createObjectNode().put("de", "Wohnen"));
+    newTopic.set("description", objectMapper.createObjectNode().put("de", "Beschreibung"));
+    ((ArrayNode) catalogue.get("groups").get(0).get("topicIds")).add(-1);
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(newTopic));
+
+    mockMvc
+        .perform(
+            put(CATALOGUE)
+                .header("tenantId", "5")
+                .with(authentication(platformAdmin()))
+                .contentType(APPLICATION_JSON)
+                .content(change.toString()))
+        .andExpect(status().isOk());
+
+    var saved = catalogue();
+    assertThat(saved.get("topics")).hasSize(21);
+    assertThat(placements(saved)).isEqualTo(placementsBefore + 1);
+    assertThat(seededTopic("wohnen").getTenantId()).isEqualTo(DEFAULT_TOPIC_TENANT);
   }
 
   private static Authentication topicAdminOfTenant5() {

@@ -1,12 +1,16 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
+import static de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver.TECHNICAL_TENANT_ID;
+
 import de.caritas.cob.consultingtypeservice.api.auth.AuthenticatedUser;
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.model.TopicCatalogueDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.service.TopicCatalogueService;
 import de.caritas.cob.consultingtypeservice.api.service.TopicFeatureAuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.service.TopicServiceFacade;
+import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.TopicadminApi;
 import io.swagger.annotations.Api;
 import java.util.List;
@@ -34,10 +38,16 @@ public class TopicAdminController implements TopicadminApi {
 
   @Autowired private TopicCatalogueService topicCatalogueService;
 
+  @Autowired private AuthorisationService authorisationService;
+
   @Override
   @PreAuthorize(
       "hasAuthority('AUTHORIZATION_GET_ALL_TOPICS') or @authorisationService.isSuperAdmin()")
   public ResponseEntity<TopicCatalogueDTO> getTopicCatalogue() {
+    if (authorisationService.isSuperAdmin()) {
+      return ResponseEntity.ok(
+          TenantContext.callWithTenant(TECHNICAL_TENANT_ID, topicCatalogueService::getCatalogue));
+    }
     return ResponseEntity.ok(topicCatalogueService.getCatalogue());
   }
 
@@ -48,7 +58,12 @@ public class TopicAdminController implements TopicadminApi {
   public ResponseEntity<TopicCatalogueDTO> saveTopicCatalogue(
       final TopicCatalogueDTO topicCatalogueDTO) {
     log.info("Saving the topic catalogue by user {}", authenticatedUser.getUsername());
-    return ResponseEntity.ok(topicCatalogueService.saveCatalogue(topicCatalogueDTO));
+    // The request's tenant (subdomain or header) would narrow the Hibernate tenant filter: the save
+    // would then rewrite every category from only that tenant's topics and drop all others. The
+    // whole transaction therefore runs unrestricted.
+    return ResponseEntity.ok(
+        TenantContext.callWithTenant(
+            TECHNICAL_TENANT_ID, () -> topicCatalogueService.saveCatalogue(topicCatalogueDTO)));
   }
 
   @Override

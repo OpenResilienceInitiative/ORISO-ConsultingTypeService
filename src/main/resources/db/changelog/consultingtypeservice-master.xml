@@ -31,4 +31,5 @@
   <include file="db/changelog/changeset/0011_add_english_topic_names/0011_add_english_topic_names.xml"/>
   <include file="db/changelog/changeset/0012_topic_icon_and_customized/0012_topic_icon_and_customized.xml"/>
   <include file="db/changelog/changeset/0013_topic_group_order_icon/0013_topic_group_order_icon.xml"/>
+  <include file="db/changelog/changeset/0014_topic_titles_unquote/0014_topic_titles_unquote.xml"/>
 </databaseChangeLog>

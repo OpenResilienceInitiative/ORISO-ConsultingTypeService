@@ -1,9 +1,12 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import static de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver.TECHNICAL_TENANT_ID;
+
 import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
@@ -21,23 +24,40 @@ public class TopicService {
 
   private @NonNull TopicRepository topicRepository;
   private @NonNull AuthorisationService authorisationService;
+  private @NonNull DefaultTopicSeeder defaultTopicSeeder;
 
   @Value("${multitenancy.enabled}")
   private boolean multitenancy;
 
-  /** The platform admin sees the topics of every tenant, anyone else those of the own tenant. */
+  /**
+   * The topics of the caller's tenant. These lists feed the topic pickers (for example of an
+   * agency), so they never mix tenants; the platform admin in tenant 0 gets the default topics.
+   */
   public Collection<TopicEntity> getAllTopics() {
-    if (multitenancy && !authorisationService.isSuperAdmin()) {
-      return topicRepository.findAllForTenant(TenantContext.getCurrentTenant());
+    if (multitenancy) {
+      return topicRepository.findAllForTenant(topicTenant());
     } else {
       return topicRepository.findAll();
     }
   }
 
   /**
+   * The tenant whose topics the caller manages: the tenant context, or for the platform admin in
+   * the technical tenant 0 (which owns no topics) the tenant of the default topics.
+   */
+  private Long topicTenant() {
+    var current = TenantContext.getCurrentTenant();
+    return TECHNICAL_TENANT_ID.equals(current) && authorisationService.isSuperAdmin()
+        ? defaultTopicSeeder.defaultTopicTenantId()
+        : current;
+  }
+
+  /**
    * The topics of the catalogue: the platform admin sees the topics of every tenant, anyone else
    * only those of the tenant context. The cross-tenant read follows the authenticated identity
-   * (token tenant 0 and the tenant-admin role), never the tenant context alone.
+   * (token tenant 0 and the tenant-admin role), never the tenant context alone. The caller must
+   * also run in tenant context 0, or the Hibernate tenant filter still narrows {@code findAll} (see
+   * TopicAdminController).
    */
   public Collection<TopicEntity> getCatalogueTopics() {
     if (!multitenancy || authorisationService.isSuperAdmin()) {
@@ -67,10 +87,10 @@ public class TopicService {
     }
   }
 
-  /** The platform admin finds a topic of any tenant, anyone else only one of the own tenant. */
+  /** A topic of the caller's tenant, see {@link #getAllTopics()}. */
   public Optional<TopicEntity> findTopicById(Long id) {
-    if (multitenancy && !authorisationService.isSuperAdmin()) {
-      return topicRepository.findByIdForTenant(id, TenantContext.getCurrentTenant());
+    if (multitenancy) {
+      return topicRepository.findByIdForTenant(id, topicTenant());
     } else {
       return topicRepository.findById(id);
     }
