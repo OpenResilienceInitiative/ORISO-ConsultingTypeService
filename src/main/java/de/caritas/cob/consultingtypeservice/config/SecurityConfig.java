@@ -92,7 +92,7 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/settings", "/settings/*")
                     .permitAll()
-                    .requestMatchers("/topic/public", "/topic/public/*")
+                    .requestMatchers("/topic/public", "/topic/public/*", "/topic/public/icons/*")
                     .permitAll()
                     .requestMatchers("/topic", "/topic/*")
                     .authenticated()

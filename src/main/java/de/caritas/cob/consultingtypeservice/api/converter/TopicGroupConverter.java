@@ -4,6 +4,7 @@ import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTOData;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupsDTODataItemsInner;
+import de.caritas.cob.consultingtypeservice.api.service.TopicGroupOrder;
 import de.caritas.cob.consultingtypeservice.api.service.TranslationService;
 import de.caritas.cob.consultingtypeservice.api.util.TranslationUtils;
 import java.util.Collection;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Component;
 public class TopicGroupConverter {
 
   private final @NonNull TranslationService translationService;
+  private final @NonNull TopicGroupOrder topicGroupOrder;
 
   public TopicGroupsDTO toTopicGroupsDTO(Collection<TopicGroupEntity> topicGroups) {
     return new TopicGroupsDTO().data(new TopicGroupsDTOData().items(itemsOf(topicGroups)));
@@ -32,6 +34,7 @@ public class TopicGroupConverter {
                 new TopicGroupsDTODataItemsInner()
                     .topicIds(topicIdsOf(topicGroup))
                     .id(topicGroup.getId().intValue())
+                    .icon(topicGroup.getIcon())
                     .name(
                         resolveNameForGivenLanguageOrFallbackToGerman(topicGroup.getName(), lang)))
         .collect(Collectors.toList());
@@ -41,9 +44,9 @@ public class TopicGroupConverter {
     return TranslationUtils.getTranslatedStringFromMap(nameAsJson, lang);
   }
 
-  private static List<Integer> topicIdsOf(TopicGroupEntity topicGroup) {
-    return topicGroup.getTopicEntities().stream()
-        .map(topicEntity -> topicEntity.getId().intValue())
+  private List<Integer> topicIdsOf(TopicGroupEntity topicGroup) {
+    return topicGroupOrder.topicIdsInOrder(topicGroup).stream()
+        .map(Long::intValue)
         .collect(Collectors.toList());
   }
 }

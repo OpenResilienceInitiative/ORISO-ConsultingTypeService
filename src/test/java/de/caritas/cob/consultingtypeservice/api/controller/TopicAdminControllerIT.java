@@ -73,6 +73,7 @@ class TopicAdminControllerIT {
           throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus("invalid status");
     final String payload = JsonConverter.convertToJson(topicDTO);
     AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
@@ -192,6 +193,7 @@ class TopicAdminControllerIT {
           throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus("a very very long status");
     final String payload = JsonConverter.convertToJson(topicDTO);
     final AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
@@ -211,6 +213,7 @@ class TopicAdminControllerIT {
           throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     final String payload = JsonConverter.convertToJson(topicDTO);
     // OAuth2 resource server returns 401 (not the legacy Keycloak-adapter 403) for anonymous calls
     mockMvc
@@ -224,6 +227,7 @@ class TopicAdminControllerIT {
       throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus(TopicStatus.ACTIVE.toString());
     final String payload = JsonConverter.convertToJson(topicDTO);
     final AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
@@ -241,6 +245,7 @@ class TopicAdminControllerIT {
       throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus(TopicStatus.INACTIVE.toString());
     topicDTO.setSlug("slug");
     topicDTO.setTitles(
@@ -285,6 +290,7 @@ class TopicAdminControllerIT {
       throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus(TopicStatus.INACTIVE.toString());
     topicDTO.setSlug("slug");
     topicDTO.setTitles(
@@ -311,6 +317,7 @@ class TopicAdminControllerIT {
     givenTopicFeatureEnabled(false);
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus(TopicStatus.INACTIVE.toString());
     final String payload = JsonConverter.convertToJson(topicDTO);
     final Authentication authentication = givenMockAuthentication(UserRole.TOPIC_ADMIN);
