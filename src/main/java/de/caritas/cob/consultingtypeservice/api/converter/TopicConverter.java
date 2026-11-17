@@ -122,8 +122,9 @@ public class TopicConverter {
     if (titles != null) {
       topicEntity.setTitlesShort(convertToJson(titles.getShort()));
       topicEntity.setTitlesLong(convertToJson(titles.getLong()));
-      topicEntity.setTitlesWelcome(convertToJson(titles.getWelcome()));
-      topicEntity.setTitlesDropdown(convertToJson(titles.getRegistrationDropdown()));
+      // Plain strings, read back as they are (not JSON).
+      topicEntity.setTitlesWelcome(titles.getWelcome());
+      topicEntity.setTitlesDropdown(titles.getRegistrationDropdown());
     } else {
       nullifyTitleAttributes(topicEntity);
     }

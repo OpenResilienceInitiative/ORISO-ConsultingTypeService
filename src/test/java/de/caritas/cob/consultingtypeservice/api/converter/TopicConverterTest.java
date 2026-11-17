@@ -50,6 +50,8 @@ class TopicConverterTest {
     assertThat(actual.getDescription()).isEqualTo(topicDTO.getDescription().get("de"));
     assertThat(actual.getTitles().getShort()).isEqualTo("ts");
     assertThat(actual.getTitles().getLong()).isEqualTo("tl");
+    assertThat(actual.getTitles().getRegistrationDropdown()).isEqualTo("td");
+    assertThat(actual.getTitles().getWelcome()).isEqualTo("tw");
   }
 
   @Test

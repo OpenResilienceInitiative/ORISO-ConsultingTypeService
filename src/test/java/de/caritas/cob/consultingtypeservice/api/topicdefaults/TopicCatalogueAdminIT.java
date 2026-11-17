@@ -32,6 +32,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -275,5 +276,111 @@ class TopicCatalogueAdminIT {
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
         .andExpect(status().isForbidden());
+  }
+
+  private ObjectNode newTopic(long id, String germanName) {
+    var topic = objectMapper.createObjectNode();
+    topic.put("id", id);
+    topic.set("name", objectMapper.createObjectNode().put("de", germanName));
+    topic.set("description", objectMapper.createObjectNode().put("de", "Beschreibung"));
+    return topic;
+  }
+
+  private ResultActions save(ObjectNode change) throws Exception {
+    return mockMvc.perform(
+        put(CATALOGUE)
+            .with(authentication(platformAdmin()))
+            .contentType(APPLICATION_JSON)
+            .content(change.toString()));
+  }
+
+  private static ObjectNode topicBySlug(JsonNode catalogue, String slug) {
+    for (JsonNode topic : catalogue.get("topics")) {
+      if (slug.equals(topic.get("slug").asText())) {
+        return (ObjectNode) topic;
+      }
+    }
+    throw new AssertionError("no topic " + slug);
+  }
+
+  @Test
+  void aNewTopicPlacedInACategory_isCreatedAndShownThereInOneSave() throws Exception {
+    var catalogue = catalogue();
+    var migration = group(catalogue, "Migration");
+    var migrationIds = ids(migration.get("topicIds"));
+    var topicIds = objectMapper.createArrayNode().add(migrationIds.get(0)).add(-1);
+    migrationIds.subList(1, migrationIds.size()).forEach(topicIds::add);
+    migration.set("topicIds", topicIds);
+    var topic = newTopic(-1, "Wohnen, Übergänge");
+    ((ObjectNode) topic.get("name")).put("en", "Housing and transitions");
+    topic.set("description", objectMapper.createObjectNode().put("de", "Hilfe rund ums Wohnen"));
+    topic.put("icon", OWN_ICON);
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(topic));
+
+    save(change).andExpect(status().isOk());
+
+    var saved = catalogue();
+    assertThat(saved.get("topics")).hasSize(21);
+    var created = topicBySlug(saved, "wohnen-uebergaenge");
+    var createdId = created.get("id").asLong();
+    assertThat(createdId).isPositive();
+    assertThat(created.get("name").get("de").asText()).isEqualTo("Wohnen, Übergänge");
+    assertThat(created.get("name").get("en").asText()).isEqualTo("Housing and transitions");
+    assertThat(created.get("description").get("de").asText()).isEqualTo("Hilfe rund ums Wohnen");
+    assertThat(created.get("icon").asText()).isEqualTo(OWN_ICON);
+    assertThat(created.get("status").asText()).isEqualToIgnoringCase("ACTIVE");
+    assertThat(created.get("internalIdentifier").asText()).isEqualTo("wohnen-uebergaenge");
+    assertThat(created.get("titles").get("short").get("de").asText())
+        .isEqualTo("Wohnen, Übergänge");
+    assertThat(created.get("titles").get("registrationDropdown").asText())
+        .isEqualTo("Wohnen, Übergänge");
+    assertThat(ids(group(saved, "Migration").get("topicIds")).subList(0, 2))
+        .containsExactly(migrationIds.get(0), createdId);
+  }
+
+  @Test
+  void aNewTopicWhoseSlugIsTaken_getsANumberedSlug() throws Exception {
+    var catalogue = catalogue();
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set(
+        "topics",
+        objectMapper.createArrayNode().add(newTopic(-1, "Debt")).add(newTopic(-2, "Debt")));
+
+    save(change).andExpect(status().isOk());
+
+    var saved = catalogue();
+    assertThat(topicBySlug(saved, "debt-2").get("id").asLong()).isNotEqualTo(idOf("debt"));
+    assertThat(topicBySlug(saved, "debt-3").get("name").get("de").asText()).isEqualTo("Debt");
+  }
+
+  @Test
+  void aNewTopicWithoutAGermanName_isRejected() throws Exception {
+    var catalogue = catalogue();
+    var topic = newTopic(-1, "");
+    ((ObjectNode) topic.get("name")).remove("de");
+    ((ObjectNode) topic.get("name")).put("en", "Housing");
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(topic));
+
+    save(change).andExpect(status().isBadRequest());
+
+    assertThat(topicRepository.count()).isEqualTo(20);
+  }
+
+  @Test
+  void aCategoryReferencingANewTopicThatIsNotSent_isRejected() throws Exception {
+    var catalogue = catalogue();
+    ((ArrayNode) group(catalogue, "Migration").get("topicIds")).add(-5);
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(newTopic(-1, "Wohnen")));
+
+    save(change).andExpect(status().isBadRequest());
+
+    assertThat(topicRepository.count()).isEqualTo(20);
   }
 }

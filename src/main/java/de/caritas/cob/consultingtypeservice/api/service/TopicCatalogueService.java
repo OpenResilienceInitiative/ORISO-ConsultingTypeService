@@ -4,11 +4,13 @@ import static de.caritas.cob.consultingtypeservice.api.util.JsonConverter.conver
 import static de.caritas.cob.consultingtypeservice.api.util.JsonConverter.convertToJson;
 
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.model.TitlesMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicCatalogueDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicCatalogueGroupDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
+import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicGroupRepository;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.TopicIconPolicy;
@@ -16,11 +18,13 @@ import de.caritas.cob.consultingtypeservice.api.validation.InputSanitizer;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.NonNull;
@@ -53,6 +57,10 @@ public class TopicCatalogueService {
         .topics(topicServiceFacade.getAllTopicsMultilingual());
   }
 
+  /**
+   * Topics with a negative id are new: they are created first, and the categories may place them by
+   * that negative id.
+   */
   @Transactional
   public TopicCatalogueDTO saveCatalogue(final TopicCatalogueDTO change) {
     Map<Long, TopicEntity> topicsById =
@@ -60,18 +68,88 @@ public class TopicCatalogueService {
             .collect(Collectors.toMap(TopicEntity::getId, Function.identity()));
     var groups =
         change.getGroups() == null ? List.<TopicCatalogueGroupDTO>of() : change.getGroups();
-    groups.forEach(group -> assertKnownTopics(group, topicsById));
+    var topics = change.getTopics() == null ? List.<TopicMultilingualDTO>of() : change.getTopics();
+    var newTopicIds =
+        topics.stream()
+            .map(TopicMultilingualDTO::getId)
+            .filter(id -> id != null && id < 0)
+            .collect(Collectors.toSet());
+    groups.forEach(group -> assertKnownTopics(group, topicsById, newTopicIds));
 
-    if (change.getTopics() != null) {
-      for (TopicMultilingualDTO topic : change.getTopics()) {
-        if (topic.getId() == null || !topicsById.containsKey(topic.getId())) {
-          throw new BadRequestException("Unknown topic " + topic.getId());
+    Map<Long, Long> createdIds = new HashMap<>();
+    var takenSlugs =
+        topicsById.values().stream()
+            .map(TopicEntity::getSlug)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toCollection(HashSet::new));
+    for (TopicMultilingualDTO topic : topics) {
+      if (topic.getId() != null && topic.getId() < 0) {
+        if (createdIds.containsKey(topic.getId())) {
+          throw new BadRequestException("Duplicate new topic " + topic.getId());
         }
+        createdIds.put(topic.getId(), createTopic(topic, takenSlugs).getId());
+      } else if (topic.getId() == null || !topicsById.containsKey(topic.getId())) {
+        throw new BadRequestException("Unknown topic " + topic.getId());
+      } else {
         topicServiceFacade.updateTopic(topic.getId(), topic);
       }
     }
+    if (!createdIds.isEmpty()) {
+      topicService.getAllTopics().forEach(topic -> topicsById.put(topic.getId(), topic));
+      groups.forEach(
+          group ->
+              group.setTopicIds(
+                  group.getTopicIds().stream()
+                      .map(id -> createdIds.getOrDefault(id, id))
+                      .collect(Collectors.toList())));
+    }
     saveGroups(groups, topicsById);
     return getCatalogue();
+  }
+
+  /**
+   * The admin dialog sends name, description and icon only; slug, internal identifier, titles and
+   * status are derived from the German name.
+   */
+  private TopicMultilingualDTO createTopic(TopicMultilingualDTO topic, Set<String> takenSlugs) {
+    var germanName = topic.getName() == null ? null : topic.getName().get("de");
+    if (germanName == null || germanName.isBlank()) {
+      throw new BadRequestException("A new topic needs a German name");
+    }
+    var slug = uniqueSlug(TopicSlugs.slugify(germanName), takenSlugs);
+    takenSlugs.add(slug);
+    topic.setId(null);
+    topic.setSlug(slug);
+    topic.setInternalIdentifier(slug);
+    if (topic.getStatus() == null || topic.getStatus().isBlank()) {
+      topic.setStatus(TopicStatus.ACTIVE.name());
+    }
+    if (topic.getDescription() == null) {
+      topic.setDescription(Map.of());
+    }
+    if (topic.getTitles() == null) {
+      // Titles are not cleaned by the topic sanitizer, so derive them from the cleaned name.
+      var cleanName = inputSanitizer.sanitize(topic.getName());
+      topic.setTitles(
+          new TitlesMultilingualDTO()
+              ._short(cleanName)
+              ._long(cleanName)
+              .welcome(cleanName.get("de"))
+              .registrationDropdown(cleanName.get("de")));
+    }
+    return topicServiceFacade.createTopic(topic);
+  }
+
+  private static String uniqueSlug(String base, Set<String> takenSlugs) {
+    if (!takenSlugs.contains(base)) {
+      return base;
+    }
+    for (int suffix = 2; ; suffix++) {
+      var candidate = TopicSlugs.withSuffix(base, suffix);
+      if (!takenSlugs.contains(candidate)) {
+        return candidate;
+      }
+    }
   }
 
   private void saveGroups(List<TopicCatalogueGroupDTO> groups, Map<Long, TopicEntity> topics) {
@@ -118,7 +196,7 @@ public class TopicCatalogueService {
   }
 
   private static void assertKnownTopics(
-      TopicCatalogueGroupDTO group, Map<Long, TopicEntity> topicsById) {
+      TopicCatalogueGroupDTO group, Map<Long, TopicEntity> topicsById, Set<Long> newTopicIds) {
     if (group.getName() == null || group.getName().isEmpty()) {
       throw new BadRequestException("A category needs a name");
     }
@@ -129,7 +207,7 @@ public class TopicCatalogueService {
       throw new BadRequestException("A category needs a topic list");
     }
     for (Long topicId : group.getTopicIds()) {
-      if (!topicsById.containsKey(topicId)) {
+      if (!topicsById.containsKey(topicId) && !newTopicIds.contains(topicId)) {
         throw new BadRequestException("Unknown topic " + topicId);
       }
     }

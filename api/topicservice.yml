@@ -172,6 +172,8 @@ paths:
         - topic-admin-controller
       summary: 'Saves the categories (order, names, pictures, topic order) and the given changed
         topics in one go. Categories missing from the list are removed; their topics stay.
+        A topic with a negative id is created (it needs a German name; slug, internal identifier,
+        titles and status ACTIVE are derived from it) and categories may place it by that id.
         [Authorization: platform admin or role topic-admin]'
       operationId: saveTopicCatalogue
       requestBody:
@@ -344,7 +346,9 @@ components:
             $ref: '#/components/schemas/TopicCatalogueGroupDTO'
         topics:
           type: array
-          description: On GET every topic; on PUT only the topics that changed.
+          description: >-
+            On GET every topic; on PUT only the topics that changed or are new. A new topic has a
+            negative id, a name with a non-empty "de" entry, and optionally description and icon.
           items:
             $ref: '#/components/schemas/TopicMultilingualDTO'
     TopicCatalogueGroupDTO:
@@ -365,7 +369,9 @@ components:
           $ref: '#/components/schemas/TopicIcon'
         topicIds:
           type: array
-          description: The topics of the category in display order.
+          description: >-
+            The topics of the category in display order. On PUT a negative id refers to a new
+            topic sent in the same request.
           items:
             type: integer
             format: int64
