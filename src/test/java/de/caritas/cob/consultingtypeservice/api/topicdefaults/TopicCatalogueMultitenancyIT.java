@@ -9,6 +9,8 @@ import static org.springframework.security.test.web.servlet.setup.SecurityMockMv
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.fasterxml.jackson.databind.JsonNode;
@@ -26,6 +28,7 @@ import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.RestrictedTenantDTO;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.Settings;
 import java.util.HashSet;
+import java.util.Locale;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,6 +40,7 @@ import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
@@ -256,7 +260,7 @@ class TopicCatalogueMultitenancyIT {
   }
 
   private static void assertRefusedWithoutDebt(MockHttpServletResponse response) throws Exception {
-    assertThat(response.getStatus()).isIn(404, 500);
+    assertThat(response.getStatus()).isEqualTo(404);
     assertThat(response.getContentAsString()).doesNotContain("debt");
   }
 
@@ -276,8 +280,6 @@ class TopicCatalogueMultitenancyIT {
             get("/topicadmin/" + debt.getId())
                 .header("tenantId", "5")
                 .with(authentication(topicAdminOfTenant5())))
-        // The generic handler answers 500 for TopicNotFoundException, see
-        // TenantIsolationWithoutTransactionIT. What matters: refused, no foreign data.
         .andExpect(result -> assertRefusedWithoutDebt(result.getResponse()));
     mockMvc
         .perform(
@@ -286,11 +288,170 @@ class TopicCatalogueMultitenancyIT {
                 .with(authentication(topicAdminOfTenant5()))
                 .contentType(APPLICATION_JSON)
                 .content(topic.toString()))
-        // The generic handler answers 500 for TopicNotFoundException, see
-        // TenantIsolationWithoutTransactionIT. What matters: refused, no foreign data.
         .andExpect(result -> assertRefusedWithoutDebt(result.getResponse()));
 
     assertThat(seededTopic("debt").getName()).doesNotContain("Fremd");
+  }
+
+  private ObjectNode adminTopic(Long id) throws Exception {
+    var body =
+        mockMvc
+            .perform(
+                get("/topicadmin/" + id)
+                    .header("tenantId", "0")
+                    .with(authentication(platformAdmin())))
+            .andExpect(status().isOk())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    return (ObjectNode) objectMapper.readTree(body);
+  }
+
+  private ResultActions putTopic(Long id, ObjectNode topic) throws Exception {
+    return mockMvc.perform(
+        put("/topicadmin/" + id)
+            .header("tenantId", "0")
+            .with(authentication(platformAdmin()))
+            .contentType(APPLICATION_JSON)
+            .content(topic.toString()));
+  }
+
+  private ResultActions saveCatalogue(ObjectNode catalogue, ObjectNode... topics) throws Exception {
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    var changed = objectMapper.createArrayNode();
+    for (ObjectNode topic : topics) {
+      changed.add(topic);
+    }
+    change.set("topics", changed);
+    return mockMvc.perform(
+        put(CATALOGUE)
+            .header("tenantId", "0")
+            .with(authentication(platformAdmin()))
+            .contentType(APPLICATION_JSON)
+            .content(change.toString()));
+  }
+
+  private static ObjectNode catalogueTopic(JsonNode catalogue, Long id) {
+    for (JsonNode topic : catalogue.get("topics")) {
+      if (topic.get("id").asLong() == id) {
+        return (ObjectNode) topic;
+      }
+    }
+    throw new AssertionError("no topic " + id);
+  }
+
+  private static void expectNameTaken(ResultActions result, String germanName) throws Exception {
+    result
+        .andExpect(status().isConflict())
+        .andExpect(header().string("X-Reason", "TOPIC_NAME_TAKEN"))
+        .andExpect(jsonPath("$.status").value(409))
+        .andExpect(
+            jsonPath("$.detail").value("A topic named \"" + germanName + "\" already exists"));
+  }
+
+  @Test
+  void renamingATopicToTheNameOfAnother_isAConflict_andChangesNothing() throws Exception {
+    var debt = seededTopic("debt");
+    var pregnancy = adminTopic(seededTopic("pregnancy").getId());
+    var topic = adminTopic(debt.getId());
+    topic.set("name", pregnancy.get("name").deepCopy());
+
+    expectNameTaken(putTopic(debt.getId(), topic), pregnancy.get("name").get("de").asText());
+
+    assertThat(seededTopic("debt").getName()).isEqualTo(debt.getName());
+  }
+
+  @Test
+  void renamingATopicToTheNameOfAnotherInOtherCase_isAConflict() throws Exception {
+    var debt = seededTopic("debt");
+    var pregnancy = adminTopic(seededTopic("pregnancy").getId());
+    var topic = adminTopic(debt.getId());
+    // The name is unique in all its languages together; only the German one changes case here.
+    var upperCased = (ObjectNode) pregnancy.get("name").deepCopy();
+    upperCased.put("de", upperCased.get("de").asText().toUpperCase(Locale.ROOT));
+    topic.set("name", upperCased);
+
+    expectNameTaken(putTopic(debt.getId(), topic), upperCased.get("de").asText());
+
+    assertThat(seededTopic("debt").getName()).isEqualTo(debt.getName());
+  }
+
+  @Test
+  void keepingTheOwnName_isNoConflict() throws Exception {
+    var debt = seededTopic("debt");
+    var topic = adminTopic(debt.getId());
+    topic.put("status", "ACTIVE");
+
+    putTopic(debt.getId(), topic).andExpect(status().isOk());
+  }
+
+  @Test
+  void renamingATopicInTheCatalogueToTheNameOfAnother_isAConflict_andChangesNothing()
+      throws Exception {
+    var debt = seededTopic("debt");
+    var catalogue = catalogue();
+    var pregnancyName = catalogueTopic(catalogue, seededTopic("pregnancy").getId()).get("name");
+    var renamed = catalogueTopic(catalogue, debt.getId());
+    renamed.set("name", pregnancyName.deepCopy());
+
+    expectNameTaken(saveCatalogue(catalogue, renamed), pregnancyName.get("de").asText());
+
+    assertThat(seededTopic("debt").getName()).isEqualTo(debt.getName());
+  }
+
+  @Test
+  void twoTopicsRenamedToTheSameNameInOneSave_areAConflict_andChangeNothing() throws Exception {
+    var debt = seededTopic("debt");
+    var pregnancy = seededTopic("pregnancy");
+    var catalogue = catalogue();
+    var first = catalogueTopic(catalogue, debt.getId());
+    var second = catalogueTopic(catalogue, pregnancy.getId());
+    first.set("name", objectMapper.createObjectNode().put("de", "Gleich"));
+    second.set("name", objectMapper.createObjectNode().put("de", "gleich"));
+
+    expectNameTaken(saveCatalogue(catalogue, first, second), "gleich");
+
+    assertThat(seededTopic("debt").getName()).isEqualTo(debt.getName());
+    assertThat(seededTopic("pregnancy").getName()).isEqualTo(pregnancy.getName());
+  }
+
+  @Test
+  void twoTopicsSwappingTheirNamesInOneSave_isAllowed() throws Exception {
+    var debt = seededTopic("debt");
+    var pregnancy = seededTopic("pregnancy");
+    var catalogue = catalogue();
+    var first = catalogueTopic(catalogue, debt.getId());
+    var second = catalogueTopic(catalogue, pregnancy.getId());
+    var firstName = first.get("name").deepCopy();
+    var secondName = second.get("name").deepCopy();
+    first.set("name", secondName.deepCopy());
+    second.set("name", firstName.deepCopy());
+
+    saveCatalogue(catalogue, first, second).andExpect(status().isOk());
+
+    var saved = catalogue();
+    assertThat(catalogueTopic(saved, debt.getId()).get("name")).isEqualTo(secondName);
+    assertThat(catalogueTopic(saved, pregnancy.getId()).get("name")).isEqualTo(firstName);
+  }
+
+  @Test
+  void aTopicTakingTheOldNameOfAnotherRenamedTopic_isAllowed() throws Exception {
+    var debt = seededTopic("debt");
+    var pregnancy = seededTopic("pregnancy");
+    var catalogue = catalogue();
+    var first = catalogueTopic(catalogue, debt.getId());
+    var second = catalogueTopic(catalogue, pregnancy.getId());
+    var secondOldName = second.get("name").deepCopy();
+    second.set("name", objectMapper.createObjectNode().put("de", "Ganz neu"));
+    first.set("name", secondOldName);
+
+    saveCatalogue(catalogue, first, second).andExpect(status().isOk());
+
+    var saved = catalogue();
+    assertThat(catalogueTopic(saved, debt.getId()).get("name")).isEqualTo(secondOldName);
+    assertThat(catalogueTopic(saved, pregnancy.getId()).get("name").get("de").asText())
+        .isEqualTo("Ganz neu");
   }
 
   @Test

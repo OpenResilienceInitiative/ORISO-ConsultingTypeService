@@ -10,6 +10,7 @@ import de.caritas.cob.consultingtypeservice.api.model.TopicDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
+import de.caritas.cob.consultingtypeservice.api.service.TopicNameUniqueness.NamedTopic;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
@@ -34,10 +35,17 @@ public class TopicServiceFacade {
   private final @NonNull DefaultTopicCatalogue defaultTopicCatalogue;
   private final @NonNull DefaultTopicSeeder defaultTopicSeeder;
   private final @NonNull AuthorisationService authorisationService;
+  private final @NonNull TopicNameUniqueness topicNameUniqueness;
 
+  /** The public topic list: the request's tenant only, see {@link TopicService#getAllTopics()}. */
   public List<TopicDTO> getAllTopics() {
     final var topicEntities = topicService.getAllTopics();
     return topicConverter.toDTOList(topicEntities);
+  }
+
+  /** The /topicadmin list, see {@link TopicService#getAllTopicsForAdmin()}. */
+  public List<TopicDTO> getAllTopicsForAdmin() {
+    return topicConverter.toDTOList(topicService.getAllTopicsForAdmin());
   }
 
   public List<TopicDTO> getAllActiveTopics() {
@@ -75,7 +83,7 @@ public class TopicServiceFacade {
   }
 
   public TopicMultilingualDTO updateTopic(final Long id, final TopicMultilingualDTO topicDTO) {
-    final var topicById = topicService.findTopicById(id);
+    final var topicById = topicService.findTopicByIdForAdmin(id);
     if (topicById.isPresent()) {
       log.info("Found topic with id {}", topicById);
       return updateTopic(topicById.get(), topicDTO);
@@ -92,7 +100,8 @@ public class TopicServiceFacade {
 
   /**
    * As {@link #updateTopic(TopicEntity, TopicMultilingualDTO)}, but without the "last visible
-   * topic" check: a batch that hides and shows topics checks the end state once instead.
+   * topic" and "name taken" checks: a batch checks its end state once instead (see
+   * TopicCatalogueService).
    */
   public TopicMultilingualDTO updateTopicInBatch(
       final TopicEntity stored, final TopicMultilingualDTO topicDTO) {
@@ -100,13 +109,12 @@ public class TopicServiceFacade {
   }
 
   private TopicMultilingualDTO updateTopic(
-      final TopicEntity stored,
-      final TopicMultilingualDTO topicDTO,
-      final boolean checkLastVisibleTopic) {
+      final TopicEntity stored, final TopicMultilingualDTO topicDTO, final boolean singleUpdate) {
     topicValidationService.validate(topicDTO);
     final var sanitizedTopicDTO = topicInputSanitizer.sanitize(topicDTO);
-    if (checkLastVisibleTopic) {
+    if (singleUpdate) {
       assertNotHidingLastVisibleTopic(stored, sanitizedTopicDTO);
+      assertNameFree(stored, topicDTO);
     }
     final var topicEntity = topicConverter.toEntity(stored, sanitizedTopicDTO);
     applyIcon(topicEntity, sanitizedTopicDTO.getIcon());
@@ -114,6 +122,16 @@ public class TopicServiceFacade {
     topicEntity.setCustomized(true);
     final var updatedEntity = topicService.updateTopic(topicEntity);
     return topicConverter.toMultilingualDTO(updatedEntity);
+  }
+
+  /** 409 instead of a 500 from the database when the new name is taken in the topic's tenant. */
+  private void assertNameFree(final TopicEntity stored, final TopicMultilingualDTO update) {
+    if (update.getName() == null) {
+      return;
+    }
+    topicNameUniqueness.assertUniqueAfter(
+        topicService.getAllTopicsOfTenant(stored.getTenantId()),
+        List.of(new NamedTopic(stored.getId(), stored.getTenantId(), update.getName())));
   }
 
   private void assertNotHidingLastVisibleTopic(
@@ -162,7 +180,7 @@ public class TopicServiceFacade {
   }
 
   public TopicMultilingualDTO getTopicMultilingualById(final Long id) {
-    final var topicEntity = topicService.findTopicById(id);
+    final var topicEntity = topicService.findTopicByIdForAdmin(id);
     if (topicEntity.isPresent()) {
       return topicConverter.toMultilingualDTO(topicEntity.get());
     } else {

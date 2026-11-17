@@ -1,10 +1,13 @@
 package de.caritas.cob.consultingtypeservice.api.exception;
 
-import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
 
-@ResponseStatus(value = HttpStatus.NOT_FOUND, reason = "No such topic")
-public class TopicNotFoundException extends RuntimeException {
+/**
+ * 404: no topic with this id in the caller's reach. A topic of another tenant is indistinguishable
+ * from an unknown one. Rendered by the {@link NotFoundException} handler, never by the generic 500
+ * fallback.
+ */
+public class TopicNotFoundException extends NotFoundException {
 
   public TopicNotFoundException(String exception) {
     super(exception);

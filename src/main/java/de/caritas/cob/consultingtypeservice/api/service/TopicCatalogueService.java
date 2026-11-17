@@ -13,18 +13,17 @@ import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicGroupRepository;
+import de.caritas.cob.consultingtypeservice.api.service.TopicNameUniqueness.NamedTopic;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.TopicIconPolicy;
 import de.caritas.cob.consultingtypeservice.api.validation.InputSanitizer;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -49,6 +48,7 @@ public class TopicCatalogueService {
   private final @NonNull DefaultTopicSeeder defaultTopicSeeder;
   private final @NonNull TopicGroupOrder topicGroupOrder;
   private final @NonNull InputSanitizer inputSanitizer;
+  private final @NonNull TopicNameUniqueness topicNameUniqueness;
 
   @Transactional(readOnly = true)
   public TopicCatalogueDTO getCatalogue() {
@@ -78,7 +78,9 @@ public class TopicCatalogueService {
             .filter(id -> id != null && id < 0)
             .collect(Collectors.toSet());
     groups.forEach(group -> assertKnownTopics(group, topicsById, newTopicIds));
-    assertNewTopicNamesAreFree(topics, topicsById.values());
+    var names = namedTopics(topics, topicsById);
+    topicNameUniqueness.assertUniqueAfter(topicsById.values(), names);
+    topicNameUniqueness.namesToRelease(topicsById, names).forEach(topicService::releaseName);
 
     Map<Long, Long> createdIds = new HashMap<>();
     Set<Long> touchedTenants = new HashSet<>();
@@ -150,35 +152,25 @@ public class TopicCatalogueService {
   }
 
   /**
-   * The database allows a name only once per tenant. New topics join the default topic tenant, so
-   * their names must differ from those stored there and from each other.
+   * The names the save gives: new topics join the default topic tenant, changed topics stay in
+   * their own. Topics without a name keep theirs; unknown ids are rejected later.
    */
-  private void assertNewTopicNamesAreFree(
-      List<TopicMultilingualDTO> topics, Collection<TopicEntity> stored) {
-    var tenantId = defaultTopicSeeder.defaultTopicTenantId();
-    var takenNames =
-        stored.stream()
-            .filter(topic -> Objects.equals(tenantId, topic.getTenantId()))
-            .map(topic -> comparableName(convertMapFromJson(topic.getName())))
-            .collect(Collectors.toCollection(HashSet::new));
+  private List<NamedTopic> namedTopics(
+      List<TopicMultilingualDTO> topics, Map<Long, TopicEntity> topicsById) {
+    var named = new ArrayList<NamedTopic>();
     for (TopicMultilingualDTO topic : topics) {
-      if (topic.getId() == null || topic.getId() >= 0 || topic.getName() == null) {
+      if (topic.getId() == null || topic.getName() == null) {
         continue;
       }
-      if (!takenNames.add(comparableName(inputSanitizer.sanitize(topic.getName())))) {
-        throw new BadRequestException(
-            "A topic named \"" + topic.getName().get("de") + "\" already exists");
+      if (topic.getId() < 0) {
+        named.add(new NamedTopic(null, defaultTopicSeeder.defaultTopicTenantId(), topic.getName()));
+      } else if (topicsById.containsKey(topic.getId())) {
+        named.add(
+            new NamedTopic(
+                topic.getId(), topicsById.get(topic.getId()).getTenantId(), topic.getName()));
       }
     }
-  }
-
-  /** MariaDB compares the stored names case-insensitively. */
-  private static Map<String, String> comparableName(Map<String, String> name) {
-    return name.entrySet().stream()
-        .filter(entry -> entry.getValue() != null)
-        .collect(
-            Collectors.toMap(
-                Map.Entry::getKey, entry -> entry.getValue().toLowerCase(Locale.ROOT)));
+    return named;
   }
 
   /**
