@@ -1,5 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import static de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver.TECHNICAL_TENANT_ID;
+
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
@@ -29,6 +31,25 @@ public class TopicService {
     } else {
       return topicRepository.findAll();
     }
+  }
+
+  /**
+   * The topics of the catalogue: the platform admin (technical tenant 0) sees the topics of every
+   * tenant, anyone else only those of the own tenant.
+   */
+  public Collection<TopicEntity> getCatalogueTopics() {
+    if (multitenancy && !TECHNICAL_TENANT_ID.equals(TenantContext.getCurrentTenant())) {
+      return topicRepository.findAllForTenant(TenantContext.getCurrentTenant());
+    }
+    return topicRepository.findAll();
+  }
+
+  /** Active topics of the tenant the given topic belongs to. */
+  public Collection<TopicEntity> getAllActiveTopicsOfTenantOf(TopicEntity topic) {
+    if (multitenancy && topic.getTenantId() != null) {
+      return topicRepository.findAllActiveForTenant(topic.getTenantId());
+    }
+    return getAllActiveTopics();
   }
 
   public Collection<TopicEntity> getAllActiveTopics() {

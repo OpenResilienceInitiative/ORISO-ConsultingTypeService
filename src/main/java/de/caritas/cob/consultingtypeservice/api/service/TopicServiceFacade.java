@@ -41,9 +41,18 @@ public class TopicServiceFacade {
   }
 
   public TopicMultilingualDTO createTopic(final TopicMultilingualDTO topicDTO) {
+    return createTopic(topicDTO, null);
+  }
+
+  /** As {@link #createTopic(TopicMultilingualDTO)}, owned by the given tenant when not null. */
+  public TopicMultilingualDTO createTopic(
+      final TopicMultilingualDTO topicDTO, final Long tenantId) {
     topicValidationService.validate(topicDTO);
     final TopicMultilingualDTO sanitizedTopicDTO = topicInputSanitizer.sanitize(topicDTO);
     final var topicEntity = topicConverter.toEntity(sanitizedTopicDTO);
+    if (tenantId != null) {
+      topicEntity.setTenantId(tenantId);
+    }
     if (topicEntity.getIcon() != null) {
       TopicIconPolicy.assertAllowed(topicEntity.getIcon());
     }
@@ -52,21 +61,27 @@ public class TopicServiceFacade {
   }
 
   public TopicMultilingualDTO updateTopic(final Long id, final TopicMultilingualDTO topicDTO) {
-    topicValidationService.validate(topicDTO);
     final var topicById = topicService.findTopicById(id);
     if (topicById.isPresent()) {
       log.info("Found topic with id {}", topicById);
-      final var sanitizedTopicDTO = topicInputSanitizer.sanitize(topicDTO);
-      assertNotHidingLastVisibleTopic(topicById.get(), sanitizedTopicDTO);
-      final var topicEntity = topicConverter.toEntity(topicById.get(), sanitizedTopicDTO);
-      applyIcon(topicEntity, sanitizedTopicDTO.getIcon());
-      // From now on this is the platform admin's version; the default seed leaves it alone.
-      topicEntity.setCustomized(true);
-      final var updatedEntity = topicService.updateTopic(topicEntity);
-      return topicConverter.toMultilingualDTO(updatedEntity);
+      return updateTopic(topicById.get(), topicDTO);
     } else {
       throw new TopicNotFoundException("Topic with given id could not be found : " + id);
     }
+  }
+
+  /** Updates a topic the caller already looked up, e.g. across tenants for the catalogue. */
+  public TopicMultilingualDTO updateTopic(
+      final TopicEntity stored, final TopicMultilingualDTO topicDTO) {
+    topicValidationService.validate(topicDTO);
+    final var sanitizedTopicDTO = topicInputSanitizer.sanitize(topicDTO);
+    assertNotHidingLastVisibleTopic(stored, sanitizedTopicDTO);
+    final var topicEntity = topicConverter.toEntity(stored, sanitizedTopicDTO);
+    applyIcon(topicEntity, sanitizedTopicDTO.getIcon());
+    // From now on this is the platform admin's version; the default seed leaves it alone.
+    topicEntity.setCustomized(true);
+    final var updatedEntity = topicService.updateTopic(topicEntity);
+    return topicConverter.toMultilingualDTO(updatedEntity);
   }
 
   private void assertNotHidingLastVisibleTopic(
@@ -75,7 +90,7 @@ public class TopicServiceFacade {
         TopicStatus.ACTIVE.equals(stored.getStatus())
             && update.getStatus() != null
             && !TopicStatus.ACTIVE.name().equalsIgnoreCase(update.getStatus());
-    if (hides && topicService.getAllActiveTopics().size() <= 1) {
+    if (hides && topicService.getAllActiveTopicsOfTenantOf(stored).size() <= 1) {
       // An installation must always offer at least one topic in the registration.
       throw new ConflictException(
           "Topic " + stored.getId() + " is the last visible topic and cannot be hidden");
@@ -102,6 +117,11 @@ public class TopicServiceFacade {
     }
     TopicIconPolicy.assertAllowed(icon);
     topic.setIcon(icon);
+  }
+
+  /** Every topic the catalogue shows, see {@link TopicService#getCatalogueTopics()}. */
+  public List<TopicMultilingualDTO> getCatalogueTopicsMultilingual() {
+    return topicConverter.toMultilingualDTOList(topicService.getCatalogueTopics());
   }
 
   public List<TopicMultilingualDTO> getAllTopicsMultilingual() {

@@ -54,7 +54,7 @@ public class TopicCatalogueService {
             topicGroupRepository.findAllByOrderBySortOrderAscIdAsc().stream()
                 .map(this::toGroupDTO)
                 .collect(Collectors.toList()))
-        .topics(topicServiceFacade.getAllTopicsMultilingual());
+        .topics(topicServiceFacade.getCatalogueTopicsMultilingual());
   }
 
   /**
@@ -64,7 +64,7 @@ public class TopicCatalogueService {
   @Transactional
   public TopicCatalogueDTO saveCatalogue(final TopicCatalogueDTO change) {
     Map<Long, TopicEntity> topicsById =
-        topicService.getAllTopics().stream()
+        topicService.getCatalogueTopics().stream()
             .collect(Collectors.toMap(TopicEntity::getId, Function.identity()));
     var groups =
         change.getGroups() == null ? List.<TopicCatalogueGroupDTO>of() : change.getGroups();
@@ -91,11 +91,11 @@ public class TopicCatalogueService {
       } else if (topic.getId() == null || !topicsById.containsKey(topic.getId())) {
         throw new BadRequestException("Unknown topic " + topic.getId());
       } else {
-        topicServiceFacade.updateTopic(topic.getId(), topic);
+        topicServiceFacade.updateTopic(topicsById.get(topic.getId()), topic);
       }
     }
     if (!createdIds.isEmpty()) {
-      topicService.getAllTopics().forEach(topic -> topicsById.put(topic.getId(), topic));
+      topicService.getCatalogueTopics().forEach(topic -> topicsById.put(topic.getId(), topic));
       groups.forEach(
           group ->
               group.setTopicIds(
@@ -137,7 +137,7 @@ public class TopicCatalogueService {
               .welcome(cleanName.get("de"))
               .registrationDropdown(cleanName.get("de")));
     }
-    return topicServiceFacade.createTopic(topic);
+    return topicServiceFacade.createTopic(topic, defaultTopicSeeder.defaultTopicTenantId());
   }
 
   private static String uniqueSlug(String base, Set<String> takenSlugs) {

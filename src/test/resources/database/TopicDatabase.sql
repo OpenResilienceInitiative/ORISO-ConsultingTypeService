@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS `topic`
     `fallback_agency_id`     bigint   NULL,
     `fallback_url`           varchar(200) NULL,
     `welcome_message`        varchar(200) NULL,
-    `send_next_step_message` boolean DEFAULT FALSE,
+    `send_next_step_message` boolean DEFAULT FALSE NOT NULL,
     `titles_short`           varchar(4092) NOT NULL,
     `titles_long`            varchar(4092) NOT NULL,
     `titles_welcome`         varchar(255) NOT NULL,

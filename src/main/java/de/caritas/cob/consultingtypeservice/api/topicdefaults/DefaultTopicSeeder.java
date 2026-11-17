@@ -80,6 +80,11 @@ public class DefaultTopicSeeder implements ApplicationRunner {
     }
   }
 
+  /** The tenant the default topics belong to; topics the platform admin adds join it. */
+  public Long defaultTopicTenantId() {
+    return tenantId;
+  }
+
   public void seedOrFillGaps() {
     var previousTenant = TenantContext.getCurrentTenant();
     TenantContext.setCurrentTenant(TenantResolver.TECHNICAL_TENANT_ID);

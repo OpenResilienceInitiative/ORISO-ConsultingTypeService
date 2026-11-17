@@ -69,8 +69,10 @@ public class TopicEntity implements TenantAware {
   @Column(name = "welcome_message")
   private String welcomeMessage;
 
-  @Column(name = "send_next_step_message")
-  private Boolean sendNextStepMessage;
+  /** NOT NULL in the database; an explicit NULL would not get the column default. */
+  @Builder.Default
+  @Column(name = "send_next_step_message", nullable = false)
+  private Boolean sendNextStepMessage = false;
 
   @Column(name = "titles_short")
   private String titlesShort;
