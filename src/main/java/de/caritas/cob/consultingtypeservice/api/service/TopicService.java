@@ -25,8 +25,9 @@ public class TopicService {
   @Value("${multitenancy.enabled}")
   private boolean multitenancy;
 
+  /** The platform admin sees the topics of every tenant, anyone else those of the own tenant. */
   public Collection<TopicEntity> getAllTopics() {
-    if (multitenancy) {
+    if (multitenancy && !authorisationService.isSuperAdmin()) {
       return topicRepository.findAllForTenant(TenantContext.getCurrentTenant());
     } else {
       return topicRepository.findAll();
@@ -66,8 +67,9 @@ public class TopicService {
     }
   }
 
+  /** The platform admin finds a topic of any tenant, anyone else only one of the own tenant. */
   public Optional<TopicEntity> findTopicById(Long id) {
-    if (multitenancy) {
+    if (multitenancy && !authorisationService.isSuperAdmin()) {
       return topicRepository.findByIdForTenant(id, TenantContext.getCurrentTenant());
     } else {
       return topicRepository.findById(id);

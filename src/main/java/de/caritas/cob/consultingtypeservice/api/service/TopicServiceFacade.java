@@ -1,5 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import static de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver.TECHNICAL_TENANT_ID;
+
 import de.caritas.cob.consultingtypeservice.api.converter.TopicConverter;
 import de.caritas.cob.consultingtypeservice.api.exception.TopicNotFoundException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
@@ -7,6 +9,7 @@ import de.caritas.cob.consultingtypeservice.api.model.TopicDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
+import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import de.caritas.cob.consultingtypeservice.api.topicdefaults.TopicIconPolicy;
@@ -40,8 +43,16 @@ public class TopicServiceFacade {
     return topicConverter.toDTOList(topicEntities);
   }
 
+  /**
+   * In the technical tenant 0 (the platform admin) the Hibernate interceptor assigns no tenant, so
+   * the topic joins the default topics' tenant, as in the catalogue.
+   */
   public TopicMultilingualDTO createTopic(final TopicMultilingualDTO topicDTO) {
-    return createTopic(topicDTO, null);
+    final var tenantId =
+        TECHNICAL_TENANT_ID.equals(TenantContext.getCurrentTenant())
+            ? defaultTopicSeeder.defaultTopicTenantId()
+            : null;
+    return createTopic(topicDTO, tenantId);
   }
 
   /** As {@link #createTopic(TopicMultilingualDTO)}, owned by the given tenant when not null. */
