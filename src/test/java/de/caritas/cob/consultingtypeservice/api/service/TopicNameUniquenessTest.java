@@ -85,4 +85,15 @@ class TopicNameUniquenessTest {
 
     assertThat(uniqueness.namesToRelease(Map.of(1L, debt, 2L, family), changes)).isEmpty();
   }
+
+  @Test
+  void topicsWithoutATenant_areNeverAConflict_likeInTheDatabase() {
+    var withoutTenant = new TopicEntity();
+    withoutTenant.setId(4L);
+    withoutTenant.setName("{\"de\":\"Ohne\"}");
+    var changes = List.of(new NamedTopic(null, null, Map.of("de", "Ohne")));
+
+    assertThatCode(() -> uniqueness.assertUniqueAfter(List.of(withoutTenant), changes))
+        .doesNotThrowAnyException();
+  }
 }

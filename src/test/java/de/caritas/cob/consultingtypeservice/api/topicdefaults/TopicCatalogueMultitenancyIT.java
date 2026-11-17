@@ -480,4 +480,36 @@ class TopicCatalogueMultitenancyIT {
 
     assertThat(seededTopic("neues-thema").getTenantId()).isEqualTo(DEFAULT_TOPIC_TENANT);
   }
+
+  @Test
+  void creatingATopicWithATakenName_isAConflict_andCreatesNothing() throws Exception {
+    var debtName = adminTopic(seededTopic("debt").getId()).get("name");
+    var topic = objectMapper.createObjectNode();
+    topic.set("name", debtName.deepCopy());
+    topic.set("description", objectMapper.createObjectNode().put("de", "Beschreibung"));
+    topic.put("status", "ACTIVE");
+    topic.put("internalIdentifier", "doppelt");
+    topic.put("slug", "doppelt");
+    var titles = objectMapper.createObjectNode();
+    titles.set("short", objectMapper.createObjectNode().put("de", "Doppelt"));
+    titles.set("long", objectMapper.createObjectNode().put("de", "Doppelt"));
+    titles.put("welcome", "Doppelt");
+    titles.put("registrationDropdown", "Doppelt");
+    topic.set("titles", titles);
+    // The request's tenant filter clears the tenant context of this thread when it is done.
+    TenantContext.setCurrentTenant(0L);
+    var countBefore = topicRepository.count();
+
+    expectNameTaken(
+        mockMvc.perform(
+            post("/topicadmin")
+                .header("tenantId", "0")
+                .with(authentication(platformAdmin()))
+                .contentType(APPLICATION_JSON)
+                .content(topic.toString())),
+        debtName.get("de").asText());
+
+    TenantContext.setCurrentTenant(0L);
+    assertThat(topicRepository.count()).isEqualTo(countBefore);
+  }
 }

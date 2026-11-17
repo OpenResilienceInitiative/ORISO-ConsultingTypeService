@@ -63,7 +63,18 @@ public class TopicServiceFacade {
                 && TECHNICAL_TENANT_ID.equals(TenantContext.getCurrentTenant())
             ? defaultTopicSeeder.defaultTopicTenantId()
             : null;
+    assertNewNameFree(topicDTO, tenantId != null ? tenantId : TenantContext.getCurrentTenant());
     return createTopic(topicDTO, tenantId);
+  }
+
+  /** 409 instead of a 500 from the database when the name is taken in the target tenant. */
+  private void assertNewNameFree(final TopicMultilingualDTO topicDTO, final Long tenantId) {
+    if (topicDTO.getName() == null) {
+      return;
+    }
+    topicNameUniqueness.assertUniqueAfter(
+        topicService.getAllTopicsOfTenant(tenantId),
+        List.of(new NamedTopic(null, tenantId, topicDTO.getName())));
   }
 
   /** As {@link #createTopic(TopicMultilingualDTO)}, owned by the given tenant when not null. */

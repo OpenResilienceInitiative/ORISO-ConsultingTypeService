@@ -44,13 +44,16 @@ public class TopicNameUniqueness {
   /**
    * @param stored the topics as stored, at least those of every tenant the changes touch
    * @param changes the new names; a stored topic not among them keeps its name
-   * @throws TopicNameConflictException if two topics of one tenant would end up with the same name
+   * @throws TopicNameConflictException if two topics of one tenant would end up with the same name.
+   *     Topics without a tenant are never compared: the constraint treats a missing tenant as
+   *     distinct, so the database accepts their duplicate names.
    */
   public void assertUniqueAfter(Collection<TopicEntity> stored, List<NamedTopic> changes) {
     var changedIds =
         changes.stream().map(NamedTopic::id).filter(Objects::nonNull).collect(Collectors.toSet());
     Set<TenantName> taken = new HashSet<>();
     stored.stream()
+        .filter(topic -> topic.getTenantId() != null)
         .filter(topic -> !changedIds.contains(topic.getId()))
         .forEach(
             topic ->
@@ -58,6 +61,9 @@ public class TopicNameUniqueness {
                     new TenantName(
                         topic.getTenantId(), comparable(convertMapFromJson(topic.getName())))));
     for (NamedTopic change : changes) {
+      if (change.tenantId() == null) {
+        continue;
+      }
       var name = sanitized(change.name());
       if (!taken.add(new TenantName(change.tenantId(), comparable(name)))) {
         throw new TopicNameConflictException(displayName(name));
