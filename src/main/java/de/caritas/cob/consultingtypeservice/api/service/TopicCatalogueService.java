@@ -4,6 +4,7 @@ import static de.caritas.cob.consultingtypeservice.api.util.JsonConverter.conver
 import static de.caritas.cob.consultingtypeservice.api.util.JsonConverter.convertToJson;
 
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.model.TitlesMultilingualDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicCatalogueDTO;
 import de.caritas.cob.consultingtypeservice.api.model.TopicCatalogueGroupDTO;
@@ -18,10 +19,12 @@ import de.caritas.cob.consultingtypeservice.api.validation.InputSanitizer;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -75,8 +78,10 @@ public class TopicCatalogueService {
             .filter(id -> id != null && id < 0)
             .collect(Collectors.toSet());
     groups.forEach(group -> assertKnownTopics(group, topicsById, newTopicIds));
+    assertNewTopicNamesAreFree(topics, topicsById.values());
 
     Map<Long, Long> createdIds = new HashMap<>();
+    Set<Long> touchedTenants = new HashSet<>();
     var takenSlugs =
         topicsById.values().stream()
             .map(TopicEntity::getSlug)
@@ -88,12 +93,16 @@ public class TopicCatalogueService {
           throw new BadRequestException("Duplicate new topic " + topic.getId());
         }
         createdIds.put(topic.getId(), createTopic(topic, takenSlugs).getId());
+        touchedTenants.add(defaultTopicSeeder.defaultTopicTenantId());
       } else if (topic.getId() == null || !topicsById.containsKey(topic.getId())) {
         throw new BadRequestException("Unknown topic " + topic.getId());
       } else {
-        topicServiceFacade.updateTopic(topicsById.get(topic.getId()), topic);
+        var stored = topicsById.get(topic.getId());
+        touchedTenants.add(stored.getTenantId());
+        topicServiceFacade.updateTopicInBatch(stored, topic);
       }
     }
+    touchedTenants.forEach(this::assertSomeTopicVisible);
     if (!createdIds.isEmpty()) {
       topicService.getCatalogueTopics().forEach(topic -> topicsById.put(topic.getId(), topic));
       groups.forEach(
@@ -138,6 +147,49 @@ public class TopicCatalogueService {
               .registrationDropdown(cleanName.get("de")));
     }
     return topicServiceFacade.createTopic(topic, defaultTopicSeeder.defaultTopicTenantId());
+  }
+
+  /**
+   * The database allows a name only once per tenant. New topics join the default topic tenant, so
+   * their names must differ from those stored there and from each other.
+   */
+  private void assertNewTopicNamesAreFree(
+      List<TopicMultilingualDTO> topics, Collection<TopicEntity> stored) {
+    var tenantId = defaultTopicSeeder.defaultTopicTenantId();
+    var takenNames =
+        stored.stream()
+            .filter(topic -> Objects.equals(tenantId, topic.getTenantId()))
+            .map(topic -> comparableName(convertMapFromJson(topic.getName())))
+            .collect(Collectors.toCollection(HashSet::new));
+    for (TopicMultilingualDTO topic : topics) {
+      if (topic.getId() == null || topic.getId() >= 0 || topic.getName() == null) {
+        continue;
+      }
+      if (!takenNames.add(comparableName(inputSanitizer.sanitize(topic.getName())))) {
+        throw new BadRequestException(
+            "A topic named \"" + topic.getName().get("de") + "\" already exists");
+      }
+    }
+  }
+
+  /** MariaDB compares the stored names case-insensitively. */
+  private static Map<String, String> comparableName(Map<String, String> name) {
+    return name.entrySet().stream()
+        .filter(entry -> entry.getValue() != null)
+        .collect(
+            Collectors.toMap(
+                Map.Entry::getKey, entry -> entry.getValue().toLowerCase(Locale.ROOT)));
+  }
+
+  /**
+   * Checked once after all changes of a save, so its order does not matter. Throwing rolls the
+   * whole save back.
+   */
+  private void assertSomeTopicVisible(Long tenantId) {
+    if (topicService.getAllActiveTopicsOfTenant(tenantId).isEmpty()) {
+      // An installation must always offer at least one topic in the registration.
+      throw new ConflictException("The registration needs at least one visible topic");
+    }
   }
 
   private static String uniqueSlug(String base, Set<String> takenSlugs) {

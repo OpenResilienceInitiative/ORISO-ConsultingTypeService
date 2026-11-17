@@ -17,6 +17,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import de.caritas.cob.consultingtypeservice.ConsultingTypeServiceApplication;
 import de.caritas.cob.consultingtypeservice.api.controller.AuthenticationMockBuilder;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
+import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicGroupRepository;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicRepository;
 import de.caritas.cob.consultingtypeservice.api.service.TenantService;
@@ -347,13 +348,115 @@ class TopicCatalogueAdminIT {
     change.set("groups", catalogue.get("groups"));
     change.set(
         "topics",
-        objectMapper.createArrayNode().add(newTopic(-1, "Debt")).add(newTopic(-2, "Debt")));
+        objectMapper.createArrayNode().add(newTopic(-1, "Debt")).add(newTopic(-2, "DEBT!")));
 
     save(change).andExpect(status().isOk());
 
     var saved = catalogue();
     assertThat(topicBySlug(saved, "debt-2").get("id").asLong()).isNotEqualTo(idOf("debt"));
-    assertThat(topicBySlug(saved, "debt-3").get("name").get("de").asText()).isEqualTo("Debt");
+    assertThat(topicBySlug(saved, "debt-2").get("name").get("de").asText()).isEqualTo("Debt");
+    assertThat(topicBySlug(saved, "debt-3").get("name").get("de").asText()).isEqualTo("DEBT!");
+  }
+
+  @Test
+  void twoNewTopicsWithTheSameName_areRejected() throws Exception {
+    var catalogue = catalogue();
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set(
+        "topics",
+        objectMapper.createArrayNode().add(newTopic(-1, "Wohnen")).add(newTopic(-2, "Wohnen")));
+
+    save(change).andExpect(status().isBadRequest());
+
+    assertThat(topicRepository.count()).isEqualTo(20);
+  }
+
+  @Test
+  void aNewTopicNamedLikeAnExistingOne_isRejected() throws Exception {
+    var catalogue = catalogue();
+    var topic = newTopic(-1, "ignored");
+    topic.set("name", topicBySlug(catalogue, "debt").get("name").deepCopy());
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(topic));
+
+    save(change).andExpect(status().isBadRequest());
+
+    assertThat(topicRepository.count()).isEqualTo(20);
+  }
+
+  /** Leaves only the given topic visible in the registration. */
+  private void onlyVisible(String slug) {
+    var topics = topicRepository.findAll();
+    topics.forEach(
+        topic ->
+            topic.setStatus(
+                slug.equals(topic.getSlug()) ? TopicStatus.ACTIVE : TopicStatus.INACTIVE));
+    topicRepository.saveAll(topics);
+  }
+
+  private ResultActions swapVisibility(boolean hideFirst) throws Exception {
+    var catalogue = catalogue();
+    var hidden = topicBySlug(catalogue, "debt").put("status", "INACTIVE");
+    var shown = topicBySlug(catalogue, "parents-and-family").put("status", "ACTIVE");
+    var topics = objectMapper.createArrayNode();
+    if (hideFirst) {
+      topics.add(hidden).add(shown);
+    } else {
+      topics.add(shown).add(hidden);
+    }
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", topics);
+    return save(change);
+  }
+
+  private TopicStatus statusOf(String slug) {
+    return topicRepository.findById(idOf(slug)).orElseThrow().getStatus();
+  }
+
+  @Test
+  void hidingTheLastVisibleTopicWhileShowingAnother_isAllowed_whenTheHiddenOneComesFirst()
+      throws Exception {
+    onlyVisible("debt");
+
+    swapVisibility(true).andExpect(status().isOk());
+
+    assertThat(statusOf("debt")).isEqualTo(TopicStatus.INACTIVE);
+    assertThat(statusOf("parents-and-family")).isEqualTo(TopicStatus.ACTIVE);
+  }
+
+  @Test
+  void hidingTheLastVisibleTopicWhileShowingAnother_isAllowed_whenTheShownOneComesFirst()
+      throws Exception {
+    onlyVisible("debt");
+
+    swapVisibility(false).andExpect(status().isOk());
+
+    assertThat(statusOf("debt")).isEqualTo(TopicStatus.INACTIVE);
+    assertThat(statusOf("parents-and-family")).isEqualTo(TopicStatus.ACTIVE);
+  }
+
+  @Test
+  void aSaveThatLeavesNoVisibleTopic_isRejectedAndChangesNothing() throws Exception {
+    onlyVisible("debt");
+    var catalogue = catalogue();
+    var hidden = topicBySlug(catalogue, "debt").put("status", "INACTIVE");
+    ((ObjectNode) hidden.get("name")).put("en", "Changed");
+    var renamed = topicBySlug(catalogue, "parents-and-family");
+    ((ObjectNode) renamed.get("name")).put("en", "Also changed");
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(renamed).add(hidden));
+
+    save(change).andExpect(status().isConflict());
+
+    assertThat(statusOf("debt")).isEqualTo(TopicStatus.ACTIVE);
+    assertThat(topicRepository.findById(idOf("parents-and-family")).orElseThrow().getName())
+        .doesNotContain("Also changed");
+    assertThat(topicRepository.findById(idOf("debt")).orElseThrow().getName())
+        .doesNotContain("Changed");
   }
 
   @Test

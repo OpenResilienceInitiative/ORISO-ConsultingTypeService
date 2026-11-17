@@ -28,7 +28,9 @@ CREATE TABLE IF NOT EXISTS `topic`
     `slug`                   varchar(255) NULL,
     `icon`                   clob NULL,
     `customized`             boolean DEFAULT FALSE NOT NULL,
-    PRIMARY KEY (`id`)
+    PRIMARY KEY (`id`),
+    -- As migration 0001_initsql/initTables.sql.
+    CONSTRAINT unique_name UNIQUE (`name`, `tenant_id`)
 );
 
 ALTER TABLE `topic`

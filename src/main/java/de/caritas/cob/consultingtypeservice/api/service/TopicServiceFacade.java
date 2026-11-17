@@ -73,9 +73,27 @@ public class TopicServiceFacade {
   /** Updates a topic the caller already looked up, e.g. across tenants for the catalogue. */
   public TopicMultilingualDTO updateTopic(
       final TopicEntity stored, final TopicMultilingualDTO topicDTO) {
+    return updateTopic(stored, topicDTO, true);
+  }
+
+  /**
+   * As {@link #updateTopic(TopicEntity, TopicMultilingualDTO)}, but without the "last visible
+   * topic" check: a batch that hides and shows topics checks the end state once instead.
+   */
+  public TopicMultilingualDTO updateTopicInBatch(
+      final TopicEntity stored, final TopicMultilingualDTO topicDTO) {
+    return updateTopic(stored, topicDTO, false);
+  }
+
+  private TopicMultilingualDTO updateTopic(
+      final TopicEntity stored,
+      final TopicMultilingualDTO topicDTO,
+      final boolean checkLastVisibleTopic) {
     topicValidationService.validate(topicDTO);
     final var sanitizedTopicDTO = topicInputSanitizer.sanitize(topicDTO);
-    assertNotHidingLastVisibleTopic(stored, sanitizedTopicDTO);
+    if (checkLastVisibleTopic) {
+      assertNotHidingLastVisibleTopic(stored, sanitizedTopicDTO);
+    }
     final var topicEntity = topicConverter.toEntity(stored, sanitizedTopicDTO);
     applyIcon(topicEntity, sanitizedTopicDTO.getIcon());
     // From now on this is the platform admin's version; the default seed leaves it alone.

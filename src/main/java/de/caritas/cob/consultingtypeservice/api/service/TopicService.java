@@ -47,8 +47,13 @@ public class TopicService {
 
   /** Active topics of the tenant the given topic belongs to. */
   public Collection<TopicEntity> getAllActiveTopicsOfTenantOf(TopicEntity topic) {
-    if (multitenancy && topic.getTenantId() != null) {
-      return topicRepository.findAllActiveForTenant(topic.getTenantId());
+    return getAllActiveTopicsOfTenant(topic.getTenantId());
+  }
+
+  /** Active topics of the given tenant; without a tenant those of the tenant context. */
+  public Collection<TopicEntity> getAllActiveTopicsOfTenant(Long tenantId) {
+    if (multitenancy && tenantId != null) {
+      return topicRepository.findAllActiveForTenant(tenantId);
     }
     return getAllActiveTopics();
   }
