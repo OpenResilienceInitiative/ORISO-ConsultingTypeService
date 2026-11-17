@@ -2,6 +2,7 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver.TECHNICAL_TENANT_ID;
 
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.converter.TopicConverter;
 import de.caritas.cob.consultingtypeservice.api.exception.TopicNotFoundException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
@@ -32,6 +33,7 @@ public class TopicServiceFacade {
   private final @NonNull TopicValidationService topicValidationService;
   private final @NonNull DefaultTopicCatalogue defaultTopicCatalogue;
   private final @NonNull DefaultTopicSeeder defaultTopicSeeder;
+  private final @NonNull AuthorisationService authorisationService;
 
   public List<TopicDTO> getAllTopics() {
     final var topicEntities = topicService.getAllTopics();
@@ -49,7 +51,8 @@ public class TopicServiceFacade {
    */
   public TopicMultilingualDTO createTopic(final TopicMultilingualDTO topicDTO) {
     final var tenantId =
-        TECHNICAL_TENANT_ID.equals(TenantContext.getCurrentTenant())
+        authorisationService.isSuperAdmin()
+                && TECHNICAL_TENANT_ID.equals(TenantContext.getCurrentTenant())
             ? defaultTopicSeeder.defaultTopicTenantId()
             : null;
     return createTopic(topicDTO, tenantId);

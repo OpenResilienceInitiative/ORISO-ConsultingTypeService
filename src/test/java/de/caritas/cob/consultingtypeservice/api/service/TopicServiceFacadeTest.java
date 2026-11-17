@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.converter.TopicConverter;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
@@ -36,6 +37,8 @@ class TopicServiceFacadeTest {
   @Mock DefaultTopicCatalogue defaultTopicCatalogue;
 
   @Mock DefaultTopicSeeder defaultTopicSeeder;
+
+  @Mock AuthorisationService authorisationService;
 
   @InjectMocks TopicServiceFacade topicServiceFacade;
 
