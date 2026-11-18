@@ -53,7 +53,8 @@ class TopicTextHtmlEntitiesMigrationIT {
               + "(1, '{\"de\": \"Gesundheit &amp; Sucht\", \"en\": \"Health &amp; Addiction\"}', 0, 1),"
               + "(2, '{\"de\": \"Alter\", \"en\": \"Ageing\"}', 1, 0),"
               + "(3, '{\"de\": \"Sie sagte &#34;Hallo&#34; &#43; &#61; &#64; &#96;\"}', 2, 1),"
-              + "(4, '{\"de\": \"&lt;img src&#61;x&gt; &amp;lt;b&amp;gt;\"}', 3, 1)");
+              + "(4, '{\"de\": \"&lt;img src&#61;x&gt; &amp;lt;b&amp;gt;\"}', 3, 1),"
+              + "(5, '{\"de\": \"Hilfe &#x1f600; &#8175; &amp;#64;\"}', 4, 1)");
       statement.executeUpdate(
           "INSERT INTO topic (id, tenant_id, name, description, status, create_date,"
               + " internal_identifier, send_next_step_message, titles_short, titles_long,"
@@ -82,6 +83,11 @@ class TopicTextHtmlEntitiesMigrationIT {
   @Test
   void encodedAngleBrackets_areDropped_andTypedEntitiesStayText() throws Exception {
     assertThat(groupName(4)).containsEntry("de", "img src=x &lt;b&gt;");
+  }
+
+  @Test
+  void emojiReferencesStay_becauseTheColumnsCannotHoldThem() throws Exception {
+    assertThat(groupName(5)).containsEntry("de", "Hilfe &#x1f600; \u1fef &#64;");
   }
 
   @Test

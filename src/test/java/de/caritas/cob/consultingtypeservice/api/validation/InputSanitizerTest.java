@@ -26,7 +26,8 @@ class InputSanitizerTest {
         "Rat + Tat = Hilfe @ home",
         "Sie sagte \"Hallo\"",
         "„Kinder“ – Jugend · Familie",
-        "Übergang von Schule zu Beruf"
+        "Übergang von Schule zu Beruf",
+        "῾ Τρία ኣጸጋሚ ናብራን Трудные"
       })
   void sanitize_keepsPlainTextUnchanged(String plainText) {
     assertThat(sanitizer.sanitize(plainText)).isEqualTo(plainText);
@@ -62,6 +63,22 @@ class InputSanitizerTest {
       })
   void sanitize_neverReturnsAngleBrackets_soInnerHtmlConsumersStaySafe(String input) {
     assertThat(sanitizer.sanitize(input)).doesNotContain("<", ">");
+  }
+
+  @Test
+  void sanitize_keepsEmojiAsNumericReferences_becauseTheTopicTablesAreUtf8mb3() {
+    var once = sanitizer.sanitize("Hilfe 😀 &#x1f499;");
+
+    assertThat(once).isEqualTo("Hilfe &#x1f600; &#x1f499;");
+    assertThat(sanitizer.sanitize(once)).isEqualTo(once);
+  }
+
+  @Test
+  void sanitize_keepsTypedEntitiesOfAngleBracketsAsText() {
+    // Typed as "&lt;b&gt;": the sanitizer reads it as the text "<b>" and drops the brackets.
+    assertThat(sanitizer.sanitize("&lt;b&gt;Sucht")).isEqualTo("bSucht");
+    // Typed as "&amp;lt;b&amp;gt;": the text "&lt;b&gt;" stays, harmless in HTML and in text.
+    assertThat(sanitizer.sanitize("&amp;lt;b&amp;gt;")).isEqualTo("&lt;b&gt;");
   }
 
   @Test

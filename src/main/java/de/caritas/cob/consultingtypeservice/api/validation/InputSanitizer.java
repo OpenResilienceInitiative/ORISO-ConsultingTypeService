@@ -19,6 +19,10 @@ import org.springframework.web.util.HtmlUtils;
  *
  * <p>Angle brackets are dropped. Some clients render these names as HTML, so a stored value must
  * never be able to form a tag, not even from encoded input such as {@code &lt;img&gt;}.
+ *
+ * <p>Characters outside the Basic Multilingual Plane (emoji) stay numeric references such as {@code
+ * &#x1f600;}, as the HTML sanitizer wrote them: the topic tables use the 3-byte {@code utf8}
+ * character set, which cannot store them, so decoding them would make the save fail.
  */
 @Component
 public class InputSanitizer {
@@ -28,7 +32,26 @@ public class InputSanitizer {
 
   public String sanitize(final String input) {
     final var withoutMarkup = NO_MARKUP.sanitize(input);
-    return ANGLE_BRACKETS.matcher(HtmlUtils.htmlUnescape(withoutMarkup)).replaceAll("");
+    final var plainText =
+        ANGLE_BRACKETS.matcher(HtmlUtils.htmlUnescape(withoutMarkup)).replaceAll("");
+    return referenceOutsideBasicPlane(plainText);
+  }
+
+  private static String referenceOutsideBasicPlane(final String text) {
+    if (text.codePoints().noneMatch(Character::isSupplementaryCodePoint)) {
+      return text;
+    }
+    final var result = new StringBuilder(text.length());
+    text.codePoints()
+        .forEach(
+            codePoint -> {
+              if (Character.isSupplementaryCodePoint(codePoint)) {
+                result.append("&#x").append(Integer.toHexString(codePoint)).append(';');
+              } else {
+                result.appendCodePoint(codePoint);
+              }
+            });
+    return result.toString();
   }
 
   public Map<String, String> sanitize(final Map<String, String> inputByLanguage) {
