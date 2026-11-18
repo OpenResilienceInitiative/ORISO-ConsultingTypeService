@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd">
+    <!-- Welcome and registration-dropdown titles are plain text now; strip the JSON quotes older
+         saves wrapped around them. Data fix only: the old encoding cannot be restored. -->
+    <changeSet author="oriso" id="0014_topic_titles_unquote">
+        <sqlFile path="db/changelog/changeset/0014_topic_titles_unquote/0014_topic_titles_unquote.sql" stripComments="true"/>
+        <rollback/>
+    </changeSet>
+</databaseChangeLog>

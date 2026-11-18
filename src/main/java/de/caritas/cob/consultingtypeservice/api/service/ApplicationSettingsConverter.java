@@ -5,6 +5,9 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.FeatureToggleDTO;
 import de.caritas.cob.consultingtypeservice.api.model.SettingDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatComposerDisabledFormats;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatMessageCollapseThreshold;
+import de.caritas.cob.consultingtypeservice.schemas.model.ChatMessageMaxWidthDesktop;
 import de.caritas.cob.consultingtypeservice.schemas.model.FurtherCounsellingPostcodeMode;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
@@ -13,6 +16,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
+import de.caritas.cob.consultingtypeservice.schemas.model.LiveChatFreeChoiceEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail;
 import de.caritas.cob.consultingtypeservice.schemas.model.TopicDuplicateMode;
@@ -73,6 +77,11 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getOneTopicPerAgencyEnabled() != null
                         ? applicationSettings.getOneTopicPerAgencyEnabled()
                         : new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false)))
+            .liveChatFreeChoiceEnabled(
+                toFeatureToggleDTO(
+                    applicationSettings.getLiveChatFreeChoiceEnabled() != null
+                        ? applicationSettings.getLiveChatFreeChoiceEnabled()
+                        : defaultLiveChatFreeChoiceEnabled()))
             .furtherCounsellingPostcodeMode(
                 toSettingDTO(
                     applicationSettings.getFurtherCounsellingPostcodeMode() != null
@@ -88,6 +97,21 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getSupportEmail() != null
                         ? applicationSettings.getSupportEmail()
                         : defaultSupportEmail()))
+            .chatComposerDisabledFormats(
+                toSettingDTO(
+                    applicationSettings.getChatComposerDisabledFormats() != null
+                        ? applicationSettings.getChatComposerDisabledFormats()
+                        : defaultChatComposerDisabledFormats()))
+            .chatMessageMaxWidthDesktop(
+                toSettingDTO(
+                    applicationSettings.getChatMessageMaxWidthDesktop() != null
+                        ? applicationSettings.getChatMessageMaxWidthDesktop()
+                        : defaultChatMessageMaxWidthDesktop()))
+            .chatMessageCollapseThreshold(
+                toSettingDTO(
+                    applicationSettings.getChatMessageCollapseThreshold() != null
+                        ? applicationSettings.getChatMessageCollapseThreshold()
+                        : defaultChatMessageCollapseThreshold()))
             .globalSmtpEnabled(
                 toFeatureToggleDTO(
                     applicationSettings.getGlobalSmtpEnabled() != null
@@ -134,8 +158,29 @@ public class ApplicationSettingsConverter {
         .withReadOnly(false);
   }
 
+  /** ORISO-Admin#1497: strict live-chat queue order unless the platform admin opts out. */
+  public static LiveChatFreeChoiceEnabled defaultLiveChatFreeChoiceEnabled() {
+    return new LiveChatFreeChoiceEnabled().withValue(false).withReadOnly(false);
+  }
+
   public static SupportEmail defaultSupportEmail() {
     return new SupportEmail().withValue("").withReadOnly(false);
+  }
+
+  public static ChatComposerDisabledFormats defaultChatComposerDisabledFormats() {
+    return new ChatComposerDisabledFormats().withValue("").withReadOnly(false);
+  }
+
+  public static ChatMessageMaxWidthDesktop defaultChatMessageMaxWidthDesktop() {
+    return new ChatMessageMaxWidthDesktop()
+        .withValue(ChatMessageSettings.DEFAULT_MAX_WIDTH_DESKTOP)
+        .withReadOnly(false);
+  }
+
+  public static ChatMessageCollapseThreshold defaultChatMessageCollapseThreshold() {
+    return new ChatMessageCollapseThreshold()
+        .withValue(ChatMessageSettings.DEFAULT_COLLAPSE_THRESHOLD)
+        .withReadOnly(false);
   }
 
   public static TopicDuplicateMode defaultTopicDuplicateMode() {

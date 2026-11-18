@@ -36,6 +36,7 @@ public class TopicConverter {
             .fallbackUrl(topic.getFallbackUrl())
             .welcomeMessage(topic.getWelcomeMessage())
             .titles(toTitlesDTO(topic, lang))
+            .icon(topic.getIcon())
             .internalIdentifier(topic.getInternalIdentifier());
     if (topic.getCreateDate() != null) {
       topicDTO.setCreateDate(topic.getCreateDate().toString());
@@ -71,6 +72,7 @@ public class TopicConverter {
             .fallbackUrl(topic.getFallbackUrl())
             .welcomeMessage(topic.getWelcomeMessage())
             .titles(toMultilingualTitlesDTO(topic))
+            .icon(topic.getIcon())
             .internalIdentifier(topic.getInternalIdentifier());
     if (topic.getCreateDate() != null) {
       topicMultilingualDTO.setCreateDate(topic.getCreateDate().toString());
@@ -110,6 +112,7 @@ public class TopicConverter {
     topicEntity.setFallbackAgencyId(topicDTO.getFallbackAgencyId());
     topicEntity.setFallbackUrl(topicDTO.getFallbackUrl());
     topicEntity.setWelcomeMessage(topicDTO.getWelcomeMessage());
+    topicEntity.setIcon(emptyToNull(topicDTO.getIcon()));
     titlesToEntity(topicDTO, topicEntity);
     return topicEntity;
   }
@@ -119,8 +122,9 @@ public class TopicConverter {
     if (titles != null) {
       topicEntity.setTitlesShort(convertToJson(titles.getShort()));
       topicEntity.setTitlesLong(convertToJson(titles.getLong()));
-      topicEntity.setTitlesWelcome(convertToJson(titles.getWelcome()));
-      topicEntity.setTitlesDropdown(convertToJson(titles.getRegistrationDropdown()));
+      // Plain strings, read back as they are (not JSON).
+      topicEntity.setTitlesWelcome(titles.getWelcome());
+      topicEntity.setTitlesDropdown(titles.getRegistrationDropdown());
     } else {
       nullifyTitleAttributes(topicEntity);
     }
@@ -152,6 +156,10 @@ public class TopicConverter {
       titlesToEntity(topicDTO, targetEntity);
     }
     return targetEntity;
+  }
+
+  private static String emptyToNull(final String value) {
+    return value == null || value.isEmpty() ? null : value;
   }
 
   private static <T> void setIfPresent(final T value, final Consumer<T> setter) {

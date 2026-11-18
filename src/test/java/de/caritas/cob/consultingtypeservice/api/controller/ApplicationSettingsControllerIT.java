@@ -356,6 +356,62 @@ class ApplicationSettingsControllerIT {
   }
 
   @Test
+  void getApplicationSettings_Should_ReturnStrictLiveChatQueue_When_FreeChoiceWasNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-Admin#1497 do not carry the field
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setLiveChatFreeChoiceEnabled(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesLiveChatFreeChoice()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchLiveChatFreeChoice(authentication, true).andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreLiveChatFreeChoiceOnly_When_PlatformAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+    var before =
+        mockMvc
+            .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    boolean oneTopicBefore =
+        com.jayway.jsonpath.JsonPath.read(before, "$.oneTopicPerAgencyEnabled.value");
+
+    patchLiveChatFreeChoice(authentication, true)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(true))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(oneTopicBefore));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(true));
+
+    // clean up
+    patchLiveChatFreeChoice(authentication, false)
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false));
+  }
+
+  @Test
   void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesOneTopicPerAgency()
       throws Exception {
     Authentication authentication =
@@ -520,6 +576,87 @@ class ApplicationSettingsControllerIT {
         .andExpect(status().isForbidden());
   }
 
+  @Test
+  void getApplicationSettings_Should_ReturnTodaysChatBehaviour_When_NeverConfigured()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setChatComposerDisabledFormats(null);
+    entity.setChatMessageMaxWidthDesktop(null);
+    entity.setChatMessageCollapseThreshold(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""))
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("770"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("300"));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_DisableAndReEnableFormats_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[\"underline\",\"bold\"]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreWidthAndCollapseOff_When_PlatformAdminSaves()
+      throws Exception {
+    patchSettings(
+            platformAdmin(),
+            "{\"chatMessageMaxWidthDesktop\":900,\"chatMessageCollapseThreshold\":0}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("900"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("0"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"blink\"]}",
+        "{\"chatMessageMaxWidthDesktop\":319}",
+        "{\"chatMessageMaxWidthDesktop\":1601}",
+        "{\"chatMessageCollapseThreshold\":-1}",
+        "{\"chatMessageCollapseThreshold\":49}",
+        "{\"chatMessageCollapseThreshold\":100001}"
+      })
+  void patchApplicationSettings_Should_ReturnBadRequest_When_ChatSettingIsInvalid(String body)
+      throws Exception {
+    patchSettings(platformAdmin(), body).andExpect(status().isBadRequest());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"bold\"]}",
+        "{\"chatMessageMaxWidthDesktop\":900}",
+        "{\"chatMessageCollapseThreshold\":0}"
+      })
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesChatSetting(
+      String body) throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, body).andExpect(status().isForbidden());
+  }
+
   private static Authentication platformAdmin() {
     return new AuthenticationMockBuilder()
         .withUserRole(TENANT_ADMIN.getValue())
@@ -535,6 +672,13 @@ class ApplicationSettingsControllerIT {
             .cookie(new Cookie("csrfCookie", "csrfToken"))
             .contentType(APPLICATION_JSON)
             .content(body));
+  }
+
+  private ResultActions patchLiveChatFreeChoice(Authentication authentication, boolean enabled)
+      throws Exception {
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setLiveChatFreeChoiceEnabled(enabled);
+    return patchSettings(authentication, JsonConverter.convertToJson(patchDTO));
   }
 
   private ResultActions patchOneTopicPerAgency(Authentication authentication, boolean enabled)

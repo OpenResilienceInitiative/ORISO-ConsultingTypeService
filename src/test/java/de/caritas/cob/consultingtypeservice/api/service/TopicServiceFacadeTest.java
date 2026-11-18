@@ -5,9 +5,12 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.converter.TopicConverter;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicMultilingualDTO;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicCatalogue;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import de.caritas.cob.consultingtypeservice.api.validation.TopicInputSanitizer;
 import de.caritas.cob.consultingtypeservice.api.validation.TopicValidationService;
 import java.util.List;
@@ -30,6 +33,14 @@ class TopicServiceFacadeTest {
   @Mock TopicInputSanitizer topicInputSanitizer;
 
   @Mock TopicValidationService topicValidationService;
+
+  @Mock DefaultTopicCatalogue defaultTopicCatalogue;
+
+  @Mock DefaultTopicSeeder defaultTopicSeeder;
+
+  @Mock AuthorisationService authorisationService;
+
+  @Mock TopicNameUniqueness topicNameUniqueness;
 
   @InjectMocks TopicServiceFacade topicServiceFacade;
 
@@ -94,7 +105,7 @@ class TopicServiceFacadeTest {
     final var topicDTO = new TopicMultilingualDTO();
     final var topicEntity = new TopicEntity();
     final TopicMultilingualDTO sanitizedDTO = new TopicMultilingualDTO().id(TOPIC_ID);
-    when(topicService.findTopicById(TOPIC_ID)).thenReturn(Optional.of(topicEntity));
+    when(topicService.findTopicByIdForAdmin(TOPIC_ID)).thenReturn(Optional.of(topicEntity));
     when(topicInputSanitizer.sanitize(topicDTO)).thenReturn(sanitizedDTO);
     when(topicConverter.toEntity(topicEntity, sanitizedDTO)).thenReturn(topicEntity);
     final var updatedTopicEntity = new TopicEntity();
@@ -106,7 +117,7 @@ class TopicServiceFacadeTest {
     // then
     verify(topicValidationService).validate(topicDTO);
     verify(topicInputSanitizer).sanitize(topicDTO);
-    verify(topicService).findTopicById(TOPIC_ID);
+    verify(topicService).findTopicByIdForAdmin(TOPIC_ID);
     verify(topicConverter).toEntity(topicEntity, sanitizedDTO);
     verify(topicService).updateTopic(topicEntity);
     verify(topicConverter).toMultilingualDTO(updatedTopicEntity);

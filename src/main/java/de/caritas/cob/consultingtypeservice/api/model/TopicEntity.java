@@ -69,8 +69,10 @@ public class TopicEntity implements TenantAware {
   @Column(name = "welcome_message")
   private String welcomeMessage;
 
-  @Column(name = "send_next_step_message")
-  private Boolean sendNextStepMessage;
+  /** NOT NULL in the database; an explicit NULL would not get the column default. */
+  @Builder.Default
+  @Column(name = "send_next_step_message", nullable = false)
+  private Boolean sendNextStepMessage = false;
 
   @Column(name = "titles_short")
   private String titlesShort;
@@ -86,4 +88,16 @@ public class TopicEntity implements TenantAware {
 
   @Column(name = "slug")
   private String slug;
+
+  /** Icon address or data URL; for default topics the shipped Caritas icon. */
+  @Column(name = "icon", columnDefinition = "MEDIUMTEXT")
+  private String icon;
+
+  /**
+   * True once a platform admin saved this topic. The default seed never touches a customized topic
+   * again, so the admin's version always wins over the shipped defaults.
+   */
+  @Builder.Default
+  @Column(name = "customized", nullable = false)
+  private Boolean customized = false;
 }
