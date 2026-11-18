@@ -245,6 +245,22 @@
         "readOnly"
       ]
     },
+    "liveChatFreeChoiceEnabled": {
+      "description": "ORISO-Admin#1497: false (default) keeps the strict live-chat queue order; true lets counsellors accept any waiting guest.",
+      "type": "object",
+      "properties": {
+        "value": {
+          "type": "boolean"
+        },
+        "readOnly": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "value",
+        "readOnly"
+      ]
+    },
     "furtherCounsellingPostcodeMode": {
       "description": "ORISO-Frontend#1876: postcode prefill for a further counselling request. SMART (default) or ALWAYS_EMPTY.",
       "type": "object",

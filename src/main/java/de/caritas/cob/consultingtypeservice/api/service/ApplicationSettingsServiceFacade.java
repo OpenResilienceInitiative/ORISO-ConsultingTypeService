@@ -196,6 +196,15 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getOneTopicPerAgencyEnabled().setValue(settingsPatchDTO.getOneTopicPerAgencyEnabled());
     }
+    if (settingsPatchDTO.getLiveChatFreeChoiceEnabled() != null) {
+      if (entity.getLiveChatFreeChoiceEnabled() == null) {
+        entity.setLiveChatFreeChoiceEnabled(
+            ApplicationSettingsConverter.defaultLiveChatFreeChoiceEnabled());
+      }
+      entity
+          .getLiveChatFreeChoiceEnabled()
+          .setValue(settingsPatchDTO.getLiveChatFreeChoiceEnabled());
+    }
     if (settingsPatchDTO.getFurtherCounsellingPostcodeMode() != null) {
       if (entity.getFurtherCounsellingPostcodeMode() == null) {
         entity.setFurtherCounsellingPostcodeMode(

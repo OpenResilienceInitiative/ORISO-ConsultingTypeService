@@ -174,6 +174,22 @@ class ApplicationSettingsServiceFacadeTest {
   }
 
   @Test
+  void patchApplicationSettings_Should_StoreLiveChatFreeChoice_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setLiveChatFreeChoiceEnabled(true);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getLiveChatFreeChoiceEnabled().getValue()).isTrue();
+    assertThat(captor.getValue().getLiveChatFreeChoiceEnabled().getReadOnly()).isFalse();
+  }
+
+  @Test
   void patchApplicationSettings_Should_RejectAndNotSave_When_TopicDuplicateModeIsReserved() {
     var entity = new ApplicationSettingsEntity();
     when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));

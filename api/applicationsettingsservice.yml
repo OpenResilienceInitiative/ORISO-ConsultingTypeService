@@ -207,6 +207,13 @@ components:
             most one topic. Defaults to false.
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
+        liveChatFreeChoiceEnabled:
+          description: >-
+            ORISO-Admin#1497: platform policy for the anonymous live-chat queue. false (default)
+            keeps the strict order: a counsellor may only accept the guest who has waited
+            longest. true lets a counsellor accept any waiting guest.
+          allOf:
+            - $ref: '#/components/schemas/FeatureToggleDTO'
         furtherCounsellingPostcodeMode:
           description: >-
             ORISO-Frontend#1876: postcode prefill when an asker requests further counselling.
@@ -286,6 +293,9 @@ components:
           type: boolean
         oneTopicPerAgencyEnabled:
           type: boolean
+        liveChatFreeChoiceEnabled:
+          type: boolean
+          description: Platform admin only. Omit to leave unchanged.
         furtherCounsellingPostcodeMode:
           type: string
           enum: [SMART, ALWAYS_EMPTY]

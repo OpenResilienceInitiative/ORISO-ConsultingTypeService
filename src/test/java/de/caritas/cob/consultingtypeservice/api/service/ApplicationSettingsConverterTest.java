@@ -103,6 +103,14 @@ class ApplicationSettingsConverterTest {
   }
 
   @Test
+  void toDTO_Should_ReturnStrictLiveChatQueue_When_EntityLacksTheFreeChoiceSetting() {
+    ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
+
+    assertThat(dto.getLiveChatFreeChoiceEnabled().getValue()).isFalse();
+    assertThat(dto.getLiveChatFreeChoiceEnabled().getReadOnly()).isFalse();
+  }
+
+  @Test
   void toDTO_Should_ReturnTodaysChatBehaviour_When_EntityLacksTheChatSettings() {
     ApplicationSettingsDTO dto = converter.toDTO(new ApplicationSettingsEntity());
 
