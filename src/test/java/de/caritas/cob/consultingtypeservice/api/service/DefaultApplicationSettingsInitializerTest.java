@@ -52,6 +52,14 @@ class DefaultApplicationSettingsInitializerTest {
   }
 
   @Test
+  void init_Should_SeedStrictLiveChatQueue() {
+    ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
+
+    assertThat(seeded.getLiveChatFreeChoiceEnabled().getValue()).isFalse();
+    assertThat(seeded.getLiveChatFreeChoiceEnabled().getReadOnly()).isFalse();
+  }
+
+  @Test
   void init_Should_SeedTodaysChatBehaviour() {
     ApplicationSettingsEntity seeded = seedWithWalkthroughProperty(true);
 

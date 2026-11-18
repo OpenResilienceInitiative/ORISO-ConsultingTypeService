@@ -96,6 +96,8 @@ public class DefaultApplicationSettingsInitializer {
         new GlobalFeatureSystemNotificationEmailsEnabled().withValue(false).withReadOnly(false));
     entity.setOneTopicPerAgencyEnabled(
         new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false));
+    entity.setLiveChatFreeChoiceEnabled(
+        ApplicationSettingsConverter.defaultLiveChatFreeChoiceEnabled());
     entity.setFurtherCounsellingPostcodeMode(
         ApplicationSettingsConverter.defaultFurtherCounsellingPostcodeMode());
     entity.setTopicDuplicateMode(ApplicationSettingsConverter.defaultTopicDuplicateMode());

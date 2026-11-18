@@ -356,6 +356,62 @@ class ApplicationSettingsControllerIT {
   }
 
   @Test
+  void getApplicationSettings_Should_ReturnStrictLiveChatQueue_When_FreeChoiceWasNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-Admin#1497 do not carry the field
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setLiveChatFreeChoiceEnabled(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesLiveChatFreeChoice()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchLiveChatFreeChoice(authentication, true).andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreLiveChatFreeChoiceOnly_When_PlatformAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+    var before =
+        mockMvc
+            .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    boolean oneTopicBefore =
+        com.jayway.jsonpath.JsonPath.read(before, "$.oneTopicPerAgencyEnabled.value");
+
+    patchLiveChatFreeChoice(authentication, true)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(true))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(oneTopicBefore));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(true));
+
+    // clean up
+    patchLiveChatFreeChoice(authentication, false)
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false));
+  }
+
+  @Test
   void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesOneTopicPerAgency()
       throws Exception {
     Authentication authentication =
@@ -616,6 +672,13 @@ class ApplicationSettingsControllerIT {
             .cookie(new Cookie("csrfCookie", "csrfToken"))
             .contentType(APPLICATION_JSON)
             .content(body));
+  }
+
+  private ResultActions patchLiveChatFreeChoice(Authentication authentication, boolean enabled)
+      throws Exception {
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setLiveChatFreeChoiceEnabled(enabled);
+    return patchSettings(authentication, JsonConverter.convertToJson(patchDTO));
   }
 
   private ResultActions patchOneTopicPerAgency(Authentication authentication, boolean enabled)

@@ -16,6 +16,7 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
+import de.caritas.cob.consultingtypeservice.schemas.model.LiveChatFreeChoiceEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail;
 import de.caritas.cob.consultingtypeservice.schemas.model.TopicDuplicateMode;
@@ -76,6 +77,11 @@ public class ApplicationSettingsConverter {
                     applicationSettings.getOneTopicPerAgencyEnabled() != null
                         ? applicationSettings.getOneTopicPerAgencyEnabled()
                         : new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false)))
+            .liveChatFreeChoiceEnabled(
+                toFeatureToggleDTO(
+                    applicationSettings.getLiveChatFreeChoiceEnabled() != null
+                        ? applicationSettings.getLiveChatFreeChoiceEnabled()
+                        : defaultLiveChatFreeChoiceEnabled()))
             .furtherCounsellingPostcodeMode(
                 toSettingDTO(
                     applicationSettings.getFurtherCounsellingPostcodeMode() != null
@@ -150,6 +156,11 @@ public class ApplicationSettingsConverter {
     return new FurtherCounsellingPostcodeMode()
         .withValue(DEFAULT_FURTHER_COUNSELLING_POSTCODE_MODE)
         .withReadOnly(false);
+  }
+
+  /** ORISO-Admin#1497: strict live-chat queue order unless the platform admin opts out. */
+  public static LiveChatFreeChoiceEnabled defaultLiveChatFreeChoiceEnabled() {
+    return new LiveChatFreeChoiceEnabled().withValue(false).withReadOnly(false);
   }
 
   public static SupportEmail defaultSupportEmail() {
