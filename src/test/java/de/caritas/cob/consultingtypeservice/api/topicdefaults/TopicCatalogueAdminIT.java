@@ -264,6 +264,35 @@ class TopicCatalogueAdminIT {
         .doesNotContain("<script>");
   }
 
+  /** ORISO-ConsultingTypeService#207: names are plain text, the registration must show "&". */
+  @Test
+  void savingTheCatalogueTwice_keepsAmpersandsAndApostrophesAsTyped() throws Exception {
+    var catalogue = catalogue();
+    var debt = topicBySlug(catalogue, "debt");
+    ((ObjectNode) debt.get("name")).put("en", "Debt & Money's Worth");
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(debt));
+    save(change).andExpect(status().isOk());
+
+    var reloaded = catalogue();
+    var unchanged = objectMapper.createObjectNode();
+    unchanged.set("groups", reloaded.get("groups"));
+    unchanged.set("topics", objectMapper.createArrayNode().add(topicBySlug(reloaded, "debt")));
+    save(unchanged).andExpect(status().isOk());
+
+    var saved = catalogue();
+    group(saved, "Gesundheit & Sucht");
+    group(saved, "Besondere Lebenssituationen & Krisen");
+    assertThat(topicBySlug(saved, "debt").get("name").get("en").asText())
+        .isEqualTo("Debt & Money's Worth");
+    assertThat(topicGroupRepository.findAll())
+        .allSatisfy(stored -> assertThat(stored.getName()).doesNotContain("&amp;", "&#"));
+    mockMvc
+        .perform(get("/topic-groups").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.data.items[2].name").value("Gesundheit & Sucht"));
+  }
+
   @Test
   void traegerAdmin_cannotSaveTheCatalogue() throws Exception {
     var change = objectMapper.createObjectNode();
