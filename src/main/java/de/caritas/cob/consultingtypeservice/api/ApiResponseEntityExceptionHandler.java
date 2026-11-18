@@ -5,6 +5,7 @@ import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.Conflict
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ServiceUnavailableException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.TopicNameConflictException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
 import jakarta.validation.ConstraintViolationException;
 import java.net.UnknownHostException;
@@ -16,6 +17,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -64,6 +66,24 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
     LogService.logWarning(ex);
 
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.CONFLICT, request);
+  }
+
+  /**
+   * 409 for a taken topic name, with the message for the admin: an RFC 9457 problem detail whose
+   * {@code detail} carries the message, plus the header {@code X-Reason: TOPIC_NAME_TAKEN}.
+   *
+   * @param ex the thrown exception
+   * @param request web request
+   * @return response entity
+   */
+  @ExceptionHandler({TopicNameConflictException.class})
+  public ResponseEntity<Object> handleTopicNameConflict(
+      final TopicNameConflictException ex, final WebRequest request) {
+    LogService.logWarning(ex);
+    var headers = new HttpHeaders();
+    headers.add("X-Reason", TopicNameConflictException.REASON);
+    var body = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    return handleExceptionInternal(ex, body, headers, HttpStatus.CONFLICT, request);
   }
 
   /**

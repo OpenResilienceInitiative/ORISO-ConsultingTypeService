@@ -359,7 +359,7 @@ class TopicCatalogueAdminIT {
   }
 
   @Test
-  void twoNewTopicsWithTheSameName_areRejected() throws Exception {
+  void twoNewTopicsWithTheSameName_areAConflict() throws Exception {
     var catalogue = catalogue();
     var change = objectMapper.createObjectNode();
     change.set("groups", catalogue.get("groups"));
@@ -367,13 +367,13 @@ class TopicCatalogueAdminIT {
         "topics",
         objectMapper.createArrayNode().add(newTopic(-1, "Wohnen")).add(newTopic(-2, "Wohnen")));
 
-    save(change).andExpect(status().isBadRequest());
+    save(change).andExpect(status().isConflict());
 
     assertThat(topicRepository.count()).isEqualTo(20);
   }
 
   @Test
-  void aNewTopicNamedLikeAnExistingOne_isRejected() throws Exception {
+  void aNewTopicNamedLikeAnExistingOne_isAConflict() throws Exception {
     var catalogue = catalogue();
     var topic = newTopic(-1, "ignored");
     topic.set("name", topicBySlug(catalogue, "debt").get("name").deepCopy());
@@ -381,7 +381,7 @@ class TopicCatalogueAdminIT {
     change.set("groups", catalogue.get("groups"));
     change.set("topics", objectMapper.createArrayNode().add(topic));
 
-    save(change).andExpect(status().isBadRequest());
+    save(change).andExpect(status().isConflict());
 
     assertThat(topicRepository.count()).isEqualTo(20);
   }

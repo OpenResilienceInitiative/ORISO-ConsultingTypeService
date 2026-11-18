@@ -91,7 +91,7 @@ public class TopicAdminController implements TopicadminApi {
   @PreAuthorize(
       "hasAuthority('AUTHORIZATION_GET_ALL_TOPICS') or @authorisationService.isSuperAdmin()")
   public ResponseEntity<List<TopicDTO>> getAllTopicsAsAdmin() {
-    final var topics = topicServiceFacade.getAllTopics();
+    final var topics = topicServiceFacade.getAllTopicsForAdmin();
     return !CollectionUtils.isEmpty(topics)
         ? new ResponseEntity<>(topics, HttpStatus.OK)
         : new ResponseEntity<>(HttpStatus.NO_CONTENT);

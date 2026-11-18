@@ -40,6 +40,8 @@ class TopicServiceFacadeTest {
 
   @Mock AuthorisationService authorisationService;
 
+  @Mock TopicNameUniqueness topicNameUniqueness;
+
   @InjectMocks TopicServiceFacade topicServiceFacade;
 
   @Test
@@ -103,7 +105,7 @@ class TopicServiceFacadeTest {
     final var topicDTO = new TopicMultilingualDTO();
     final var topicEntity = new TopicEntity();
     final TopicMultilingualDTO sanitizedDTO = new TopicMultilingualDTO().id(TOPIC_ID);
-    when(topicService.findTopicById(TOPIC_ID)).thenReturn(Optional.of(topicEntity));
+    when(topicService.findTopicByIdForAdmin(TOPIC_ID)).thenReturn(Optional.of(topicEntity));
     when(topicInputSanitizer.sanitize(topicDTO)).thenReturn(sanitizedDTO);
     when(topicConverter.toEntity(topicEntity, sanitizedDTO)).thenReturn(topicEntity);
     final var updatedTopicEntity = new TopicEntity();
@@ -115,7 +117,7 @@ class TopicServiceFacadeTest {
     // then
     verify(topicValidationService).validate(topicDTO);
     verify(topicInputSanitizer).sanitize(topicDTO);
-    verify(topicService).findTopicById(TOPIC_ID);
+    verify(topicService).findTopicByIdForAdmin(TOPIC_ID);
     verify(topicConverter).toEntity(topicEntity, sanitizedDTO);
     verify(topicService).updateTopic(topicEntity);
     verify(topicConverter).toMultilingualDTO(updatedTopicEntity);
