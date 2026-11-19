@@ -16,6 +16,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class TopicGroupConverterTest {
 
+  @Mock de.caritas.cob.consultingtypeservice.api.service.TopicGroupOrder topicGroupOrder;
+
   @InjectMocks TopicGroupConverter topicGroupConverter;
 
   @Mock TranslationService translationService;

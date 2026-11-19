@@ -36,7 +36,11 @@ public class SmtpPasswordEncryptionService {
   }
 
   public String encrypt(String plaintext) {
-    if (StringUtils.isEmpty(plaintext) || secretKey == null || isEncrypted(plaintext)) {
+    if (StringUtils.isEmpty(plaintext)) {
+      return plaintext;
+    }
+    requireEncryptionSecret();
+    if (isEncrypted(plaintext)) {
       return plaintext;
     }
     try {
@@ -58,7 +62,11 @@ public class SmtpPasswordEncryptionService {
   }
 
   public String decrypt(String value) {
-    if (StringUtils.isEmpty(value) || secretKey == null || !isEncrypted(value)) {
+    if (StringUtils.isEmpty(value)) {
+      return value;
+    }
+    requireEncryptionSecret();
+    if (!isEncrypted(value)) {
       return value;
     }
     try {
@@ -78,6 +86,13 @@ public class SmtpPasswordEncryptionService {
 
   boolean isEncrypted(String value) {
     return value != null && value.startsWith(ENCRYPTED_PREFIX);
+  }
+
+  private void requireEncryptionSecret() {
+    if (secretKey == null) {
+      throw new IllegalStateException(
+          "SMTP password encryption requires settings.smtp.password.encryption.secret");
+    }
   }
 
   private static SecretKey deriveKey(String encryptionSecret) {

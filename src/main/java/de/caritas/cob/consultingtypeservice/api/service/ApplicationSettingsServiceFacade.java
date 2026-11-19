@@ -1,9 +1,12 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsSmtpCredentialsDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
@@ -13,9 +16,13 @@ import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
+import de.caritas.cob.consultingtypeservice.schemas.model.OneTopicPerAgencyEnabled;
+import java.time.Instant;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.Value;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -27,6 +34,19 @@ public class ApplicationSettingsServiceFacade {
   private final @NonNull ApplicationSettingsService applicationSettingsService;
   private final @NonNull ApplicationSettingsConverter applicationSettingsConverter;
   private final @NonNull SmtpPasswordEncryptionService smtpPasswordEncryptionService;
+  private final @NonNull SmtpSynchronizationService smtpSynchronizationService;
+
+  @Value
+  public static class SavedSettings {
+    ApplicationSettingsDTO settings;
+    SmtpSynchronizationStatus synchronization;
+  }
+
+  @Value
+  public static class SmtpSnapshot {
+    long revision;
+    ApplicationSettingsSmtpCredentialsDTO credentials;
+  }
 
   public Optional<ApplicationSettingsDTO> getApplicationSettings() {
     var applicationSettings = applicationSettingsService.getApplicationSettings();
@@ -35,22 +55,99 @@ public class ApplicationSettingsServiceFacade {
         : Optional.empty();
   }
 
-  public void patchApplicationSettings(ApplicationSettingsPatchDTO settingsPatchDTO) {
-    var applicationSettings = applicationSettingsService.getApplicationSettings();
-    if (applicationSettings.isPresent()) {
-      ApplicationSettingsEntity entity = applicationSettings.get();
+  public Optional<SavedSettings> patchApplicationSettings(
+      ApplicationSettingsPatchDTO settingsPatchDTO) {
+    for (int attempt = 0; attempt < 3; attempt++) {
+      var current = applicationSettingsService.getApplicationSettings();
+      if (current.isEmpty()) return Optional.empty();
+      ApplicationSettingsEntity entity = current.get();
+      Long expectedVersion = entity.getSettingsVersion();
+      var before = SmtpSettingsFingerprint.from(entity, smtpPasswordEncryptionService);
+      String storedPassword =
+          entity.getGlobalSmtpPassword() != null ? entity.getGlobalSmtpPassword().getValue() : null;
       convertPatchedValues(settingsPatchDTO, entity);
-      applicationSettingsService.saveApplicationSettings(entity);
+      if (!isRealCredentialValue(settingsPatchDTO.getGlobalSmtpPassword())
+          && isRealCredentialValue(storedPassword)
+          && !storedPassword.startsWith(SmtpPasswordEncryptionService.ENCRYPTED_PREFIX)) {
+        // Migrate ciphertext without treating an unchanged effective password as a transport
+        // change.
+        entity
+            .getGlobalSmtpPassword()
+            .setValue(smtpPasswordEncryptionService.encrypt(storedPassword));
+      }
+      boolean changed =
+          !before.equals(SmtpSettingsFingerprint.from(entity, smtpPasswordEncryptionService));
+      if (changed) {
+        entity.setSmtpRevision(Math.addExact(entity.getSmtpRevision(), 1));
+        entity.setSmtpPendingRevision(entity.getSmtpRevision());
+        entity.setSmtpSyncStatus(SmtpSynchronizationStatus.PENDING);
+        entity.setSmtpSyncAttempts(0);
+        entity.setSmtpNextAttemptAt(Instant.now());
+      }
+      if (!applicationSettingsService.compareAndSave(entity, expectedVersion)) continue;
+      // Mongo single-document CAS has completed; failure before this point cannot dispatch.
+      if (changed)
+        smtpSynchronizationService.synchronizeAfterSave(entity.getId(), entity.getSmtpRevision());
+      ApplicationSettingsEntity latest = entity;
+      try {
+        latest = applicationSettingsService.getApplicationSettings().orElse(entity);
+      } catch (RuntimeException ignored) {
+        // The save committed. The original pending snapshot is conservative if readback is
+        // unavailable.
+      }
+      return Optional.of(
+          new SavedSettings(
+              applicationSettingsConverter.toDTO(latest), SmtpSynchronizationStatus.from(latest)));
     }
+    throw new ConflictException(
+        "Application settings changed concurrently. Please retry the save.");
+  }
+
+  public Optional<SmtpSnapshot> getGlobalSmtpSnapshot() {
+    return applicationSettingsService
+        .getApplicationSettings()
+        .map(entity -> new SmtpSnapshot(entity.getSmtpRevision(), toSmtpCredentialsDTO(entity)));
   }
 
   public Optional<ApplicationSettingsSmtpCredentialsDTO> getGlobalSmtpCredentials() {
-    return applicationSettingsService.getApplicationSettings().map(this::toSmtpCredentialsDTO);
+    return getGlobalSmtpSnapshot().map(SmtpSnapshot::getCredentials);
+  }
+
+  public boolean acknowledgeSmtpSynchronization(long revision, String status) {
+    return applicationSettingsService
+        .getApplicationSettings()
+        .map(entity -> smtpSynchronizationService.acknowledgeWritten(entity, revision, status))
+        .orElse(false);
+  }
+
+  public SmtpSynchronizationStatus getSmtpSynchronizationStatus() {
+    return SmtpSynchronizationStatus.from(
+        applicationSettingsService.getApplicationSettings().orElse(null));
   }
 
   private ApplicationSettingsSmtpCredentialsDTO toSmtpCredentialsDTO(
       ApplicationSettingsEntity entity) {
     var credentials = new ApplicationSettingsSmtpCredentialsDTO();
+    credentials.setGlobalFeatureSystemNotificationEmailsEnabled(
+        entity.getGlobalFeatureSystemNotificationEmailsEnabled() != null
+            && Boolean.TRUE.equals(
+                entity.getGlobalFeatureSystemNotificationEmailsEnabled().getValue()));
+    credentials.setGlobalSmtpEnabled(
+        entity.getGlobalSmtpEnabled() != null
+            && Boolean.TRUE.equals(entity.getGlobalSmtpEnabled().getValue()));
+    credentials.setGlobalSmtpHost(
+        entity.getGlobalSmtpHost() != null ? entity.getGlobalSmtpHost().getValue() : "");
+    credentials.setGlobalSmtpPort(
+        entity.getGlobalSmtpPort() != null ? entity.getGlobalSmtpPort().getValue() : "");
+    credentials.setGlobalSmtpSecure(
+        entity.getGlobalSmtpSecure() != null
+            && Boolean.TRUE.equals(entity.getGlobalSmtpSecure().getValue()));
+    credentials.setGlobalSmtpFrom(
+        entity.getGlobalSmtpFrom() != null ? entity.getGlobalSmtpFrom().getValue() : "");
+    credentials.setGlobalSmtpEmailThemeColor(
+        entity.getGlobalSmtpEmailThemeColor() != null
+            ? entity.getGlobalSmtpEmailThemeColor().getValue()
+            : "");
     credentials.setGlobalSmtpUsername(
         entity.getGlobalSmtpUsername() != null ? entity.getGlobalSmtpUsername().getValue() : "");
     String storedPassword =
@@ -65,6 +162,16 @@ public class ApplicationSettingsServiceFacade {
       entity
           .getLegalContentChangesBySingleTenantAdminsAllowed()
           .setValue(settingsPatchDTO.getLegalContentChangesBySingleTenantAdminsAllowed());
+    }
+    if (settingsPatchDTO.getEnableWalkthrough() != null) {
+      if (entity.getEnableWalkthrough() == null) {
+        entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+      }
+      // readOnly is the operator's lock on the master switch; the admin API must not bypass it.
+      if (Boolean.TRUE.equals(entity.getEnableWalkthrough().getReadOnly())) {
+        throw new BadRequestException("enableWalkthrough is read-only");
+      }
+      entity.getEnableWalkthrough().setValue(settingsPatchDTO.getEnableWalkthrough());
     }
     if (settingsPatchDTO.getMainTenantSubdomainForSingleDomainMultitenancy() != null) {
       entity
@@ -82,6 +189,54 @@ public class ApplicationSettingsServiceFacade {
           .getGlobalFeatureSystemNotificationEmailsEnabled()
           .setValue(settingsPatchDTO.getGlobalFeatureSystemNotificationEmailsEnabled());
     }
+    if (settingsPatchDTO.getOneTopicPerAgencyEnabled() != null) {
+      if (entity.getOneTopicPerAgencyEnabled() == null) {
+        entity.setOneTopicPerAgencyEnabled(
+            new OneTopicPerAgencyEnabled().withValue(false).withReadOnly(false));
+      }
+      entity.getOneTopicPerAgencyEnabled().setValue(settingsPatchDTO.getOneTopicPerAgencyEnabled());
+    }
+    if (settingsPatchDTO.getLiveChatFreeChoiceEnabled() != null) {
+      if (entity.getLiveChatFreeChoiceEnabled() == null) {
+        entity.setLiveChatFreeChoiceEnabled(
+            ApplicationSettingsConverter.defaultLiveChatFreeChoiceEnabled());
+      }
+      entity
+          .getLiveChatFreeChoiceEnabled()
+          .setValue(settingsPatchDTO.getLiveChatFreeChoiceEnabled());
+    }
+    if (settingsPatchDTO.getFurtherCounsellingPostcodeMode() != null) {
+      if (entity.getFurtherCounsellingPostcodeMode() == null) {
+        entity.setFurtherCounsellingPostcodeMode(
+            ApplicationSettingsConverter.defaultFurtherCounsellingPostcodeMode());
+      }
+      entity
+          .getFurtherCounsellingPostcodeMode()
+          .setValue(settingsPatchDTO.getFurtherCounsellingPostcodeMode().getValue());
+    }
+    if (settingsPatchDTO.getTopicDuplicateMode() != null) {
+      // The other modes are reserved until ORISO-Frontend#1878 implements them.
+      if (settingsPatchDTO.getTopicDuplicateMode()
+          != ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.INFORM_EXISTING_COUNSELLOR_ONCE) {
+        throw new BadRequestException(
+            "topicDuplicateMode " + settingsPatchDTO.getTopicDuplicateMode() + " is not available");
+      }
+      if (entity.getTopicDuplicateMode() == null) {
+        entity.setTopicDuplicateMode(ApplicationSettingsConverter.defaultTopicDuplicateMode());
+      }
+      entity.getTopicDuplicateMode().setValue(settingsPatchDTO.getTopicDuplicateMode().getValue());
+    }
+    if (settingsPatchDTO.getSupportEmail() != null) {
+      var supportEmail = settingsPatchDTO.getSupportEmail().trim();
+      if (!supportEmail.isEmpty() && !isValidSupportEmail(supportEmail)) {
+        throw new BadRequestException("supportEmail is not a valid e-mail address");
+      }
+      if (entity.getSupportEmail() == null) {
+        entity.setSupportEmail(ApplicationSettingsConverter.defaultSupportEmail());
+      }
+      entity.getSupportEmail().setValue(supportEmail);
+    }
+    convertPatchedChatMessageSettings(settingsPatchDTO, entity);
     if (settingsPatchDTO.getGlobalSmtpEnabled() != null) {
       if (entity.getGlobalSmtpEnabled() == null) {
         entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
@@ -106,13 +261,13 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getGlobalSmtpSecure().setValue(settingsPatchDTO.getGlobalSmtpSecure());
     }
-    if (settingsPatchDTO.getGlobalSmtpUsername() != null) {
+    if (isRealCredentialValue(settingsPatchDTO.getGlobalSmtpUsername())) {
       if (entity.getGlobalSmtpUsername() == null) {
         entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
       }
       entity.getGlobalSmtpUsername().setValue(settingsPatchDTO.getGlobalSmtpUsername());
     }
-    if (settingsPatchDTO.getGlobalSmtpPassword() != null) {
+    if (isRealCredentialValue(settingsPatchDTO.getGlobalSmtpPassword())) {
       if (entity.getGlobalSmtpPassword() == null) {
         entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
       }
@@ -136,5 +291,62 @@ public class ApplicationSettingsServiceFacade {
           .getGlobalSmtpEmailThemeColor()
           .setValue(settingsPatchDTO.getGlobalSmtpEmailThemeColor());
     }
+  }
+
+  private void convertPatchedChatMessageSettings(
+      ApplicationSettingsPatchDTO settingsPatchDTO, ApplicationSettingsEntity entity) {
+    if (settingsPatchDTO.getChatComposerDisabledFormats() != null) {
+      var disabledFormats =
+          ChatMessageSettings.toStoredDisabledFormats(
+              settingsPatchDTO.getChatComposerDisabledFormats());
+      if (entity.getChatComposerDisabledFormats() == null) {
+        entity.setChatComposerDisabledFormats(
+            ApplicationSettingsConverter.defaultChatComposerDisabledFormats());
+      }
+      entity.getChatComposerDisabledFormats().setValue(disabledFormats);
+    }
+    if (settingsPatchDTO.getChatMessageMaxWidthDesktop() != null) {
+      var maxWidth =
+          ChatMessageSettings.toStoredMaxWidth(settingsPatchDTO.getChatMessageMaxWidthDesktop());
+      if (entity.getChatMessageMaxWidthDesktop() == null) {
+        entity.setChatMessageMaxWidthDesktop(
+            ApplicationSettingsConverter.defaultChatMessageMaxWidthDesktop());
+      }
+      entity.getChatMessageMaxWidthDesktop().setValue(maxWidth);
+    }
+    if (settingsPatchDTO.getChatMessageCollapseThreshold() != null) {
+      var threshold =
+          ChatMessageSettings.toStoredCollapseThreshold(
+              settingsPatchDTO.getChatMessageCollapseThreshold());
+      if (entity.getChatMessageCollapseThreshold() == null) {
+        entity.setChatMessageCollapseThreshold(
+            ApplicationSettingsConverter.defaultChatMessageCollapseThreshold());
+      }
+      entity.getChatMessageCollapseThreshold().setValue(threshold);
+    }
+  }
+
+  private static final int SUPPORT_EMAIL_MAX_LENGTH = 254;
+  // One address only: no whitespace, no list separators, no display name; dots in the
+  // local part only between characters (no leading, trailing or doubled dots).
+  private static final Pattern SUPPORT_EMAIL_PATTERN =
+      Pattern.compile(
+          "^[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+(?:\\.[A-Za-z0-9!#$%&'*+/=?^_`{|}~-]+)*@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?"
+              + "(?:\\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$");
+
+  private static boolean isValidSupportEmail(String value) {
+    return value.length() <= SUPPORT_EMAIL_MAX_LENGTH
+        && SUPPORT_EMAIL_PATTERN.matcher(value).matches();
+  }
+
+  /**
+   * Credentials are write-only: since CTS-C01 they are no longer returned by GET /settings, so the
+   * admin form renders them empty and echoes blank (or masked) values back on every save. Such
+   * values must never overwrite the stored credentials - only a real new value does.
+   */
+  private static boolean isRealCredentialValue(String value) {
+    return value != null
+        && !value.isBlank()
+        && !value.chars().allMatch(c -> c == '*' || c == '\u2022');
   }
 }

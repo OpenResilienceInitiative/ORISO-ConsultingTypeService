@@ -20,4 +20,7 @@ public interface ConsultingTypeRepositoryService {
   Integer getNextId();
 
   ConsultingType getConsultingTypeByTenantId(Integer tenantId);
+
+  /** Whether any consulting type exists for the tenant, regardless of the caller's tenant scope. */
+  boolean hasConsultingTypesForTenant(Integer tenantId);
 }

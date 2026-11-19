@@ -41,7 +41,12 @@ paths:
               $ref: '#/components/schemas/ApplicationSettingsPatchDTO'
       responses:
         200:
-          description: OK - successful operation
+          description: OK - settings saved; synchronization may remain pending
+          headers:
+            X-Smtp-Revision:
+              schema: {type: integer, format: int64, minimum: 0}
+            X-Smtp-Sync-Status:
+              schema: {type: string, enum: [UNKNOWN, SMTP_SYNC_PENDING, APPLIED, DISABLED_OR_INCOMPLETE]}
 
           content:
             application/json:
@@ -55,28 +60,95 @@ paths:
           description: UNAUTHORIZED - no/invalid Keycloak token
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+  /settingsadmin/smtp-sync-status:
+    get:
+      tags:
+        - applicationsettings-controller
+      summary: 'Read credential-free synchronization proof for saved SMTP settings'
+      operationId: getSmtpSyncStatus
+      security:
+        - bearerAuth: []
+      responses:
+        200:
+          description: Current metadata; UNKNOWN means no successful apply has been proved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SmtpSynchronizationStatusDTO'
+        401:
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        403:
+          description: FORBIDDEN - platform super admin required
   /settingsadmin/smtp-credentials:
     get:
       tags:
         - applicationsettings-controller
-      summary: 'Get global SMTP credentials (super admin only)'
+      summary: 'Get one current global SMTP transport snapshot'
+      description: >-
+        Returns the platform SMTP switches, transport fields, sender and decrypted credentials
+        from one application-settings document. Only a platform super admin or an authorized
+        technical service identity may read this response. Responses must not be cached.
       operationId: getGlobalSmtpCredentials
+      security:
+        - bearerAuth: []
       responses:
         200:
           description: OK - successful operation
+          headers:
+            X-Smtp-Revision:
+              description: Revision from the same saved document as the credential snapshot
+              schema: {type: integer, format: int64, minimum: 0}
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ApplicationSettingsSmtpCredentialsDTO'
         204:
           description: NO CONTENT - no content found
+          headers:
+            X-Smtp-Revision:
+              schema: {type: integer, format: int64, enum: [0]}
         401:
           description: UNAUTHORIZED - no/invalid Keycloak token
         403:
           description: FORBIDDEN - insufficient permissions
         500:
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+  /settingsadmin/smtp-sync-acknowledgement:
+    post:
+      tags:
+        - applicationsettings-controller
+      summary: 'Report that Keycloak now holds one exact saved SMTP revision'
+      description: >-
+        Called by the Keycloak SMTP sync Job after it wrote the snapshot it read from
+        /settingsadmin/smtp-credentials. Only the technical service identity may call it.
+        A revision other than the current saved one is rejected, so a newer pending
+        save is never marked synchronized.
+      operationId: acknowledgeSmtpSync
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SmtpSynchronizationAcknowledgementDTO'
+      responses:
+        204:
+          description: NO CONTENT - revision recorded as applied (also when already recorded)
+        400:
+          description: BAD REQUEST - invalid revision or status
+        401:
+          description: UNAUTHORIZED - no/invalid Keycloak token
+        403:
+          description: FORBIDDEN - technical service identity required
+        409:
+          description: CONFLICT - revision is not the current saved SMTP revision
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     ApplicationSettingsDTO:
       type: object
@@ -129,6 +201,60 @@ components:
         globalFeatureSystemNotificationEmailsEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
+        oneTopicPerAgencyEnabled:
+          description: >-
+            Platform policy (ADR-014 amendment 2026-09-25): when true, an agency may hold at
+            most one topic. Defaults to false.
+          allOf:
+            - $ref: '#/components/schemas/FeatureToggleDTO'
+        liveChatFreeChoiceEnabled:
+          description: >-
+            ORISO-Admin#1497: platform policy for the anonymous live-chat queue. false (default)
+            keeps the strict order: a counsellor may only accept the guest who has waited
+            longest. true lets a counsellor accept any waiting guest.
+          allOf:
+            - $ref: '#/components/schemas/FeatureToggleDTO'
+        furtherCounsellingPostcodeMode:
+          description: >-
+            ORISO-Frontend#1876: postcode prefill when an asker requests further counselling.
+            SMART (default) takes the postcode the asker typed last; ALWAYS_EMPTY leaves it
+            empty.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        topicDuplicateMode:
+          description: >-
+            ORISO-Frontend#1876: what happens when an asker holds two accepted conversations on
+            the same topic. One of INFORM_EXISTING_COUNSELLOR_ONCE (default), INFORM_BOTH_ONCE,
+            INFORM_BOTH_EVERY_MESSAGE, FORBID.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        supportEmail:
+          description: >-
+            ORISO-Frontend#1915: fallback support e-mail address shown to counsellors when a
+            counselling centre has no admin reachable by chat. Empty string = not configured.
+            Public (served unauthenticated by GET /settings), so it must be a shared mailbox,
+            never a personal address.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        chatComposerDisabledFormats:
+          description: >-
+            Formats the chat composer's formats menu does not offer on this platform, as a
+            comma-separated list of format keys. Empty string (default) = every format is offered.
+            Only hides the formats while composing: existing messages keep rendering them.
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        chatMessageMaxWidthDesktop:
+          description: >-
+            Widest a chat message bubble may grow on desktop, in CSS pixels, as a string.
+            Default "770".
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
+        chatMessageCollapseThreshold:
+          description: >-
+            Length in characters above which a chat message collapses behind "show more", as a
+            string. "0" = never collapse. Default "300".
+          allOf:
+            - $ref: '#/components/schemas/SettingDTO'
         globalSmtpEnabled:
           allOf:
             - $ref: '#/components/schemas/FeatureToggleDTO'
@@ -158,10 +284,55 @@ components:
       properties:
         legalContentChangesBySingleTenantAdminsAllowed:
           type: boolean
+        enableWalkthrough:
+          type: boolean
+          description: Platform-wide master switch for product tours. Omit to leave unchanged.
         mainTenantSubdomainForSingleDomainMultitenancy:
           type: string
         globalFeatureSystemNotificationEmailsEnabled:
           type: boolean
+        oneTopicPerAgencyEnabled:
+          type: boolean
+        liveChatFreeChoiceEnabled:
+          type: boolean
+          description: Platform admin only. Omit to leave unchanged.
+        furtherCounsellingPostcodeMode:
+          type: string
+          enum: [SMART, ALWAYS_EMPTY]
+          description: Platform admin only. Omit to leave unchanged.
+        topicDuplicateMode:
+          type: string
+          enum: [INFORM_EXISTING_COUNSELLOR_ONCE, INFORM_BOTH_ONCE, INFORM_BOTH_EVERY_MESSAGE, FORBID]
+          description: >-
+            Platform admin only. Omit to leave unchanged. Only INFORM_EXISTING_COUNSELLOR_ONCE is
+            accepted for now; the other values answer 400 until ORISO-Frontend#1878.
+        supportEmail:
+          type: string
+          maxLength: 254
+          description: >-
+            Platform admin only. Omit to leave unchanged; an empty string clears the address.
+            Otherwise a single valid e-mail address (max 254 characters).
+        chatComposerDisabledFormats:
+          type: array
+          items:
+            type: string
+            enum: [heading, bulletList, orderedList, taskList, blockquote, codeBlock, bold, italic, strike, code, underline, highlight, link, superscript, subscript, image, dateTime]
+          description: >-
+            Platform admin only. Omit to leave unchanged; an empty array offers every format again.
+        chatMessageMaxWidthDesktop:
+          type: integer
+          format: int32
+          minimum: 320
+          maximum: 1600
+          description: Platform admin only. Omit to leave unchanged. CSS pixels, 320 to 1600.
+        chatMessageCollapseThreshold:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100000
+          description: >-
+            Platform admin only. Omit to leave unchanged. 0 switches collapsing off; otherwise 50
+            to 100000 characters.
         globalSmtpEnabled:
           type: boolean
         globalSmtpHost:
@@ -182,10 +353,57 @@ components:
     ApplicationSettingsSmtpCredentialsDTO:
       type: object
       properties:
+        globalFeatureSystemNotificationEmailsEnabled:
+          type: boolean
+        globalSmtpEnabled:
+          type: boolean
+        globalSmtpHost:
+          type: string
+        globalSmtpPort:
+          type: string
+        globalSmtpSecure:
+          type: boolean
+        globalSmtpFrom:
+          type: string
+        globalSmtpEmailThemeColor:
+          type: string
         globalSmtpUsername:
           type: string
         globalSmtpPassword:
           type: string
+
+    SmtpSynchronizationAcknowledgementDTO:
+      type: object
+      required:
+        - revision
+        - status
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 1
+        status:
+          type: string
+          enum: [APPLIED, DISABLED_OR_INCOMPLETE]
+
+    SmtpSynchronizationStatusDTO:
+      type: object
+      required:
+        - revision
+        - status
+      properties:
+        revision:
+          type: integer
+          format: int64
+          minimum: 0
+        appliedRevision:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+        status:
+          type: string
+          enum: [UNKNOWN, SMTP_SYNC_PENDING, APPLIED, DISABLED_OR_INCOMPLETE]
 
     FeatureToggleDTO:
       type: object

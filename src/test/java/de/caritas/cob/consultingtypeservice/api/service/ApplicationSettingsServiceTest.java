@@ -2,6 +2,8 @@ package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import com.google.common.collect.Lists;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
@@ -47,5 +49,16 @@ class ApplicationSettingsServiceTest {
     // when, then
     assertThrows(
         IllegalStateException.class, () -> applicationSettingsService.getApplicationSettings());
+  }
+
+  @Test
+  void saveApplicationSettings_Should_ReplaceExistingDocumentWithoutDeleteGap() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setId("existing-settings");
+
+    applicationSettingsService.saveApplicationSettings(entity);
+
+    verify(applicationSettingsRepository).save(entity);
+    verify(applicationSettingsRepository, never()).deleteAll();
   }
 }

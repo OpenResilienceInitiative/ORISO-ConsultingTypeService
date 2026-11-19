@@ -349,6 +349,29 @@ paths:
           description: Not found
         '500':
           description: INTERNAL SERVER ERROR - server encountered unexpected condition
+  /tenantadmin/{id}/permission-policies:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Tenant ID
+        schema:
+          type: integer
+          format: int64
+    get:
+      tags:
+        - tenant-controller
+      summary: Gets the tenant-resolved permission policies
+      operationId: getTenantPermissionPolicies
+      responses:
+        200:
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TenantPermissionPolicies'
+        403:
+          description: FORBIDDEN - tenant admins can access only their own tenant
   /tenant:
     get:
       tags:
@@ -1720,3 +1743,38 @@ components:
         welcomeMessage:
           allOf:
             - $ref: '#/components/schemas/WelcomeMessageDTO'
+
+    TenantPermissionPolicies:
+      type: object
+      required:
+        - tenantId
+        - policies
+      properties:
+        tenantId:
+          type: integer
+          format: int64
+        policies:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/BooleanPermissionPolicy'
+
+    PermissionPolicyMode:
+      type: string
+      enum:
+        - ENFORCED
+        - SUGGESTED
+
+    BooleanPermissionPolicy:
+      type: object
+      required:
+        - value
+        - mode
+      properties:
+        value:
+          type: boolean
+        mode:
+          $ref: '#/components/schemas/PermissionPolicyMode'
+        inherited:
+          type: boolean
+          readOnly: true
+          description: True when the resolved tenant value comes from the platform policy.

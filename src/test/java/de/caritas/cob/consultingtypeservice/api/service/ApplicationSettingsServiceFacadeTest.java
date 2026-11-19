@@ -1,16 +1,29 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsEntity;
 import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDTO;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalFeatureSystemNotificationEmailsEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEmailThemeColor;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpEnabled;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpFrom;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpHost;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPort;
+import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpSecure;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -24,6 +37,12 @@ class ApplicationSettingsServiceFacadeTest {
   @Mock ApplicationSettingsService applicationSettingsService;
   @Mock ApplicationSettingsConverter applicationSettingsConverter;
   @Mock SmtpPasswordEncryptionService smtpPasswordEncryptionService;
+  @Mock SmtpSynchronizationService smtpSynchronizationService;
+
+  @BeforeEach
+  void successfulCas() {
+    lenient().when(applicationSettingsService.compareAndSave(any(), isNull())).thenReturn(true);
+  }
 
   @InjectMocks ApplicationSettingsServiceFacade applicationSettingsServiceFacade;
 
@@ -45,8 +64,26 @@ class ApplicationSettingsServiceFacadeTest {
     verify(smtpPasswordEncryptionService).encrypt("plain-pass");
     ArgumentCaptor<ApplicationSettingsEntity> captor =
         ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
-    verify(applicationSettingsService).saveApplicationSettings(captor.capture());
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
     assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:cipher");
+  }
+
+  @Test
+  void patchApplicationSettings_Should_MigrateLegacyPlaintextOnNextAdminUpdate() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("legacy-pass").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    when(smtpPasswordEncryptionService.encrypt("legacy-pass")).thenReturn("ENC:migrated");
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpHost("smtp.example.net");
+    patchDTO.setGlobalSmtpPassword("");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getGlobalSmtpPassword().getValue()).isEqualTo("ENC:migrated");
+    verify(applicationSettingsService).compareAndSave(entity, null);
   }
 
   @Test
@@ -63,8 +100,191 @@ class ApplicationSettingsServiceFacadeTest {
 
     // then
     verify(applicationSettingsService)
-        .saveApplicationSettings(any(ApplicationSettingsEntity.class));
+        .compareAndSave(any(ApplicationSettingsEntity.class), isNull());
     verify(smtpPasswordEncryptionService, never()).encrypt(any());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_SetWalkthrough_When_ToggleIsWritable() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setEnableWalkthrough(false);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getEnableWalkthrough().getValue()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_CreateWalkthroughToggle_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setEnableWalkthrough(true);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getEnableWalkthrough().getValue()).isTrue();
+    assertThat(captor.getValue().getEnableWalkthrough().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_WalkthroughToggleIsReadOnly() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(true));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setEnableWalkthrough(false);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+    assertThat(entity.getEnableWalkthrough().getValue()).isTrue();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_CreateFurtherCounsellingSettings_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setFurtherCounsellingPostcodeMode(
+        ApplicationSettingsPatchDTO.FurtherCounsellingPostcodeModeEnum.ALWAYS_EMPTY);
+    patchDTO.setTopicDuplicateMode(
+        ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.INFORM_EXISTING_COUNSELLOR_ONCE);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getFurtherCounsellingPostcodeMode().getValue())
+        .isEqualTo("ALWAYS_EMPTY");
+    assertThat(captor.getValue().getFurtherCounsellingPostcodeMode().getReadOnly()).isFalse();
+    assertThat(captor.getValue().getTopicDuplicateMode().getValue())
+        .isEqualTo("INFORM_EXISTING_COUNSELLOR_ONCE");
+    assertThat(captor.getValue().getTopicDuplicateMode().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreLiveChatFreeChoice_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setLiveChatFreeChoiceEnabled(true);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getLiveChatFreeChoiceEnabled().getValue()).isTrue();
+    assertThat(captor.getValue().getLiveChatFreeChoiceEnabled().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_TopicDuplicateModeIsReserved() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setTopicDuplicateMode(ApplicationSettingsPatchDTO.TopicDuplicateModeEnum.FORBID);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+    assertThat(entity.getTopicDuplicateMode()).isNull();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreDisabledFormatsInEnumOrder_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatComposerDisabledFormats(
+        java.util.List.of(
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.HEADING,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE));
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getChatComposerDisabledFormats().getValue()).isEqualTo("heading,underline");
+    assertThat(entity.getChatMessageMaxWidthDesktop()).isNull();
+    assertThat(entity.getChatMessageCollapseThreshold()).isNull();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_CollapseThresholdIsOutOfRange() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatMessageCollapseThreshold(10);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_CreateTrimmedSupportEmail_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail("  support@example.org ");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getSupportEmail().getValue()).isEqualTo("support@example.org");
+    assertThat(captor.getValue().getSupportEmail().getReadOnly()).isFalse();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ClearSupportEmail_When_BlankValueIsSent() {
+    var entity = new ApplicationSettingsEntity();
+    entity.setSupportEmail(
+        new de.caritas.cob.consultingtypeservice.schemas.model.SupportEmail()
+            .withValue("support@example.org")
+            .withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail("   ");
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getSupportEmail().getValue()).isEmpty();
+  }
+
+  @org.junit.jupiter.params.ParameterizedTest
+  @org.junit.jupiter.params.provider.ValueSource(
+      strings = {
+        "nope",
+        "a@b",
+        "a@example.org;b@example.org",
+        "<a@example.org>",
+        "support..team@example.org",
+        ".support@example.org",
+        "support.@example.org"
+      })
+  void patchApplicationSettings_Should_RejectAndNotSave_When_SupportEmailIsInvalid(String invalid) {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setSupportEmail(invalid);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
+    assertThat(entity.getSupportEmail()).isNull();
   }
 
   @Test
@@ -75,6 +295,17 @@ class ApplicationSettingsServiceFacadeTest {
         new GlobalSmtpUsername().withValue("smtp-user").withReadOnly(false));
     entity.setGlobalSmtpPassword(
         new GlobalSmtpPassword().withValue("ENC:stored").withReadOnly(false));
+    entity.setGlobalSmtpHost(
+        new GlobalSmtpHost().withValue("smtp.example.net").withReadOnly(false));
+    entity.setGlobalSmtpPort(new GlobalSmtpPort().withValue("587").withReadOnly(false));
+    entity.setGlobalSmtpSecure(new GlobalSmtpSecure().withValue(false).withReadOnly(false));
+    entity.setGlobalSmtpFrom(
+        new GlobalSmtpFrom().withValue("sender@example.net").withReadOnly(false));
+    entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(true).withReadOnly(false));
+    entity.setGlobalFeatureSystemNotificationEmailsEnabled(
+        new GlobalFeatureSystemNotificationEmailsEnabled().withValue(true).withReadOnly(false));
+    entity.setGlobalSmtpEmailThemeColor(
+        new GlobalSmtpEmailThemeColor().withValue("#123456").withReadOnly(false));
     when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
     when(smtpPasswordEncryptionService.decrypt("ENC:stored")).thenReturn("plain-pass");
 
@@ -85,6 +316,161 @@ class ApplicationSettingsServiceFacadeTest {
     assertThat(credentials).isPresent();
     assertThat(credentials.get().getGlobalSmtpUsername()).isEqualTo("smtp-user");
     assertThat(credentials.get().getGlobalSmtpPassword()).isEqualTo("plain-pass");
+    assertThat(credentials.get().getGlobalSmtpHost()).isEqualTo("smtp.example.net");
+    assertThat(credentials.get().getGlobalSmtpPort()).isEqualTo("587");
+    assertThat(credentials.get().getGlobalSmtpSecure()).isFalse();
+    assertThat(credentials.get().getGlobalSmtpFrom()).isEqualTo("sender@example.net");
+    assertThat(credentials.get().getGlobalSmtpEnabled()).isTrue();
+    assertThat(credentials.get().getGlobalFeatureSystemNotificationEmailsEnabled()).isTrue();
+    assertThat(credentials.get().getGlobalSmtpEmailThemeColor()).isEqualTo("#123456");
     verify(smtpPasswordEncryptionService).decrypt("ENC:stored");
+  }
+
+  @Test
+  void patchApplicationSettings_Should_PreserveStoredUsername_When_PatchedUsernameIsBlank() {
+    // given
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("stored-user").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpUsername("");
+
+    // when
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    // then
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
+  }
+
+  @Test
+  void patchApplicationSettings_Should_PreserveStoredPassword_When_PatchedPasswordIsBlank() {
+    // given
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("ENC:stored").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpPassword("");
+
+    // when
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    // then
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:stored");
+    verify(smtpPasswordEncryptionService, never()).encrypt(any());
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_PreserveStoredCredentials_When_PatchedValuesAreWhitespaceOnly() {
+    // given
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("stored-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("ENC:stored").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpUsername("   ");
+    patchDTO.setGlobalSmtpPassword("  \t ");
+
+    // when
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    // then
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
+    assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:stored");
+    verify(smtpPasswordEncryptionService, never()).encrypt(any());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_PreserveStoredCredentials_When_PatchedValuesAreMasked() {
+    // given
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("stored-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("ENC:stored").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpUsername("***");
+    patchDTO.setGlobalSmtpPassword("\u2022\u2022\u2022\u2022\u2022");
+
+    // when
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    // then
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
+    assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:stored");
+    verify(smtpPasswordEncryptionService, never()).encrypt(any());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreNewUsername_When_PatchedUsernameIsRealValue() {
+    // given
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("old-user").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpUsername("new-user");
+
+    // when
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    // then
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("new-user");
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ApplyOtherFields_When_CredentialsInSamePatchAreBlank() {
+    // given
+    var entity = new ApplicationSettingsEntity();
+    entity.setGlobalSmtpHost(new GlobalSmtpHost().withValue("old-host").withReadOnly(false));
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("stored-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("ENC:stored").withReadOnly(false));
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setGlobalSmtpHost("smtp.new-host.example");
+    patchDTO.setGlobalSmtpPort("2525");
+    patchDTO.setGlobalSmtpUsername("");
+    patchDTO.setGlobalSmtpPassword("");
+
+    // when
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    // then
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getGlobalSmtpHost().getValue()).isEqualTo("smtp.new-host.example");
+    assertThat(captor.getValue().getGlobalSmtpPort().getValue()).isEqualTo("2525");
+    assertThat(captor.getValue().getGlobalSmtpUsername().getValue()).isEqualTo("stored-user");
+    assertThat(captor.getValue().getGlobalSmtpPassword().getValue()).isEqualTo("ENC:stored");
+    verify(smtpPasswordEncryptionService, never()).encrypt(any());
   }
 }

@@ -15,7 +15,9 @@ import org.hibernate.boot.MetadataSources;
 import org.hibernate.boot.registry.StandardServiceRegistry;
 import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.testcontainers.junit.jupiter.Container;
+import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.mariadb.MariaDBContainer;
 
 /**
  * Permanent drift guard for the MariaDB part of this service (Liquibase Re-Enablement Plan
@@ -25,27 +27,30 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
  * validation against the JPA entities. If a schema change is ever made to the entities (or directly
  * on an environment database) without a matching changeset, this test fails.
  *
- * <p>The test is skipped unless LIQUIBASE_IT_DB_URL is set, because it needs a real, EMPTY MariaDB
- * database named {@code consultingtypeservice} (the legacy changesets hard-code that schema name).
- * Local run:
+ * <p>The test owns a disposable MariaDB container with an empty {@code consultingtypeservice}
+ * database (the legacy changesets hard-code that schema name). Local run:
  *
  * <pre>
- * docker run -d --name cts-drift-mariadb -p 3314:3306 \
- *   -e MARIADB_ROOT_PASSWORD=root -e MARIADB_DATABASE=consultingtypeservice mariadb:10.11
- * LIQUIBASE_IT_DB_URL='jdbc:mariadb://localhost:3314/consultingtypeservice' \
- *   ./mvnw test -Dtest=LiquibaseSchemaDriftIT
+ * ./mvnw test -Dtest=LiquibaseSchemaDriftIT
  * </pre>
  */
-@EnabledIfEnvironmentVariable(named = "LIQUIBASE_IT_DB_URL", matches = ".+")
+@Testcontainers
 class LiquibaseSchemaDriftIT {
 
   private static final String MASTER_CHANGELOG = "db/changelog/consultingtypeservice-master.xml";
 
+  @Container
+  private static final MariaDBContainer MARIADB =
+      new MariaDBContainer("mariadb:10.11.18")
+          .withDatabaseName("consultingtypeservice")
+          .withUsername("test")
+          .withPassword("test");
+
   @Test
   void freshDatabaseMigratedByLiquibase_shouldMatchJpaEntities() throws Exception {
-    final var url = System.getenv("LIQUIBASE_IT_DB_URL");
-    final var username = envOrDefault("LIQUIBASE_IT_DB_USERNAME", "root");
-    final var password = envOrDefault("LIQUIBASE_IT_DB_PASSWORD", "root");
+    final var url = MARIADB.getJdbcUrl();
+    final var username = MARIADB.getUsername();
+    final var password = MARIADB.getPassword();
 
     runLiquibaseUpdate(url, username, password);
     validateJpaMappingAgainstDatabase(url, username, password);
@@ -84,10 +89,5 @@ class LiquibaseSchemaDriftIT {
     } finally {
       StandardServiceRegistryBuilder.destroy(registry);
     }
-  }
-
-  private static String envOrDefault(final String name, final String defaultValue) {
-    final var value = System.getenv(name);
-    return value == null || value.isBlank() ? defaultValue : value;
   }
 }

@@ -1,9 +1,11 @@
 package de.caritas.cob.consultingtypeservice.api;
 
-import de.caritas.cob.consultingtypeservice.api.exception.SmtpSendException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.BadRequestException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ConflictException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.InternalServerErrorException;
 import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.NotFoundException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.ServiceUnavailableException;
+import de.caritas.cob.consultingtypeservice.api.exception.httpresponses.TopicNameConflictException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
 import jakarta.validation.ConstraintViolationException;
 import java.net.UnknownHostException;
@@ -15,6 +17,7 @@ import org.springframework.dao.InvalidDataAccessApiUsageException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
+import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -48,6 +51,39 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
     LogService.logWarning(ex);
 
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+  }
+
+  /**
+   * Custom Conflict exception.
+   *
+   * @param ex the thrown exception
+   * @param request web request
+   * @return response entity
+   */
+  @ExceptionHandler({ConflictException.class})
+  public ResponseEntity<Object> handleCustomConflict(
+      final ConflictException ex, final WebRequest request) {
+    LogService.logWarning(ex);
+
+    return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.CONFLICT, request);
+  }
+
+  /**
+   * 409 for a taken topic name, with the message for the admin: an RFC 9457 problem detail whose
+   * {@code detail} carries the message, plus the header {@code X-Reason: TOPIC_NAME_TAKEN}.
+   *
+   * @param ex the thrown exception
+   * @param request web request
+   * @return response entity
+   */
+  @ExceptionHandler({TopicNameConflictException.class})
+  public ResponseEntity<Object> handleTopicNameConflict(
+      final TopicNameConflictException ex, final WebRequest request) {
+    LogService.logWarning(ex);
+    var headers = new HttpHeaders();
+    headers.add("X-Reason", TopicNameConflictException.REASON);
+    var body = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, ex.getMessage());
+    return handleExceptionInternal(ex, body, headers, HttpStatus.CONFLICT, request);
   }
 
   /**
@@ -105,24 +141,6 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
   }
 
   /**
-   * 502 - Bad Gateway: the upstream SMTP server rejected or never received the message. Mapped
-   * explicitly so an email transport failure is never masked as success and is distinguishable from
-   * generic internal errors.
-   *
-   * @param ex the thrown exception
-   * @param request web request
-   * @return response entity
-   */
-  @ExceptionHandler({SmtpSendException.class})
-  public ResponseEntity<Object> handleSmtpSendFailure(
-      final SmtpSendException ex, final WebRequest request) {
-    LogService.logError(ex);
-
-    return handleExceptionInternal(
-        EMPTY_EXCEPTION, null, new HttpHeaders(), HttpStatus.BAD_GATEWAY, request);
-  }
-
-  /**
    * 500 - Internal Server Error.
    *
    * @param ex the thrown exception
@@ -172,6 +190,22 @@ public class ApiResponseEntityExceptionHandler extends ResponseEntityExceptionHa
       final NotFoundException ex, final WebRequest request) {
 
     return handleExceptionInternal(ex, null, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+  }
+
+  /**
+   * 503 - Service unavailable: a dependency the decision needs did not answer. Not a refusal (403).
+   *
+   * @param ex {@link ServiceUnavailableException}
+   * @param request WebRequest
+   * @return a ResponseEntity instance
+   */
+  @ExceptionHandler({ServiceUnavailableException.class})
+  public ResponseEntity<Object> handleInternal(
+      final ServiceUnavailableException ex, final WebRequest request) {
+    ex.executeLogging();
+
+    return handleExceptionInternal(
+        EMPTY_EXCEPTION, null, new HttpHeaders(), HttpStatus.SERVICE_UNAVAILABLE, request);
   }
 
   /**

@@ -1,18 +1,24 @@
 package de.caritas.cob.consultingtypeservice.api.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import de.caritas.cob.consultingtypeservice.api.auth.AuthorisationService;
 import de.caritas.cob.consultingtypeservice.api.model.TopicEntity;
 import de.caritas.cob.consultingtypeservice.api.model.TopicStatus;
 import de.caritas.cob.consultingtypeservice.api.repository.TopicRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
+import de.caritas.cob.consultingtypeservice.api.topicdefaults.DefaultTopicSeeder;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class TopicServiceTest {
@@ -20,6 +26,101 @@ class TopicServiceTest {
   @InjectMocks TopicService topicService;
 
   @Mock TopicRepository topicRepository;
+
+  @Mock AuthorisationService authorisationService;
+
+  @Mock DefaultTopicSeeder defaultTopicSeeder;
+
+  @Test
+  void publicTopicList_ofThePlatformAdminInTenantZero_staysInTenantZero() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+
+    topicService.getAllTopics();
+
+    verify(topicRepository).findAllForTenant(0L);
+    verifyNoInteractions(authorisationService, defaultTopicSeeder);
+  }
+
+  @Test
+  void publicTopicById_ofThePlatformAdminInTenantZero_staysInTenantZero() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+
+    topicService.findTopicById(5L);
+
+    verify(topicRepository).findByIdForTenant(5L, 0L);
+    verifyNoInteractions(authorisationService, defaultTopicSeeder);
+  }
+
+  @Test
+  void adminTopicList_ofThePlatformAdminInTenantZero_isTheDefaultTenantOnly_neverAllTenants() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+    when(authorisationService.isSuperAdmin()).thenReturn(true);
+    when(defaultTopicSeeder.defaultTopicTenantId()).thenReturn(1L);
+
+    topicService.getAllTopicsForAdmin();
+
+    verify(topicRepository).findAllForTenant(1L);
+    verify(topicRepository, never()).findAll();
+  }
+
+  @Test
+  void adminTopicList_ofThePlatformAdminInATenant_isThatTenant() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(7L);
+
+    topicService.getAllTopicsForAdmin();
+
+    verify(topicRepository).findAllForTenant(7L);
+  }
+
+  @Test
+  void adminTopicById_ofThePlatformAdminInTenantZero_isLookedUpInTheDefaultTenant() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+    when(authorisationService.isSuperAdmin()).thenReturn(true);
+    when(defaultTopicSeeder.defaultTopicTenantId()).thenReturn(1L);
+
+    topicService.findTopicByIdForAdmin(5L);
+
+    verify(topicRepository).findByIdForTenant(5L, 1L);
+    verify(topicRepository, never()).findById(5L);
+  }
+
+  @Test
+  void adminTopicList_ofAnyoneElseInTenantZero_staysInTenantZero() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+    when(authorisationService.isSuperAdmin()).thenReturn(false);
+
+    topicService.getAllTopicsForAdmin();
+
+    verify(topicRepository).findAllForTenant(0L);
+  }
+
+  @Test
+  void catalogueTopics_spanAllTenants_onlyForThePlatformAdmin() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+    when(authorisationService.isSuperAdmin()).thenReturn(true);
+
+    topicService.getCatalogueTopics();
+
+    verify(topicRepository).findAll();
+  }
+
+  @Test
+  void catalogueTopics_stayInTheTenantContext_forAnyoneElse_evenUnderTenantZero() {
+    ReflectionTestUtils.setField(topicService, "multitenancy", true);
+    TenantContext.setCurrentTenant(0L);
+    when(authorisationService.isSuperAdmin()).thenReturn(false);
+
+    topicService.getCatalogueTopics();
+
+    verify(topicRepository).findAllForTenant(0L);
+  }
 
   @AfterEach
   void tearDown() {

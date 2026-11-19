@@ -16,6 +16,8 @@ import java.io.IOException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.web.access.AccessDeniedHandler;
@@ -51,6 +53,19 @@ public class StatelessCsrfFilterTest {
     this.csrfFilter.doFilterInternal(request, response, filterChain);
 
     verify(this.filterChain, times(1)).doFilter(request, response);
+  }
+
+  @ParameterizedTest
+  @CsvSource({"POST, /topicadmin", "PUT, /topicadmin/1", "PUT, /topicadmin/catalogue"})
+  void topicWritesRequireARequestToken(String method, String path)
+      throws IOException, ServletException {
+    when(request.getRequestURI()).thenReturn(path);
+    when(request.getMethod()).thenReturn(method);
+
+    csrfFilter.doFilterInternal(request, response, filterChain);
+
+    verify(accessDeniedHandler).handle(any(), any(), any());
+    verifyNoMoreInteractions(filterChain);
   }
 
   @Test

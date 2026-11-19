@@ -2,10 +2,12 @@ package de.caritas.cob.consultingtypeservice.api.controller;
 
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TENANT_ADMIN;
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -16,17 +18,21 @@ import de.caritas.cob.consultingtypeservice.api.model.ApplicationSettingsPatchDT
 import de.caritas.cob.consultingtypeservice.api.repository.ApplicationSettingsRepository;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.api.util.JsonConverter;
+import de.caritas.cob.consultingtypeservice.schemas.model.EnableWalkthrough;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpPassword;
 import de.caritas.cob.consultingtypeservice.schemas.model.GlobalSmtpUsername;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.security.core.Authentication;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
@@ -34,6 +40,7 @@ import org.springframework.web.context.WebApplicationContext;
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
 @TestPropertySource(properties = "spring.profiles.active=testing")
 @TestPropertySource(properties = "feature.multitenancy.with.single.domain.enabled=true")
+@TestPropertySource(properties = "settings.smtp.password.encryption.secret=test-only-smtp-secret")
 @AutoConfigureMockMvc(addFilters = false)
 class ApplicationSettingsControllerIT {
 
@@ -88,7 +95,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.useTenantService.readOnly").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.value").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.readOnly").value(false))
-        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
         .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false))
         .andExpect(jsonPath("$.disableVideoAppointments.value").value(true))
         .andExpect(jsonPath("$.disableVideoAppointments.readOnly").value(false))
@@ -135,7 +142,8 @@ class ApplicationSettingsControllerIT {
     // given
     giveApplicationSettingEntityWithDynamicReleaseToggles();
     AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
-    Authentication authentication = builder.withUserRole(TENANT_ADMIN.getValue()).build();
+    Authentication authentication =
+        builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build();
     ApplicationSettingsPatchDTO patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(false);
     patchDTO.setMainTenantSubdomainForSingleDomainMultitenancy("app2");
@@ -159,6 +167,10 @@ class ApplicationSettingsControllerIT {
                 .content(jsonRequest)
                 .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Smtp-Sync-Status", "SMTP_SYNC_PENDING"))
+        .andExpect(header().exists("X-Smtp-Revision"))
+        .andExpect(
+            header().string("Access-Control-Expose-Headers", "X-Smtp-Revision, X-Smtp-Sync-Status"))
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.value").value(true))
         .andExpect(jsonPath("$.multitenancyWithSingleDomainEnabled.readOnly").value(true))
         .andExpect(jsonPath("$.multitenancyEnabled.value").value(false))
@@ -167,7 +179,7 @@ class ApplicationSettingsControllerIT {
         .andExpect(jsonPath("$.useTenantService.readOnly").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.value").value(false))
         .andExpect(jsonPath("$.useConsultingTypesForAgencies.readOnly").value(false))
-        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
         .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false))
         .andExpect(jsonPath("$.disableVideoAppointments.value").value(true))
         .andExpect(jsonPath("$.disableVideoAppointments.readOnly").value(false))
@@ -202,6 +214,480 @@ class ApplicationSettingsControllerIT {
     resetSettingsToPreviousState(authentication);
   }
 
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_PatchContainsUnsupportedSetting()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(authentication(authentication))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content("{\"useOverviewPage\":true}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_SwitchWalkthroughOffAndOn_When_PlatformAdminPatchesIt()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"enableWalkthrough\":false}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(false));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(false))
+        .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(false));
+
+    patchSettings(authentication, "{\"enableWalkthrough\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_LeaveWalkthroughUntouched_When_PatchOmitsIt()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":true}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_WalkthroughToggleIsReadOnly()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(true));
+    applicationSettingsRepository.save(entity);
+    Authentication authentication = platformAdmin();
+
+    try {
+      patchSettings(authentication, "{\"enableWalkthrough\":false}")
+          .andExpect(status().isBadRequest());
+      mockMvc
+          .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+          .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
+          .andExpect(jsonPath("$.enableWalkthrough.readOnly").value(true));
+    } finally {
+      ApplicationSettingsEntity current = applicationSettingsRepository.findAll().get(0);
+      current.setEnableWalkthrough(new EnableWalkthrough().withValue(true).withReadOnly(false));
+      applicationSettingsRepository.save(current);
+    }
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminOfRegularTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(
+            authentication,
+            "{\"enableWalkthrough\":false,\"mainTenantSubdomainForSingleDomainMultitenancy\":\"x\"}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true))
+        .andExpect(jsonPath("$.mainTenantSubdomainForSingleDomainMultitenancy.value").value("app"));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminWithoutTenantSendsWalkthrough()
+          throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder().withUserRole(TENANT_ADMIN.getValue()).build();
+
+    patchSettings(authentication, "{\"enableWalkthrough\":false}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.enableWalkthrough.value").value(true));
+  }
+
+  @Test
+  void
+      patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminOfRegularTenantOmitsWalkthrough()
+          throws Exception {
+    // Before CTS#168 only enableWalkthrough was platform-only; now every field of this PATCH is.
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"legalContentChangesBySingleTenantAdminsAllowed\":false}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.legalContentChangesBySingleTenantAdminsAllowed.value").value(true));
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnOneTopicPerAgencyOff_When_SettingWasNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-UserService#1264 do not carry the field
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setOneTopicPerAgencyEnabled(null);
+    applicationSettingsRepository.save(entity);
+
+    // when / then
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.readOnly").value(false));
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnStrictLiveChatQueue_When_FreeChoiceWasNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-Admin#1497 do not carry the field
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setLiveChatFreeChoiceEnabled(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesLiveChatFreeChoice()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchLiveChatFreeChoice(authentication, true).andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreLiveChatFreeChoiceOnly_When_PlatformAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+    var before =
+        mockMvc
+            .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    boolean oneTopicBefore =
+        com.jayway.jsonpath.JsonPath.read(before, "$.oneTopicPerAgencyEnabled.value");
+
+    patchLiveChatFreeChoice(authentication, true)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(true))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(oneTopicBefore));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(true));
+
+    // clean up
+    patchLiveChatFreeChoice(authentication, false)
+        .andExpect(jsonPath("$.liveChatFreeChoiceEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminSwitchesOneTopicPerAgency()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchOneTopicPerAgency(authentication, true).andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreOneTopicPerAgency_When_PlatformAdminSwitchesItOn()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchOneTopicPerAgency(authentication, true)
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(true));
+
+    // clean up
+    patchOneTopicPerAgency(authentication, false)
+        .andExpect(jsonPath("$.oneTopicPerAgencyEnabled.value").value(false));
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnFurtherCounsellingDefaults_When_SettingsWereNeverStored()
+      throws Exception {
+    // given — documents written before ORISO-Frontend#1876 do not carry the fields
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setFurtherCounsellingPostcodeMode(null);
+    entity.setTopicDuplicateMode(null);
+    applicationSettingsRepository.save(entity);
+
+    // when / then
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("SMART"))
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.readOnly").value(false))
+        .andExpect(jsonPath("$.topicDuplicateMode.value").value("INFORM_EXISTING_COUNSELLOR_ONCE"))
+        .andExpect(jsonPath("$.topicDuplicateMode.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreFurtherCounsellingSettings_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(
+            authentication,
+            "{\"furtherCounsellingPostcodeMode\":\"ALWAYS_EMPTY\","
+                + "\"topicDuplicateMode\":\"INFORM_EXISTING_COUNSELLOR_ONCE\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("ALWAYS_EMPTY"))
+        .andExpect(jsonPath("$.topicDuplicateMode.value").value("INFORM_EXISTING_COUNSELLOR_ONCE"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("ALWAYS_EMPTY"));
+
+    // clean up
+    patchSettings(authentication, "{\"furtherCounsellingPostcodeMode\":\"SMART\"}")
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("SMART"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"INFORM_BOTH_ONCE", "INFORM_BOTH_EVERY_MESSAGE", "FORBID"})
+  void patchApplicationSettings_Should_ReturnBadRequest_When_TopicDuplicateModeIsReserved(
+      String reservedMode) throws Exception {
+    patchSettings(platformAdmin(), "{\"topicDuplicateMode\":\"" + reservedMode + "\"}")
+        .andExpect(status().isBadRequest());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.topicDuplicateMode.value").value("INFORM_EXISTING_COUNSELLOR_ONCE"));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_PostcodeModeIsUnknown()
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"furtherCounsellingPostcodeMode\":\"SOMETIMES\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesFurtherCounselling()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"furtherCounsellingPostcodeMode\":\"ALWAYS_EMPTY\"}")
+        .andExpect(status().isForbidden());
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.furtherCounsellingPostcodeMode.value").value("SMART"));
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnEmptySupportEmail_When_NeverConfigured()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSupportEmail(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value(""))
+        .andExpect(jsonPath("$.supportEmail.readOnly").value(false));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreAndClearSupportEmail_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"supportEmail\":\" support@example.org \"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value("support@example.org"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.supportEmail.value").value("support@example.org"));
+
+    patchSettings(authentication, "{\"supportEmail\":\"\"}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.supportEmail.value").value(""));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"not-an-email", "a@b", "a@example.org, b@example.org", "a b@example.org"})
+  void patchApplicationSettings_Should_ReturnBadRequest_When_SupportEmailIsInvalid(String invalid)
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"supportEmail\":\"" + invalid + "\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnBadRequest_When_SupportEmailIsTooLong()
+      throws Exception {
+    patchSettings(platformAdmin(), "{\"supportEmail\":\"" + "a".repeat(250) + "@example.org\"}")
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesSupportEmail()
+      throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, "{\"supportEmail\":\"support@example.org\"}")
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getApplicationSettings_Should_ReturnTodaysChatBehaviour_When_NeverConfigured()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setChatComposerDisabledFormats(null);
+    entity.setChatMessageMaxWidthDesktop(null);
+    entity.setChatMessageCollapseThreshold(null);
+    applicationSettingsRepository.save(entity);
+
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""))
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("770"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("300"));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_DisableAndReEnableFormats_When_PlatformAdminSaves()
+      throws Exception {
+    Authentication authentication = platformAdmin();
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[\"underline\",\"bold\"]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value("bold,underline"));
+
+    patchSettings(authentication, "{\"chatComposerDisabledFormats\":[]}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+    mockMvc
+        .perform(MockMvcRequestBuilders.get("/settings").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.chatComposerDisabledFormats.value").value(""));
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreWidthAndCollapseOff_When_PlatformAdminSaves()
+      throws Exception {
+    patchSettings(
+            platformAdmin(),
+            "{\"chatMessageMaxWidthDesktop\":900,\"chatMessageCollapseThreshold\":0}")
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.chatMessageMaxWidthDesktop.value").value("900"))
+        .andExpect(jsonPath("$.chatMessageCollapseThreshold.value").value("0"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"blink\"]}",
+        "{\"chatMessageMaxWidthDesktop\":319}",
+        "{\"chatMessageMaxWidthDesktop\":1601}",
+        "{\"chatMessageCollapseThreshold\":-1}",
+        "{\"chatMessageCollapseThreshold\":49}",
+        "{\"chatMessageCollapseThreshold\":100001}"
+      })
+  void patchApplicationSettings_Should_ReturnBadRequest_When_ChatSettingIsInvalid(String body)
+      throws Exception {
+    patchSettings(platformAdmin(), body).andExpect(status().isBadRequest());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"chatComposerDisabledFormats\":[\"bold\"]}",
+        "{\"chatMessageMaxWidthDesktop\":900}",
+        "{\"chatMessageCollapseThreshold\":0}"
+      })
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminChangesChatSetting(
+      String body) throws Exception {
+    Authentication authentication =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+
+    patchSettings(authentication, body).andExpect(status().isForbidden());
+  }
+
+  private static Authentication platformAdmin() {
+    return new AuthenticationMockBuilder()
+        .withUserRole(TENANT_ADMIN.getValue())
+        .withTenantId("0")
+        .build();
+  }
+
+  private ResultActions patchSettings(Authentication authentication, String body) throws Exception {
+    return mockMvc.perform(
+        patch("/settingsadmin")
+            .with(authentication(authentication))
+            .header("csrfHeader", "csrfToken")
+            .cookie(new Cookie("csrfCookie", "csrfToken"))
+            .contentType(APPLICATION_JSON)
+            .content(body));
+  }
+
+  private ResultActions patchLiveChatFreeChoice(Authentication authentication, boolean enabled)
+      throws Exception {
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setLiveChatFreeChoiceEnabled(enabled);
+    return patchSettings(authentication, JsonConverter.convertToJson(patchDTO));
+  }
+
+  private ResultActions patchOneTopicPerAgency(Authentication authentication, boolean enabled)
+      throws Exception {
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setOneTopicPerAgencyEnabled(enabled);
+    return patchSettings(authentication, JsonConverter.convertToJson(patchDTO));
+  }
+
   private void resetSettingsToPreviousState(Authentication authentication) throws Exception {
     var patchDTO = new ApplicationSettingsPatchDTO();
     patchDTO.setLegalContentChangesBySingleTenantAdminsAllowed(true);
@@ -226,6 +712,73 @@ class ApplicationSettingsControllerIT {
                 .content(jsonRequest)
                 .contentType(jakarta.ws.rs.core.MediaType.APPLICATION_JSON))
         .andExpect(status().isOk());
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "{\"legalContentChangesBySingleTenantAdminsAllowed\":false}",
+        "{\"mainTenantSubdomainForSingleDomainMultitenancy\":\"attacker\"}",
+        "{\"globalFeatureSystemNotificationEmailsEnabled\":true}",
+        "{\"globalSmtpEnabled\":true}",
+        "{\"globalSmtpHost\":\"smtp.attacker.example\"}",
+        "{\"globalSmtpPort\":\"2525\"}",
+        "{\"globalSmtpSecure\":true}",
+        "{\"globalSmtpUsername\":\"attacker\"}",
+        "{\"globalSmtpPassword\":\"attacker\"}",
+        "{\"globalSmtpFrom\":\"attacker@example.org\"}",
+        "{\"globalSmtpEmailThemeColor\":\"#000000\"}"
+      })
+  void patchApplicationSettings_Should_ReturnForbiddenAndStoreNothing_When_TenantScopedAdminPatches(
+      String platformWideChange) throws Exception {
+    var before = applicationSettingsRepository.findAll().get(0);
+    var hostBefore =
+        before.getGlobalSmtpHost() == null ? null : before.getGlobalSmtpHost().getValue();
+    var subdomainBefore = before.getMainTenantSubdomainForSingleDomainMultitenancy().getValue();
+    var legalBefore = before.getLegalContentChangesBySingleTenantAdminsAllowed().getValue();
+    var revisionBefore = before.getSmtpRevision();
+
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(TENANT_ADMIN.getValue())
+                            .withTenantId("1")
+                            .build()))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content(platformWideChange))
+        .andExpect(status().isForbidden());
+
+    var after = applicationSettingsRepository.findAll().get(0);
+    assertThat(after.getGlobalSmtpHost() == null ? null : after.getGlobalSmtpHost().getValue())
+        .isEqualTo(hostBefore);
+    assertThat(after.getMainTenantSubdomainForSingleDomainMultitenancy().getValue())
+        .isEqualTo(subdomainBefore);
+    assertThat(after.getLegalContentChangesBySingleTenantAdminsAllowed().getValue())
+        .isEqualTo(legalBefore);
+    assertThat(after.getSmtpRevision()).isEqualTo(revisionBefore);
+  }
+
+  @Test
+  void patchApplicationSettings_Should_ReturnForbidden_When_TenantAdminHasNoTenantIdClaim()
+      throws Exception {
+    mockMvc
+        .perform(
+            patch("/settingsadmin")
+                .with(
+                    authentication(
+                        new AuthenticationMockBuilder()
+                            .withUserRole(TENANT_ADMIN.getValue())
+                            .build()))
+                .header("csrfHeader", "csrfToken")
+                .cookie(new Cookie("csrfCookie", "csrfToken"))
+                .contentType(APPLICATION_JSON)
+                .content("{\"globalSmtpHost\":\"smtp.attacker.example\"}"))
+        .andExpect(status().isForbidden());
   }
 
   @Test
@@ -280,6 +833,7 @@ class ApplicationSettingsControllerIT {
                     authentication(
                         builder.withUserRole(TENANT_ADMIN.getValue()).withTenantId("0").build())))
         .andExpect(status().isOk())
+        .andExpect(header().string("Cache-Control", "no-store"))
         .andExpect(jsonPath("$.globalSmtpUsername").value("admin-smtp-user"))
         .andExpect(jsonPath("$.globalSmtpPassword").value("admin-smtp-pass"));
 
@@ -288,11 +842,185 @@ class ApplicationSettingsControllerIT {
     applicationSettingsRepository.save(entity);
   }
 
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnCredentials_When_UserIsTechnicalUser()
+      throws Exception {
+    ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
+    entity.setGlobalSmtpUsername(
+        new GlobalSmtpUsername().withValue("technical-smtp-user").withReadOnly(false));
+    entity.setGlobalSmtpPassword(
+        new GlobalSmtpPassword().withValue("technical-smtp-pass").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(authentication(builder.withUserRole("technical").build())))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.globalSmtpUsername").value("technical-smtp-user"))
+        .andExpect(jsonPath("$.globalSmtpPassword").value("technical-smtp-pass"));
+
+    entity.setGlobalSmtpUsername(new GlobalSmtpUsername().withValue("").withReadOnly(false));
+    entity.setGlobalSmtpPassword(new GlobalSmtpPassword().withValue("").withReadOnly(false));
+    applicationSettingsRepository.save(entity);
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnForbidden_When_TenantIdIsZeroWithoutTenantAdminRole()
+      throws Exception {
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(
+                    authentication(
+                        builder.withUserRole(TOPIC_ADMIN.getValue()).withTenantId("0").build())))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnForbidden_When_TenantAdminHasNoTenantIdClaim()
+      throws Exception {
+    AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials")
+                .accept(APPLICATION_JSON)
+                .with(authentication(builder.withUserRole(TENANT_ADMIN.getValue()).build())))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void getGlobalSmtpCredentials_Should_ReturnUnauthorized_When_RequestIsAnonymous()
+      throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-credentials").accept(APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
   private void giveApplicationSettingEntityWithDynamicReleaseToggles() {
     ApplicationSettingsEntity entity = applicationSettingsRepository.findAll().get(0);
     entity.setReleaseToggles("featureToggleTenantCreationEnabled", true);
     applicationSettingsRepository.deleteAll();
     applicationSettingsRepository.save(entity);
+  }
+
+  @Test
+  void smtpSyncStatusRequiresPlatformAdminAndDoesNotExposeCredentials() throws Exception {
+    var entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSmtpRevision(0);
+    entity.setSmtpPendingRevision(null);
+    entity.setSmtpAppliedRevision(null);
+    entity.setSmtpSyncStatus(null);
+    applicationSettingsRepository.save(entity);
+    var platform =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    var response =
+        mockMvc
+            .perform(
+                MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                    .with(authentication(platform))
+                    .accept(APPLICATION_JSON))
+            .andExpect(status().isOk())
+            .andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.revision").value(0))
+            .andExpect(jsonPath("$.status").value("UNKNOWN"))
+            .andExpect(jsonPath("$.globalSmtpUsername").doesNotExist())
+            .andExpect(jsonPath("$.globalSmtpPassword").doesNotExist())
+            .andReturn();
+    org.assertj.core.api.Assertions.assertThat(response.getResponse().getContentAsString())
+        .doesNotContain("password", "username", "private");
+  }
+
+  // The Admin panel accepts appliedRevision only as a JSON integer or null.
+  @Test
+  void smtpSyncStatusWritesAppliedRevisionAsNumberOrNull() throws Exception {
+    var entity = applicationSettingsRepository.findAll().get(0);
+    entity.setSmtpRevision(5);
+    entity.setSmtpPendingRevision(null);
+    entity.setSmtpAppliedRevision(5L);
+    entity.setSmtpSyncStatus("APPLIED");
+    applicationSettingsRepository.save(entity);
+    var platform =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    var status = MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status");
+    mockMvc
+        .perform(status.with(authentication(platform)))
+        .andExpect(jsonPath("$.appliedRevision").value(5))
+        .andExpect(jsonPath("$.status").value("APPLIED"));
+    entity.setSmtpAppliedRevision(null);
+    entity.setSmtpSyncStatus(null);
+    applicationSettingsRepository.save(entity);
+    var body =
+        mockMvc
+            .perform(status.with(authentication(platform)))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    assertThat(body).contains("\"appliedRevision\":null");
+  }
+
+  @Test
+  void smtpSyncStatusDeniesUnauthenticatedCaller() throws Exception {
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status").accept(APPLICATION_JSON))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTenantAdminOutsidePlatformTenant() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(TENANT_ADMIN.getValue())
+            .withTenantId("1")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTechnicalCaller() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(UserRole.TECHNICAL.getValue())
+            .withTenantId("0")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void smtpSyncStatusDeniesTopicAdmin() throws Exception {
+    var restricted =
+        new AuthenticationMockBuilder()
+            .withUserRole(TOPIC_ADMIN.getValue())
+            .withTenantId("0")
+            .build();
+    mockMvc
+        .perform(
+            MockMvcRequestBuilders.get("/settingsadmin/smtp-sync-status")
+                .with(authentication(restricted))
+                .accept(APPLICATION_JSON))
+        .andExpect(status().isForbidden());
   }
 
   private Authentication givenMockAuthentication(final UserRole authority) {

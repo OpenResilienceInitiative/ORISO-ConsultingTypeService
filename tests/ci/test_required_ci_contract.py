@@ -18,6 +18,84 @@ def job_block(workflow: str, job_name: str) -> str:
 
 
 class RequiredCiContractTest(unittest.TestCase):
+    def run_required_runner_with_reports(self, reports):
+        runner = ROOT / "scripts/ci/run-required-integration-tests.sh"
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_root = Path(temp_dir)
+            fake_maven = temp_root / "mvnw"
+            fake_maven.write_text("#!/usr/bin/env bash\nexit 0\n")
+            fake_maven.chmod(0o755)
+            for report_path, report_xml in reports.items():
+                destination = temp_root / report_path
+                destination.parent.mkdir(parents=True, exist_ok=True)
+                destination.write_text(report_xml)
+            env = os.environ.copy()
+            env["ORISO_MAVEN_WRAPPER"] = str(fake_maven)
+
+            return subprocess.run(
+                [runner], cwd=temp_root, env=env, check=False, capture_output=True, text=True
+            )
+
+    def test_required_runner_rejects_skipped_test_report(self):
+        skipped_report = """\
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="SkippedIT" tests="1" failures="0" errors="0" skipped="1">
+  <testcase name="isRequired" classname="SkippedIT">
+    <skipped message="missing database"/>
+  </testcase>
+</testsuite>
+"""
+        result = self.run_required_runner_with_reports(
+            {"target/surefire-reports/TEST-SkippedIT.xml": skipped_report}
+        )
+
+        self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("skipped=1", result.stdout + result.stderr)
+
+    def test_required_runner_rejects_skipped_failsafe_report(self):
+        passing_integration = '<testsuite tests="1" failures="0" errors="0" skipped="0"/>'
+        skipped_failsafe = '<testsuite tests="1" failures="0" errors="0" skipped="1"/>'
+
+        result = self.run_required_runner_with_reports(
+            {
+                "target/surefire-reports/TEST-PassingIT.xml": passing_integration,
+                "module/target/failsafe-reports/TEST-SkippedIT.xml": skipped_failsafe,
+            }
+        )
+
+        self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("skipped=1", result.stdout + result.stderr)
+
+    def test_required_runner_rejects_zero_executed_failures_and_errors(self):
+        invalid_reports = {
+            "zero executed tests": '<testsuite tests="0" failures="0" errors="0" skipped="0"/>',
+            "one failure": '<testsuite tests="1" failures="1" errors="0" skipped="0"/>',
+            "one error": '<testsuite tests="1" failures="0" errors="1" skipped="0"/>',
+        }
+        for reason, report in invalid_reports.items():
+            with self.subTest(reason=reason):
+                result = self.run_required_runner_with_reports(
+                    {"target/surefire-reports/TEST-FixtureIT.xml": report}
+                )
+
+                self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+
+    def test_required_runner_accepts_only_executed_passing_reports(self):
+        passing_report = '<testsuite tests="2" failures="0" errors="0" skipped="0"/>'
+
+        result = self.run_required_runner_with_reports(
+            {"target/surefire-reports/TEST-PassingIT.xml": passing_report}
+        )
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("tests=2 failures=0 errors=0 skipped=0", result.stdout)
+
+    def test_required_runner_rejects_zero_reports(self):
+        result = self.run_required_runner_with_reports({})
+
+        self.assertNotEqual(0, result.returncode, result.stdout + result.stderr)
+        self.assertIn("no integration-test reports", result.stderr)
+
     def test_required_runner_propagates_maven_failure(self):
         runner = ROOT / "scripts/ci/run-required-integration-tests.sh"
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -72,6 +150,7 @@ class RequiredCiContractTest(unittest.TestCase):
         self.assertNotIn("continue-on-error:", action)
         self.assertNotIn("if ! ./mvnw", action)
         self.assertIn("scripts/ci/run-required-integration-tests.sh", action)
+        self.assertIn("scripts/ci/assert-required-test-reports.py", action)
 
 
 if __name__ == "__main__":

@@ -1,9 +1,11 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
 import static de.caritas.cob.consultingtypeservice.api.auth.UserRole.TOPIC_ADMIN;
+import static de.caritas.cob.consultingtypeservice.testHelper.TopicCsrfTestSupport.topicCsrf;
 import static javax.ws.rs.core.MediaType.APPLICATION_JSON;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -23,12 +25,17 @@ import de.caritas.cob.consultingtypeservice.api.util.JsonConverter;
 import de.caritas.cob.consultingtypeservice.api.util.MultilingualTopicTestDataBuilder;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.RestrictedTenantDTO;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.Settings;
+import de.caritas.cob.consultingtypeservice.testHelper.TopicCsrfTestSupport;
 import de.caritas.cob.consultingtypeservice.testHelper.TopicPathConstants;
+import jakarta.servlet.http.Cookie;
 import java.util.HashMap;
 import java.util.Map;
 import org.jeasy.random.EasyRandom;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,6 +46,7 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 @SpringBootTest(classes = ConsultingTypeServiceApplication.class)
@@ -67,12 +75,53 @@ class TopicAdminControllerIT {
                 .settings(new Settings().featureTopicsEnabled(topicFeatureEnabled)));
   }
 
+  @ParameterizedTest
+  @NullSource
+  @ValueSource(strings = "mismatched-topic-write-token")
+  @Transactional
+  void topicUpdateWithAnInvalidRequestTokenLeavesTheTopicUnchanged(String header) throws Exception {
+    var path = String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1");
+    var topicAdmin = authentication(givenMockAuthentication(UserRole.TOPIC_ADMIN));
+    var before = mockMvc.perform(get(path).with(topicAdmin)).andExpect(status().isOk()).andReturn();
+    var payload =
+        new MultilingualTopicTestDataBuilder()
+            .topicDTO()
+            .withName("CSRF fixture subject")
+            .withSlug("csrf-fixture-subject")
+            .withDescription("Topic request protection fixture")
+            .withInternalIdentifier("csrf-fixture-subject")
+            .withStatus(TopicStatus.INACTIVE.toString())
+            .withTitles(
+                new TitlesMultilingualDTO()
+                    ._short(translateableMapWithGermanEntryFor("short"))
+                    ._long(translateableMapWithGermanEntryFor("long"))
+                    .welcome("welcome")
+                    .registrationDropdown("fixture"))
+            .jsonify();
+    var write =
+        put(path)
+            .with(topicAdmin)
+            .cookie(new Cookie(TopicCsrfTestSupport.COOKIE, TopicCsrfTestSupport.VALUE))
+            .contentType(APPLICATION_JSON)
+            .content(payload);
+    if (header != null) {
+      write.header(TopicCsrfTestSupport.HEADER, header);
+    }
+
+    mockMvc.perform(write).andExpect(status().isForbidden());
+
+    var after = mockMvc.perform(get(path).with(topicAdmin)).andExpect(status().isOk()).andReturn();
+    assertEquals(
+        before.getResponse().getContentAsString(), after.getResponse().getContentAsString());
+  }
+
   @Test
   void
       createTopic_Should_returnStatusBadRequest_When_calledWithInvalidCreateParamsButValidAuthority()
           throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus("invalid status");
     final String payload = JsonConverter.convertToJson(topicDTO);
     AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
@@ -80,6 +129,7 @@ class TopicAdminControllerIT {
     mockMvc
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
                 .with(authentication(builder.withUserRole(TOPIC_ADMIN.getValue()).build()))
                 .contentType(APPLICATION_JSON)
                 .content(payload)
@@ -110,6 +160,7 @@ class TopicAdminControllerIT {
     mockMvc
         .perform(
             put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
+                .with(topicCsrf())
                 .with(authentication(authentication))
                 .contentType(APPLICATION_JSON)
                 .content(payload)
@@ -123,6 +174,45 @@ class TopicAdminControllerIT {
         .andExpect(jsonPath("$.status").value(TopicStatus.INACTIVE.toString()))
         .andExpect(jsonPath("$.updateDate").exists())
         .andExpect(jsonPath("$.createDate").exists());
+  }
+
+  @Test
+  void updateTopic_Should_keepStoredSlug_When_payloadOmitsSlug() throws Exception {
+    final Authentication authentication = givenMockAuthentication(UserRole.TOPIC_ADMIN);
+    final MultilingualTopicTestDataBuilder builder =
+        new MultilingualTopicTestDataBuilder()
+            .topicDTO()
+            .withName("name")
+            .withDescription("desc")
+            .withInternalIdentifier("ident")
+            .withStatus(TopicStatus.ACTIVE.toString())
+            .withTitles(
+                new TitlesMultilingualDTO()
+                    ._short(translateableMapWithGermanEntryFor("s"))
+                    ._long(translateableMapWithGermanEntryFor("l"))
+                    .welcome("w")
+                    .registrationDropdown("dd"));
+
+    mockMvc
+        .perform(
+            put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
+                .with(topicCsrf())
+                .with(authentication(authentication))
+                .contentType(APPLICATION_JSON)
+                .content(builder.withSlug("debt").jsonify()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value("debt"));
+
+    // The Admin form does not send a slug; saving it must not erase the stored one.
+    mockMvc
+        .perform(
+            put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
+                .with(topicCsrf())
+                .with(authentication(authentication))
+                .contentType(APPLICATION_JSON)
+                .content(builder.withSlug(null).jsonify()))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.slug").value("debt"));
   }
 
   @Test
@@ -142,6 +232,7 @@ class TopicAdminControllerIT {
     mockMvc
         .perform(
             put(String.format(TopicPathConstants.PATH_PUT_TOPIC_BY_ID, "1"))
+                .with(topicCsrf())
                 .with(authentication(authentication))
                 .contentType(APPLICATION_JSON)
                 .content(payload)
@@ -155,12 +246,14 @@ class TopicAdminControllerIT {
           throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus("a very very long status");
     final String payload = JsonConverter.convertToJson(topicDTO);
     final AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
     mockMvc
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
                 .with(authentication(builder.withUserRole(TOPIC_ADMIN.getValue()).build()))
                 .contentType(APPLICATION_JSON)
                 .content(payload)
@@ -174,11 +267,15 @@ class TopicAdminControllerIT {
           throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     final String payload = JsonConverter.convertToJson(topicDTO);
     // OAuth2 resource server returns 401 (not the legacy Keycloak-adapter 403) for anonymous calls
     mockMvc
         .perform(
-            post(TopicPathConstants.ADMIN_ROOT_PATH).content(payload).contentType(APPLICATION_JSON))
+            post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
+                .content(payload)
+                .contentType(APPLICATION_JSON))
         .andExpect(status().isUnauthorized());
   }
 
@@ -187,12 +284,14 @@ class TopicAdminControllerIT {
       throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus(TopicStatus.ACTIVE.toString());
     final String payload = JsonConverter.convertToJson(topicDTO);
     final AuthenticationMockBuilder builder = new AuthenticationMockBuilder();
     mockMvc
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
                 .with(authentication(builder.withUserRole("another-authority").build()))
                 .content(payload)
                 .contentType(APPLICATION_JSON))
@@ -204,6 +303,7 @@ class TopicAdminControllerIT {
       throws Exception {
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus(TopicStatus.INACTIVE.toString());
     topicDTO.setSlug("slug");
     topicDTO.setTitles(
@@ -217,6 +317,7 @@ class TopicAdminControllerIT {
     mockMvc
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
                 .with(authentication(authentication))
                 .contentType(APPLICATION_JSON)
                 .content(payload)
@@ -233,17 +334,57 @@ class TopicAdminControllerIT {
         .andExpect(jsonPath("$.createDate").exists());
   }
 
+  /**
+   * Strictness about unsupported fields belongs to the application-settings PATCH body alone (see
+   * {@code StrictRequestBodyConfig}). Enforcing it with the global {@code
+   * spring.jackson.deserialization.fail-on-unknown-properties} property would silently extend it to
+   * every other body the service accepts, including this one.
+   *
+   * <p>{@code external} is the concrete case: the Admin panel hardcodes it into every topic create
+   * and update (ORISO-Admin {@code src/hooks/useAddOrUpdateTopicAdmin.hook.ts}), and {@code
+   * TopicMultilingualDTO} does not declare it. Rejecting it here would break topic administration.
+   */
+  @Test
+  void createTopic_Should_returnStatusOk_When_payloadCarriesFieldOutsideTheTopicContract()
+      throws Exception {
+    final EasyRandom easyRandom = new EasyRandom();
+    final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
+    topicDTO.setStatus(TopicStatus.INACTIVE.toString());
+    topicDTO.setSlug("slug");
+    topicDTO.setTitles(
+        new TitlesMultilingualDTO()
+            ._short(translateableMapWithGermanEntryFor("short"))
+            ._long(translateableMapWithGermanEntryFor("long"))
+            .welcome("welcome")
+            .registrationDropdown("dd"));
+    final String payload =
+        JsonConverter.convertToJson(topicDTO).replaceFirst("\\{", "{\"external\":false,");
+    final Authentication authentication = givenMockAuthentication(UserRole.TOPIC_ADMIN);
+    mockMvc
+        .perform(
+            post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
+                .with(authentication(authentication))
+                .contentType(APPLICATION_JSON)
+                .content(payload))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").exists());
+  }
+
   @Test
   void createTopic_Should_returnStatusForbidden_When_topicToggleIsDisabled() throws Exception {
     givenTopicFeatureEnabled(false);
     final EasyRandom easyRandom = new EasyRandom();
     final TopicMultilingualDTO topicDTO = easyRandom.nextObject(TopicMultilingualDTO.class);
+    topicDTO.setIcon(null);
     topicDTO.setStatus(TopicStatus.INACTIVE.toString());
     final String payload = JsonConverter.convertToJson(topicDTO);
     final Authentication authentication = givenMockAuthentication(UserRole.TOPIC_ADMIN);
     mockMvc
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
                 .with(authentication(authentication))
                 .contentType(APPLICATION_JSON)
                 .content(payload)
@@ -258,6 +399,7 @@ class TopicAdminControllerIT {
     mockMvc
         .perform(
             post(TopicPathConstants.ADMIN_ROOT_PATH)
+                .with(topicCsrf())
                 .with(authentication(builder.withUserRole("another-authority").build()))
                 .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isForbidden());

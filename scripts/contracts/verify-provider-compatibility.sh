@@ -4,15 +4,22 @@ set -euo pipefail
 
 base_dir="${1:?base bundle directory is required}"
 head_dir="${2:?head bundle directory is required}"
-err_ignore="${3:-}"
+shift 2
 oasdiff_bin="${OASDIFF_BIN:-oasdiff}"
 
+# Every further argument is one reviewed breaking-change allowlist; oasdiff takes a single file.
 ignore_args=()
-if [[ -n "${err_ignore}" ]]; then
-  if [[ ! -f "${err_ignore}" ]]; then
-    echo "Reviewed breaking-change allowlist not found: ${err_ignore}" >&2
-    exit 1
-  fi
+if [[ "$#" -gt 0 ]]; then
+  err_ignore="$(mktemp)"
+  trap 'rm -f "${err_ignore}"' EXIT
+  for allowlist in "$@"; do
+    if [[ ! -f "${allowlist}" ]]; then
+      echo "Reviewed breaking-change allowlist not found: ${allowlist}" >&2
+      exit 1
+    fi
+    cat "${allowlist}" >> "${err_ignore}"
+    echo >> "${err_ignore}"
+  done
   ignore_args=(--err-ignore "${err_ignore}")
 fi
 

@@ -14,7 +14,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.support.AbstractCacheManager;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
-import org.springframework.cache.support.SimpleValueWrapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -156,7 +155,7 @@ public class CacheManagerConfig {
     @Override
     public ValueWrapper putIfAbsent(Object key, Object value) {
       Element existing = cache.putIfAbsent(new Element(key, toStoreValue(value)));
-      return existing == null ? null : new SimpleValueWrapper(existing.getObjectValue());
+      return toValueWrapper(existing == null ? null : existing.getObjectValue());
     }
 
     @Override

@@ -1,5 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api.controller;
 
+import de.caritas.cob.consultingtypeservice.api.auth.Authority.AuthorityValue;
+import de.caritas.cob.consultingtypeservice.api.auth.ConsultingTypeAccessGuard;
 import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeGroupResponseDTO;
@@ -8,14 +10,20 @@ import de.caritas.cob.consultingtypeservice.api.model.ExtendedConsultingTypeResp
 import de.caritas.cob.consultingtypeservice.api.model.FullConsultingTypeResponseDTO;
 import de.caritas.cob.consultingtypeservice.api.service.ConsultingTypeGroupService;
 import de.caritas.cob.consultingtypeservice.api.service.ConsultingTypeService;
+import de.caritas.cob.consultingtypeservice.api.service.TenantBootstrapService;
+import de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity;
+import de.caritas.cob.consultingtypeservice.config.security.TenantCreationContext;
 import de.caritas.cob.consultingtypeservice.generated.api.controller.ConsultingtypesApi;
 import io.swagger.annotations.Api;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.util.CollectionUtils;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,9 +33,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 @Api(tags = "consulting-type-controller")
 public class ConsultingTypeController implements ConsultingtypesApi {
+  @Autowired private TaskServiceIdentity taskIdentity;
+
+  @Autowired private TenantBootstrapService bootstrap;
+
+  @Autowired private HttpServletRequest request;
 
   private final @NonNull ConsultingTypeService consultingTypeService;
   private final @NonNull ConsultingTypeGroupService consultingTypeGroupService;
+  private final @NonNull ConsultingTypeAccessGuard accessGuard;
 
   /**
    * Returns a list of all consulting types with basic properties.
@@ -129,10 +143,29 @@ public class ConsultingTypeController implements ConsultingtypesApi {
   }
 
   @Override
-  @PreAuthorize("hasAuthority('AUTHORIZATION_CREATE_CONSULTING_TYPE')")
+  @PreAuthorize(
+      "hasAnyAuthority('AUTHORIZATION_CREATE_CONSULTING_TYPE',"
+          + " 'AUTHORIZATION_TECHNICAL_CREATE_TENANT_DEFAULT_CONSULTING_TYPES')"
+          + " or @taskServiceIdentity.allows(authentication, 'CONFIG_WIZARD')")
   public ResponseEntity<FullConsultingTypeResponseDTO> createConsultingType(
       final ConsultingTypeDTO consultingTypeDTO) {
-    return ResponseEntity.ok(consultingTypeService.createConsultingType(consultingTypeDTO));
+    if (callerHasAuthority(AuthorityValue.CREATE_CONSULTING_TYPE)) {
+      accessGuard.assertMayCreate();
+      return ResponseEntity.ok(consultingTypeService.createConsultingType(consultingTypeDTO));
+    }
+    if (taskIdentity != null && taskIdentity.current("CONFIG_WIZARD")) {
+      return ResponseEntity.ok(
+          bootstrap.create(consultingTypeDTO, request.getHeader(TenantCreationContext.HEADER)));
+    }
+    return ResponseEntity.ok(
+        consultingTypeService.createInitialConsultingTypeForTenant(consultingTypeDTO));
+  }
+
+  private static boolean callerHasAuthority(String authority) {
+    var authentication = SecurityContextHolder.getContext().getAuthentication();
+    return authentication != null
+        && authentication.getAuthorities().stream()
+            .anyMatch(granted -> authority.equals(granted.getAuthority()));
   }
 
   @Override

@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
@@ -35,6 +36,7 @@ public class TopicConverter {
             .fallbackUrl(topic.getFallbackUrl())
             .welcomeMessage(topic.getWelcomeMessage())
             .titles(toTitlesDTO(topic, lang))
+            .icon(topic.getIcon())
             .internalIdentifier(topic.getInternalIdentifier());
     if (topic.getCreateDate() != null) {
       topicDTO.setCreateDate(topic.getCreateDate().toString());
@@ -70,6 +72,7 @@ public class TopicConverter {
             .fallbackUrl(topic.getFallbackUrl())
             .welcomeMessage(topic.getWelcomeMessage())
             .titles(toMultilingualTitlesDTO(topic))
+            .icon(topic.getIcon())
             .internalIdentifier(topic.getInternalIdentifier());
     if (topic.getCreateDate() != null) {
       topicMultilingualDTO.setCreateDate(topic.getCreateDate().toString());
@@ -109,6 +112,7 @@ public class TopicConverter {
     topicEntity.setFallbackAgencyId(topicDTO.getFallbackAgencyId());
     topicEntity.setFallbackUrl(topicDTO.getFallbackUrl());
     topicEntity.setWelcomeMessage(topicDTO.getWelcomeMessage());
+    topicEntity.setIcon(emptyToNull(topicDTO.getIcon()));
     titlesToEntity(topicDTO, topicEntity);
     return topicEntity;
   }
@@ -118,8 +122,9 @@ public class TopicConverter {
     if (titles != null) {
       topicEntity.setTitlesShort(convertToJson(titles.getShort()));
       topicEntity.setTitlesLong(convertToJson(titles.getLong()));
-      topicEntity.setTitlesWelcome(convertToJson(titles.getWelcome()));
-      topicEntity.setTitlesDropdown(convertToJson(titles.getRegistrationDropdown()));
+      // Plain strings, read back as they are (not JSON).
+      topicEntity.setTitlesWelcome(titles.getWelcome());
+      topicEntity.setTitlesDropdown(titles.getRegistrationDropdown());
     } else {
       nullifyTitleAttributes(topicEntity);
     }
@@ -132,17 +137,34 @@ public class TopicConverter {
     topicEntity.setTitlesDropdown(null);
   }
 
+  /**
+   * Applies an update to a stored topic. Fields the caller did not send (null) keep their stored
+   * value: the Admin form sends neither slug, titles, welcome message nor fallback fields, and
+   * treating "not sent" as "clear it" silently erased them on every save (issue #195).
+   */
   public TopicEntity toEntity(final TopicEntity targetEntity, final TopicMultilingualDTO topicDTO) {
     targetEntity.setName(convertToJson(topicDTO.getName()));
-    targetEntity.setSlug(topicDTO.getSlug());
     targetEntity.setStatus(TopicStatus.valueOf(topicDTO.getStatus()));
     targetEntity.setDescription(convertToJson(topicDTO.getDescription()));
     targetEntity.setInternalIdentifier(topicDTO.getInternalIdentifier());
     targetEntity.setUpdateDate(LocalDateTime.now(ZoneOffset.UTC));
-    targetEntity.setFallbackAgencyId(topicDTO.getFallbackAgencyId());
-    targetEntity.setFallbackUrl(topicDTO.getFallbackUrl());
-    targetEntity.setWelcomeMessage(topicDTO.getWelcomeMessage());
-    titlesToEntity(topicDTO, targetEntity);
+    setIfPresent(topicDTO.getSlug(), targetEntity::setSlug);
+    setIfPresent(topicDTO.getFallbackAgencyId(), targetEntity::setFallbackAgencyId);
+    setIfPresent(topicDTO.getFallbackUrl(), targetEntity::setFallbackUrl);
+    setIfPresent(topicDTO.getWelcomeMessage(), targetEntity::setWelcomeMessage);
+    if (topicDTO.getTitles() != null) {
+      titlesToEntity(topicDTO, targetEntity);
+    }
     return targetEntity;
+  }
+
+  private static String emptyToNull(final String value) {
+    return value == null || value.isEmpty() ? null : value;
+  }
+
+  private static <T> void setIfPresent(final T value, final Consumer<T> setter) {
+    if (value != null) {
+      setter.accept(value);
+    }
   }
 }

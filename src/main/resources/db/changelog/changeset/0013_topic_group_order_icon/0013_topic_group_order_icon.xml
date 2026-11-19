@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd">
+    <!-- Category order, picture and saved-by-admin marker; order of the topics inside a category. -->
+    <changeSet author="oriso" id="0013_topic_group_order_icon">
+        <sqlFile path="db/changelog/changeset/0013_topic_group_order_icon/0013_topic_group_order_icon.sql" stripComments="true"/>
+        <rollback>
+            <sqlFile path="db/changelog/changeset/0013_topic_group_order_icon/0013_topic_group_order_icon-rollback.sql" stripComments="true"/>
+        </rollback>
+    </changeSet>
+</databaseChangeLog>

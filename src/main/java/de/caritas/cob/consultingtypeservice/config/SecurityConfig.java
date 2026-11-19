@@ -1,6 +1,7 @@
 package de.caritas.cob.consultingtypeservice.config;
 
 import de.caritas.cob.consultingtypeservice.api.auth.RoleAuthorizationAuthorityMapper;
+import de.caritas.cob.consultingtypeservice.config.security.TaskServiceIdentity;
 import de.caritas.cob.consultingtypeservice.filter.HttpTenantFilter;
 import de.caritas.cob.consultingtypeservice.filter.StatelessCsrfFilter;
 import jakarta.annotation.Nullable;
@@ -12,6 +13,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.convert.converter.Converter;
@@ -36,6 +38,7 @@ import org.springframework.security.web.csrf.CsrfFilter;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+  @Autowired private TaskServiceIdentity taskServiceIdentity;
 
   public static final String[] WHITE_LIST =
       new String[] {
@@ -89,7 +92,7 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/settings", "/settings/*")
                     .permitAll()
-                    .requestMatchers("/topic/public", "/topic/public/*")
+                    .requestMatchers("/topic/public", "/topic/public/*", "/topic/public/icons/*")
                     .permitAll()
                     .requestMatchers("/topic", "/topic/*")
                     .authenticated()
@@ -102,8 +105,10 @@ public class SecurityConfig {
                     .anyRequest()
                     .permitAll())
         .oauth2ResourceServer(
-            oauth2 ->
-                oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)));
+            oauth2 -> oauth2.jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter)))
+        .headers(
+            headers ->
+                headers.contentSecurityPolicy(csp -> csp.policyDirectives("script-src 'self'")));
 
     return httpSecurity.build();
   }
@@ -127,6 +132,10 @@ public class SecurityConfig {
 
   private Collection<GrantedAuthority> grantedAuthorities(
       Jwt jwt, RoleAuthorizationAuthorityMapper authorityMapper) {
+    if (TaskServiceIdentity.hasTaskRole(jwt)
+        || (taskServiceIdentity != null && taskServiceIdentity.isTaskToken(jwt))) {
+      return java.util.List.of();
+    }
     var authorities = new HashSet<GrantedAuthority>();
     Collection<GrantedAuthority> jwtAuthorities = jwtGrantedAuthoritiesConverter.convert(jwt);
     if (jwtAuthorities != null) {
@@ -141,21 +150,17 @@ public class SecurityConfig {
     return authorities;
   }
 
+  /**
+   * Realm roles only. Client roles in {@code resource_access} belong to other clients (for example
+   * realm-management) and are not role grants for this service; the realm defines no client for
+   * this service either.
+   */
   @SuppressWarnings("unchecked")
   private Set<String> extractKeycloakRoles(Jwt jwt) {
     var roles = new HashSet<String>();
     Object realmAccess = jwt.getClaims().get("realm_access");
     if (realmAccess instanceof Map) {
       addRoles(roles, ((Map<String, Object>) realmAccess).get("roles"));
-    }
-
-    Object resourceAccess = jwt.getClaims().get("resource_access");
-    if (resourceAccess instanceof Map) {
-      Map<String, Object> resourceAccessMap = (Map<String, Object>) resourceAccess;
-      resourceAccessMap.values().stream()
-          .filter(Map.class::isInstance)
-          .map(value -> (Map<String, Object>) value)
-          .forEach(clientAccess -> addRoles(roles, clientAccess.get("roles")));
     }
     return roles;
   }
