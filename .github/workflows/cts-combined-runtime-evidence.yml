@@ -1,0 +1,55 @@
+name: CTS combined runtime remediation proof
+
+on:
+  push:
+    branches: [evidence/541-cts-combined-runtime]
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ghcr.io
+  ORG: openresilienceinitiative
+
+jobs:
+  package-and-scan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/maven-build
+        with:
+          java_version: '21'
+      - name: Verify the actual shipped libraries and generated classes
+        run: |
+          python3 - <<'PY'
+          from zipfile import ZipFile
+          with ZipFile('target/ConsultingTypeService.jar') as jar:
+              names = jar.namelist()
+          jars = [n for n in names if n.startswith('BOOT-INF/lib/') and n.endswith('.jar')]
+          assert not any(part in j for part in ['ehcache', 'liquibase-commercial', 'keycloak-', 'openapi-generator', 'handlebars'] for j in jars)
+          security = [j for j in jars if '/spring-security-' in j]
+          assert len(security) >= 5 and all(j.endswith('-7.1.2.jar') for j in security)
+          assert 'BOOT-INF/lib/caffeine-3.2.4.jar' in jars
+          assert 'BOOT-INF/lib/guava-33.7.2-jre.jar' in jars
+          assert 'BOOT-INF/lib/liquibase-core-4.33.0.jar' in jars
+          assert any(n.endswith('TenantControllerApi.class') for n in names)
+          print('Confirmed the combined runtime package has all four dependency remediations.')
+          PY
+      - name: Build and scan the combined candidate without publishing
+        uses: ./.github/actions/docker-build-push
+        with:
+          push_to_ghcr: false
+          image_name: oriso-consultingtypeservice
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/maven-verify-required
+        with:
+          java_version: '21'

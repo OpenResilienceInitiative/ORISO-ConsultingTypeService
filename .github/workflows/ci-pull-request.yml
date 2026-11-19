@@ -21,12 +21,11 @@ jobs:
       with:
         java_version: '21'
 
-    - name: Create Docker image
+    - name: Build and scan Docker image
       uses: ./.github/actions/docker-build-push
       with:
         push_to_ghcr: false
         image_name: oriso-consultingtypeservice
-        github_token: ${{ secrets.GITHUB_TOKEN }}
 
   required-integration-tests:
     name: required integration tests
