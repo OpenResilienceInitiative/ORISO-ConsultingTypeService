@@ -1,0 +1,35 @@
+name: Verify the pinned CTS Java base without publishing
+
+on:
+  push:
+    branches: [evidence/222-cts-runtime]
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-and-scan:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - name: Install the image scanner
+        uses: aquasecurity/setup-trivy@3fb12ec12f41e471780db15c232d5dd185dcb514
+        with:
+          version: v0.70.0
+          cache: true
+      - name: Start and scan the exact pinned base
+        shell: bash
+        run: |
+          set -euo pipefail
+          read -r directive base extra < Dockerfile
+          [[ "$directive" == FROM && -z "$extra" && "$base" =~ ^eclipse-temurin:21-jre-noble@sha256:[0-9a-f]{64}$ ]]
+          docker pull --platform linux/amd64 "$base"
+          docker run --rm --platform linux/amd64 --network none --entrypoint java "$base" -version
+          docker run --rm --platform linux/amd64 --network none --entrypoint sh "$base" -ec 'test ! -e /usr/bin/pebble'
+          docker tag "$base" cts-base-proof:local
+          docker image save --output "$RUNNER_TEMP/cts-base-proof.tar" cts-base-proof:local
+          trivy image --input "$RUNNER_TEMP/cts-base-proof.tar" --platform linux/amd64 \
+            --format table --exit-code 1 --ignore-unfixed --vuln-type os,library --severity CRITICAL,HIGH
