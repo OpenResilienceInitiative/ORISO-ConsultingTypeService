@@ -74,7 +74,6 @@ public class StatelessCsrfFilter extends OncePerRequestFilter {
 
       // Allow specific whitelist items to disable CSRF protection for Swagger UI documentation
       List<String> csrfWhitelist = new ArrayList<>(Arrays.asList(SecurityConfig.WHITE_LIST));
-      csrfWhitelist.add("/topic");
       csrfWhitelist.add("/consultingtypes");
       csrfWhitelist.add("/settingsadmin");
       if (csrfWhitelist.parallelStream()
