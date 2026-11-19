@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.topicdefaults;
 
+import static de.caritas.cob.consultingtypeservice.testHelper.TopicCsrfTestSupport.topicCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
@@ -135,6 +136,7 @@ class TopicCatalogueMultitenancyIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .header("tenantId", "0")
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
@@ -190,6 +192,7 @@ class TopicCatalogueMultitenancyIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .header("tenantId", "5")
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
@@ -234,6 +237,7 @@ class TopicCatalogueMultitenancyIT {
     mockMvc
         .perform(
             put("/topicadmin/" + debt.getId())
+                .with(topicCsrf())
                 .header("tenantId", "0")
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
@@ -284,6 +288,7 @@ class TopicCatalogueMultitenancyIT {
     mockMvc
         .perform(
             put("/topicadmin/" + debt.getId())
+                .with(topicCsrf())
                 .header("tenantId", "5")
                 .with(authentication(topicAdminOfTenant5()))
                 .contentType(APPLICATION_JSON)
@@ -310,6 +315,7 @@ class TopicCatalogueMultitenancyIT {
   private ResultActions putTopic(Long id, ObjectNode topic) throws Exception {
     return mockMvc.perform(
         put("/topicadmin/" + id)
+            .with(topicCsrf())
             .header("tenantId", "0")
             .with(authentication(platformAdmin()))
             .contentType(APPLICATION_JSON)
@@ -326,6 +332,7 @@ class TopicCatalogueMultitenancyIT {
     change.set("topics", changed);
     return mockMvc.perform(
         put(CATALOGUE)
+            .with(topicCsrf())
             .header("tenantId", "0")
             .with(authentication(platformAdmin()))
             .contentType(APPLICATION_JSON)
@@ -472,6 +479,7 @@ class TopicCatalogueMultitenancyIT {
     mockMvc
         .perform(
             post("/topicadmin")
+                .with(topicCsrf())
                 .header("tenantId", "0")
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
@@ -503,6 +511,7 @@ class TopicCatalogueMultitenancyIT {
     expectNameTaken(
         mockMvc.perform(
             post("/topicadmin")
+                .with(topicCsrf())
                 .header("tenantId", "0")
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)

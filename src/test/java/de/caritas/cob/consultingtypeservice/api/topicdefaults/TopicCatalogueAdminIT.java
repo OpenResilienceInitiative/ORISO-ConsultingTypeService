@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.topicdefaults;
 
+import static de.caritas.cob.consultingtypeservice.testHelper.TopicCsrfTestSupport.topicCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -153,6 +154,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -183,6 +185,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -211,6 +214,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -231,6 +235,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(
                     authentication(
                         new AuthenticationMockBuilder()
@@ -255,6 +260,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -273,6 +279,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(traegerAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -290,6 +297,7 @@ class TopicCatalogueAdminIT {
   private ResultActions save(ObjectNode change) throws Exception {
     return mockMvc.perform(
         put(CATALOGUE)
+            .with(topicCsrf())
             .with(authentication(platformAdmin()))
             .contentType(APPLICATION_JSON)
             .content(change.toString()));
