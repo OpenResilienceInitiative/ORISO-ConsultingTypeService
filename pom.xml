@@ -48,7 +48,6 @@
     <liquibase-maven-plugin.version>4.33.0</liquibase-maven-plugin.version>
     <owasp-java-html-sanitizer.version>20211018.2</owasp-java-html-sanitizer.version>
     <liquibase-core.version>4.33.0</liquibase-core.version>
-    <spring-security.version>7.0.1</spring-security.version>
     <ehcache.version>2.10.9.2</ehcache.version>
     <lombok.version>1.18.48</lombok.version>
     <mockito.version>5.20.0</mockito.version>
@@ -400,6 +399,10 @@
         <exclusion>
           <groupId>org.liquibase</groupId>
           <artifactId>liquibase-core</artifactId>
+        </exclusion>
+        <exclusion>
+          <groupId>org.liquibase</groupId>
+          <artifactId>liquibase-commercial</artifactId>
         </exclusion>
       </exclusions>
     </dependency>
