@@ -37,7 +37,6 @@
     <jackson-databind-nullable.version>0.2.13</jackson-databind-nullable.version>
     <springfox.boot.starter.version>3.0.0</springfox.boot.starter.version>
     <commons-lang3.version>3.22.0</commons-lang3.version>
-    <keycloak.version>17.0.1</keycloak.version>
     <easy-random-core.version>5.0.0</easy-random-core.version>
     <org.everit.json.schema.version>1.14.6</org.everit.json.schema.version>
     <json.version>20231013</json.version>
@@ -221,23 +220,6 @@
       <version>2.22.0</version> <!-- Or the latest version -->
     </dependency>
 
-    <!-- Keycloak dependencies -->
-    <dependency>
-      <groupId>org.keycloak</groupId>
-      <artifactId>keycloak-spring-security-adapter</artifactId>
-      <version>${keycloak.version}</version>
-    </dependency>
-    <dependency>
-      <groupId>org.keycloak</groupId>
-      <artifactId>keycloak-spring-boot-starter</artifactId>
-      <version>${keycloak.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>ch.qos.logback</groupId>
-          <artifactId>logback-classic</artifactId>
-        </exclusion>
-      </exclusions>
-    </dependency>
     <dependency>
       <groupId>jakarta.ws.rs</groupId>
       <artifactId>jakarta.ws.rs-api</artifactId>

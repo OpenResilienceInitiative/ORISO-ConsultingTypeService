@@ -16,8 +16,6 @@ import java.util.stream.Collectors;
 import lombok.Data;
 import org.apache.commons.codec.binary.Base32;
 import org.hibernate.validator.constraints.URL;
-import org.keycloak.adapters.KeycloakConfigResolver;
-import org.keycloak.adapters.springboot.KeycloakSpringBootConfigResolver;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -95,11 +93,6 @@ public class KeycloakConfig {
     } catch (IllegalArgumentException e) {
       throw new AccessDeniedException("Invalid encoded username: " + username, e);
     }
-  }
-
-  @Bean
-  public KeycloakConfigResolver keycloakConfigResolver() {
-    return new KeycloakSpringBootConfigResolver();
   }
 
   @URL private String authServerUrl;
