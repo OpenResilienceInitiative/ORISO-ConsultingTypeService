@@ -59,4 +59,13 @@ class TopicInputSanitizerTest {
     assertThat(
         new InputSanitizer().sanitizePlainText("Gesundheit &amp; Sucht"), is("Gesundheit & Sucht"));
   }
+
+  @Test
+  void sanitizePlainText_Should_keepAngleBracketsEscaped() {
+    var sanitizer = new InputSanitizer();
+    assertThat(
+        sanitizer.sanitizePlainText("&lt;img src=x onerror=alert(1)&gt;").contains("<"), is(false));
+    assertThat(sanitizer.sanitizePlainText("&amp;lt;b&amp;gt;"), is("&lt;b&gt;"));
+    assertThat(sanitizer.sanitizePlainText("Eltern's \"Hilfe\""), is("Eltern's \"Hilfe\""));
+  }
 }

@@ -5,7 +5,6 @@ import static java.util.Objects.isNull;
 import java.util.Map;
 import org.owasp.html.HtmlPolicyBuilder;
 import org.springframework.stereotype.Component;
-import org.springframework.web.util.HtmlUtils;
 
 @Component
 public class InputSanitizer {
@@ -23,12 +22,34 @@ public class InputSanitizer {
   }
 
   /**
-   * For values the clients show as text, never as HTML (topic and category names): removes every
-   * tag like {@link #sanitize(String)}, then turns the escaped characters back into text, so
-   * "Gesundheit &amp; Sucht" is stored as "Gesundheit & Sucht" and not shown with "&amp;amp;".
+   * The escapes the sanitizer writes for characters that are harmless as text. "&lt;" and "&gt;"
+   * stay escaped, so no markup can come back. "&amp;" is undone last, so "&amp;lt;" ends up as the
+   * text "&lt;" and never as "<".
+   */
+  private static final String[][] TEXT_ESCAPES = {
+    {"&#34;", "\""},
+    {"&#39;", "'"},
+    {"&#43;", "+"},
+    {"&#61;", "="},
+    {"&#64;", "@"},
+    {"&#96;", "`"},
+    {"&amp;", "&"}
+  };
+
+  /**
+   * For values the clients show as text (topic and category names): removes every tag like {@link
+   * #sanitize(String)} and keeps "&", quotes and similar characters as text, so "Gesundheit &
+   * Sucht" is not stored as "Gesundheit &amp; Sucht". Angle brackets stay escaped.
    */
   public String sanitizePlainText(final String input) {
-    return isNull(input) ? null : HtmlUtils.htmlUnescape(sanitize(input));
+    if (isNull(input)) {
+      return null;
+    }
+    var text = sanitize(input);
+    for (var escape : TEXT_ESCAPES) {
+      text = text.replace(escape[0], escape[1]);
+    }
+    return text;
   }
 
   /** {@link #sanitizePlainText(String)} for every language; cleans the map in place. */
