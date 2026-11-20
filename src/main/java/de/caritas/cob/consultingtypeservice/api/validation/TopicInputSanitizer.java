@@ -16,7 +16,7 @@ public class TopicInputSanitizer {
   public TopicMultilingualDTO sanitize(final TopicMultilingualDTO input) {
     log.info("Sanitizing input DTO");
     final TopicMultilingualDTO output = copyNotSanitizedAttributes(input);
-    output.setName(inputSanitizer.sanitize(input.getName()));
+    output.setName(inputSanitizer.sanitizePlainText(input.getName()));
     output.setStatus(inputSanitizer.sanitize(input.getStatus()));
     output.setDescription(inputSanitizer.sanitize(input.getDescription()));
     output.setInternalIdentifier(inputSanitizer.sanitize(input.getInternalIdentifier()));

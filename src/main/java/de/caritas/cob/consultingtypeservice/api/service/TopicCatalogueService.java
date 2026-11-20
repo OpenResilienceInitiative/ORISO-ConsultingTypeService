@@ -140,7 +140,7 @@ public class TopicCatalogueService {
     }
     if (topic.getTitles() == null) {
       // Titles are not cleaned by the topic sanitizer, so derive them from the cleaned name.
-      var cleanName = inputSanitizer.sanitize(topic.getName());
+      var cleanName = inputSanitizer.sanitizePlainText(topic.getName());
       topic.setTitles(
           new TitlesMultilingualDTO()
               ._short(cleanName)
@@ -216,7 +216,7 @@ public class TopicCatalogueService {
           dto.getId() != null && existing.containsKey(dto.getId())
               ? existing.get(dto.getId())
               : TopicGroupEntity.builder().createDate(now).build();
-      entity.setName(convertToJson(inputSanitizer.sanitize(dto.getName())));
+      entity.setName(convertToJson(inputSanitizer.sanitizePlainText(dto.getName())));
       entity.setIcon(resolveIcon(dto));
       entity.setSortOrder(position);
       entity.setCustomized(true);

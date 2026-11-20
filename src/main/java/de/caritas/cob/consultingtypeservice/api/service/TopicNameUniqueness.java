@@ -106,7 +106,7 @@ public class TopicNameUniqueness {
 
   /** The sanitizer cleans a map in place; the caller's name stays as sent. */
   private Map<String, String> sanitized(Map<String, String> name) {
-    return name == null ? Map.of() : inputSanitizer.sanitize(new HashMap<>(name));
+    return name == null ? Map.of() : inputSanitizer.sanitizePlainText(new HashMap<>(name));
   }
 
   private static Map<String, String> comparable(Map<String, String> name) {

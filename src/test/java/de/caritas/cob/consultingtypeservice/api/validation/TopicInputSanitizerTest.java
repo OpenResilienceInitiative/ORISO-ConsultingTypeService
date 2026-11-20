@@ -36,4 +36,27 @@ class TopicInputSanitizerTest {
     assertThat(sanitized.getStatus(), is(TopicStatus.ACTIVE.toString()));
     assertThat(sanitized.getSlug(), is("slug"));
   }
+
+  @Test
+  void sanitize_Should_keepAmpersandInNameAsText() {
+    final TopicMultilingualDTO topicMultilingualDTO =
+        new MultilingualTopicTestDataBuilder()
+            .topicDTO()
+            .withName("Gesundheit & Sucht<b>!</b>")
+            .withDescription("desc")
+            .withInternalIdentifier("ident")
+            .withStatus(TopicStatus.ACTIVE.toString())
+            .withSlug("slug")
+            .build();
+
+    final TopicMultilingualDTO sanitized = topicInputSanitizer.sanitize(topicMultilingualDTO);
+
+    assertThat(sanitized.getName().get("de"), is("Gesundheit & Sucht!"));
+  }
+
+  @Test
+  void sanitizePlainText_Should_notEscapeAgain_When_nameWasStoredEscaped() {
+    assertThat(
+        new InputSanitizer().sanitizePlainText("Gesundheit &amp; Sucht"), is("Gesundheit & Sucht"));
+  }
 }
