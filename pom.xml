@@ -47,7 +47,6 @@
     <liquibase-maven-plugin.version>4.33.0</liquibase-maven-plugin.version>
     <owasp-java-html-sanitizer.version>20211018.2</owasp-java-html-sanitizer.version>
     <liquibase-core.version>4.33.0</liquibase-core.version>
-    <ehcache.version>2.10.9.2</ehcache.version>
     <lombok.version>1.18.48</lombok.version>
     <mockito.version>5.20.0</mockito.version>
     <spring-security-oauth2-test-webmvc-addons.version>3.2.1</spring-security-oauth2-test-webmvc-addons.version>
@@ -84,15 +83,8 @@
       <artifactId>spring-boot-starter-cache</artifactId>
     </dependency>
     <dependency>
-      <groupId>net.sf.ehcache</groupId>
-      <artifactId>ehcache</artifactId>
-      <version>${ehcache.version}</version>
-      <exclusions>
-        <exclusion>
-          <groupId>com.fasterxml.jackson.core</groupId>
-          <artifactId>jackson-databind</artifactId>
-        </exclusion>
-      </exclusions>
+      <groupId>com.github.ben-manes.caffeine</groupId>
+      <artifactId>caffeine</artifactId>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>
