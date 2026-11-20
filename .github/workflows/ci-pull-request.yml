@@ -11,22 +11,28 @@ jobs:
   validate:
     name: test, build and Docker validation
     runs-on: ubuntu-24.04
+    permissions:
+      contents: read
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v6
+      with:
+        persist-credentials: false
+
+    - name: Test the OCI archive publishing contract
+      run: bash scripts/ci/test-image-archive.sh
 
     - name: Compile and Package Java application
       uses: ./.github/actions/maven-build
       with:
         java_version: '21'
 
-    - name: Create Docker image
+    - name: Build and scan Docker image
       uses: ./.github/actions/docker-build-push
       with:
         push_to_ghcr: false
         image_name: oriso-consultingtypeservice
-        github_token: ${{ secrets.GITHUB_TOKEN }}
 
   required-integration-tests:
     name: required integration tests
