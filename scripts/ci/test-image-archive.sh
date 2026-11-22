@@ -59,12 +59,29 @@ scan_line=$(line_number "$action" 'scan-image-archive.sh')
 login_line=$(line_number "$action" 'docker/login-action')
 publish_line=$(line_number "$action" 'publish-image-archive.sh')
 ((scan_line < login_line && login_line < publish_line)) || fail 'Scan must succeed before any registry operation'
+for workflow in "$main" "$release"; do
+  require_line "$workflow" 'id: image'
+  require_line "$workflow" 'id-token: write'
+  require_line "$workflow" 'attestations: write'
+  require_line "$workflow" 'subject-name: ${{ env.REGISTRY }}/${{ env.ORG }}/${{ env.IMAGE_NAME }}'
+  require_line "$workflow" 'subject-digest: ${{ steps.image.outputs.digest }}'
+  require_line "$workflow" 'push-to-registry: true'
+  require_line "$workflow" 'create-storage-record: false'
+  image_line=$(line_number "$workflow" 'uses: ./.github/actions/docker-build-push')
+  signing_line=$(line_number "$workflow" 'uses: actions/attest@')
+  ((image_line < signing_line)) || fail "$workflow must publish the scanned archive before signing its digest"
+done
+require_line "$main" "if: github.ref == 'refs/heads/dev'"
+if grep -Eq 'actions/attest@|id-token: write|attestations: write' "$pr"; then
+  fail 'PR validation must not have attestation credentials or operations'
+fi
 guard_line=$(line_number "$release" 'git ls-remote')
-image_line=$(line_number "$release" 'uses: ./.github/actions/docker-build-push')
+release_image_line=$(line_number "$release" 'uses: ./.github/actions/docker-build-push')
+release_signing_line=$(line_number "$release" 'uses: actions/attest@')
 git_tag_line=$(line_number "$release" 'git tag -a')
 github_release_line=$(line_number "$release" 'Create GitHub Release')
-((guard_line < image_line && image_line < git_tag_line && git_tag_line < github_release_line)) ||
-  fail 'The Git tag guard, image publication, Git tag and GitHub Release must run in order'
+((guard_line < release_image_line && release_signing_line < git_tag_line && git_tag_line < github_release_line)) ||
+  fail 'The Git tag guard, image publication, signing, Git tag and GitHub Release must run in order'
 printf '%s\n' 'ConsultingTypeService branch, release and no-push PR workflow contracts passed.'
 
 scratch=$(mktemp -d "${TMPDIR:-/tmp}/consultingtypeservice-archive-test.XXXXXX")
