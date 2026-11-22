@@ -10,12 +10,19 @@ import static de.caritas.cob.consultingtypeservice.testHelper.PathConstants.PATH
 import static de.caritas.cob.consultingtypeservice.testHelper.PathConstants.PATH_GET_FULL_CONSULTING_TYPE_BY_SLUG;
 import static de.caritas.cob.consultingtypeservice.testHelper.PathConstants.ROOT_PATH;
 import static net.javacrumbs.jsonunit.spring.JsonUnitResultMatchers.json;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import de.caritas.cob.consultingtypeservice.api.auth.ConsultingTypeAccessGuard;
@@ -29,6 +36,7 @@ import de.caritas.cob.consultingtypeservice.api.mapper.FullConsultingTypeMapper;
 import de.caritas.cob.consultingtypeservice.api.model.BasicConsultingTypeResponseDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ConsultingTypeDTO;
 import de.caritas.cob.consultingtypeservice.api.model.ExtendedConsultingTypeResponseDTO;
+import de.caritas.cob.consultingtypeservice.api.model.FullConsultingTypeResponseDTO;
 import de.caritas.cob.consultingtypeservice.api.service.ConsultingTypeGroupService;
 import de.caritas.cob.consultingtypeservice.api.service.ConsultingTypeService;
 import de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver;
@@ -40,6 +48,7 @@ import org.jeasy.random.EasyRandom;
 import org.json.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -78,6 +87,79 @@ class ConsultingTypeControllerIT {
   }
 
   private final ConsultingTypeConverter consultingTypeConverter = new ConsultingTypeConverter();
+
+  @Test
+  @WithMockUser(authorities = "AUTHORIZATION_PATCH_CONSULTING_TYPE")
+  void recordsTheAuthorizedWriteLifecycleWithoutIdentifiersFromTheBody() throws Exception {
+    var probe = new ListAppender<ILoggingEvent>();
+    var logger = (Logger) LoggerFactory.getLogger(ConsultingTypeController.class);
+    probe.start();
+    logger.addAppender(probe);
+    try {
+      String requestId = "d7c9c575-78aa-403b-b72d-e6dff925fa6a";
+      when(consultingTypeService.updateConsultingType(eq(2), any()))
+          .thenReturn(new FullConsultingTypeResponseDTO().id(2));
+      mvc.perform(
+              patch(ROOT_PATH + "/2")
+                  .header("X-Consulting-Settings-Request-ID", requestId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{\"languageFormal\":true}"))
+          .andExpect(status().isOk());
+
+      assertThat(probe.list)
+          .extracting(ILoggingEvent::getFormattedMessage)
+          .hasSize(2)
+          .first()
+          .asString()
+          .isEqualTo("Consulting settings PATCH received requestId=" + requestId);
+      assertThat(probe.list.getLast().getFormattedMessage())
+          .startsWith(
+              "Consulting settings PATCH finished requestId="
+                  + requestId
+                  + " outcome=service_returned elapsedMs=");
+    } finally {
+      logger.detachAppender(probe);
+      probe.stop();
+    }
+  }
+
+  @Test
+  @WithMockUser(authorities = "AUTHORIZATION_PATCH_CONSULTING_TYPE")
+  void recordsCompletionOnServiceErrorAndIgnoresMalformedCorrelationIds() throws Exception {
+    var probe = new ListAppender<ILoggingEvent>();
+    var logger = (Logger) LoggerFactory.getLogger(ConsultingTypeController.class);
+    probe.start();
+    logger.addAppender(probe);
+    try {
+      String requestId = "d7c9c575-78aa-403b-b72d-e6dff925fa6a";
+      when(consultingTypeService.updateConsultingType(eq(2), any()))
+          .thenThrow(new NotFoundException("Internal diagnostic fixture"));
+      mvc.perform(
+              patch(ROOT_PATH + "/2")
+                  .header("X-Consulting-Settings-Request-ID", requestId)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{}"))
+          .andExpect(status().isNotFound());
+      assertThat(probe.list.getLast().getFormattedMessage())
+          .startsWith(
+              "Consulting settings PATCH finished requestId="
+                  + requestId
+                  + " outcome=service_failed elapsedMs=")
+          .doesNotContain("Internal diagnostic fixture");
+
+      probe.list.clear();
+      mvc.perform(
+              patch(ROOT_PATH + "/2")
+                  .header("X-Consulting-Settings-Request-ID", "malformed-correlation-fixture")
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{}"))
+          .andExpect(status().isNotFound());
+      assertThat(probe.list).isEmpty();
+    } finally {
+      logger.detachAppender(probe);
+      probe.stop();
+    }
+  }
 
   @Test
   void getBasicConsultingTypeList_Should_ReturnNoContent_When_ServiceReturnsEmptyList()
