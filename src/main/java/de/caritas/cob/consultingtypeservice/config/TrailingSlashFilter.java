@@ -21,7 +21,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
  * API interfaces. Kept intentionally narrow: only rewrites the perceived path, never redirects.
  */
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE)
+@Order(Ordered.HIGHEST_PRECEDENCE + 1)
 public class TrailingSlashFilter extends OncePerRequestFilter {
 
   @Override
