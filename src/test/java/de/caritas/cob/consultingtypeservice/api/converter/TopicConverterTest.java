@@ -128,7 +128,7 @@ class TopicConverterTest {
   @Test
   void toDTOList_Should_convertCollectionOfTopicEntitiesToListOfTopicDTOsWithCorrectLang() {
     // given
-    when(translationService.getCurrentLanguageContext()).thenReturn("en");
+    when(translationService.getLanguagePreferences()).thenReturn(List.of("en", "de"));
     final var topicEntity1 =
         TopicEntity.builder()
             .id(1L)
@@ -176,7 +176,7 @@ class TopicConverterTest {
             .titles(titles)
             .description("desc 2 de");
 
-    when(translationService.getCurrentLanguageContext()).thenReturn("de");
+    when(translationService.getLanguagePreferences()).thenReturn(List.of("de"));
     // when
     final var entities = topicConverter.toDTOList(List.of(topicEntity1, topicEntity2));
 
@@ -188,7 +188,7 @@ class TopicConverterTest {
   void
       toDTOList_Should_convertCollectionOfTopicEntitiesToListOfTopicDTOsWithDE_When_languageIsNotProvided() {
     // given
-    when(translationService.getCurrentLanguageContext()).thenReturn(null);
+    when(translationService.getLanguagePreferences()).thenReturn(List.of());
     final var topicEntity1 =
         TopicEntity.builder()
             .id(1L)
@@ -236,7 +236,7 @@ class TopicConverterTest {
             .titles(titles)
             .description("desc 2 de");
 
-    when(translationService.getCurrentLanguageContext()).thenReturn("de");
+    when(translationService.getLanguagePreferences()).thenReturn(List.of("de"));
     // when
     final var entities = topicConverter.toDTOList(List.of(topicEntity1, topicEntity2));
 

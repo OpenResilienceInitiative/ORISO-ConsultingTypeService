@@ -26,7 +26,7 @@ public class TopicGroupConverter {
   }
 
   private List<TopicGroupsDTODataItemsInner> itemsOf(Collection<TopicGroupEntity> topicGroups) {
-    final String lang = translationService.getCurrentLanguageContext();
+    final List<String> lang = translationService.getLanguagePreferences();
 
     return topicGroups.stream()
         .map(
@@ -40,7 +40,8 @@ public class TopicGroupConverter {
         .collect(Collectors.toList());
   }
 
-  private String resolveNameForGivenLanguageOrFallbackToGerman(String nameAsJson, String lang) {
+  private String resolveNameForGivenLanguageOrFallbackToGerman(
+      String nameAsJson, List<String> lang) {
     return TranslationUtils.getTranslatedStringFromMap(nameAsJson, lang);
   }
 
