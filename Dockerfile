@@ -1,4 +1,4 @@
-FROM eclipse-temurin:21-jre-noble@sha256:977602aad3cf25b74bbb4c8e7532060eef80e1f1288932da35f5fbecd6159b65
+FROM eclipse-temurin:21-jre-noble@sha256:ac595159aa2209f07a2331efa8a8ce4278b77a7b76a9365a0f173786d5067a9e
 VOLUME ["/tmp","/log"]
 EXPOSE 8083
 ARG JAR_FILE
