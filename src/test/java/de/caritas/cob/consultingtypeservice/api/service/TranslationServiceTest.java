@@ -50,11 +50,21 @@ class TranslationServiceTest {
   }
 
   @Test
-  void headerAndCookieDiffer_Should_preferHeader() {
-    request.addHeader(HttpHeaders.ACCEPT_LANGUAGE, "en");
-    request.setCookies(new Cookie("lang", "tr"));
+  void headerAndCookieDiffer_Should_preferCookieSelectedByUser() {
+    // ORISO Frontend keeps the selected UI language in the cookie while the browser sends its own
+    request.addHeader(HttpHeaders.ACCEPT_LANGUAGE, "de");
+    request.setCookies(new Cookie("lang", "en"));
 
-    assertThat(translationService.getLanguagePreferences()).containsExactly("en", "tr", "de");
+    assertThat(translationService.getLanguagePreferences()).containsExactly("en", "de");
+    assertThat(resolvedTopicName()).isEqualTo("Addiction");
+  }
+
+  @Test
+  void unsupportedCookie_Should_fallBackToHeader() {
+    request.addHeader(HttpHeaders.ACCEPT_LANGUAGE, "en");
+    request.setCookies(new Cookie("lang", "fr"));
+
+    assertThat(translationService.getLanguagePreferences()).containsExactly("fr", "en", "de");
     assertThat(resolvedTopicName()).isEqualTo("Addiction");
   }
 

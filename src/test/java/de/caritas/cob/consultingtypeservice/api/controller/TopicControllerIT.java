@@ -20,6 +20,7 @@ import de.caritas.cob.consultingtypeservice.api.tenant.TenantContext;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.RestrictedTenantDTO;
 import de.caritas.cob.consultingtypeservice.tenantservice.generated.web.model.Settings;
 import de.caritas.cob.consultingtypeservice.testHelper.TopicPathConstants;
+import jakarta.servlet.http.Cookie;
 import java.util.List;
 import lombok.val;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,6 +29,7 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -95,6 +97,32 @@ class TopicControllerIT {
         .andExpect(jsonPath("$[0].description").exists())
         .andExpect(jsonPath("$[0].status").exists())
         .andExpect(jsonPath("$[0].createDate").exists());
+  }
+
+  @Test
+  void getAllActiveTopics_Should_keepCookieLanguage_When_browserSendsDifferentAcceptLanguage()
+      throws Exception {
+    // ORISO Frontend: the user picked English, a German browser still sends Accept-Language: de
+    mockMvc
+        .perform(
+            get(PATH_GET_PUBLIC_TOPIC_LIST)
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "de")
+                .cookie(new Cookie("lang", "en"))
+                .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[?(@.id == 1)].name").value("en an active topic"));
+  }
+
+  @Test
+  void getAllActiveTopics_Should_useAcceptLanguage_When_noLanguageCookie() throws Exception {
+    // ORISO Admin sends the UI language as Accept-Language and sets no lang cookie
+    mockMvc
+        .perform(
+            get(PATH_GET_PUBLIC_TOPIC_LIST)
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en")
+                .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[?(@.id == 1)].name").value("en an active topic"));
   }
 
   @Test

@@ -23,18 +23,23 @@ public class TranslationService {
   private static final String WILDCARD = "*";
 
   /**
-   * The languages of the current request, most preferred first: the {@code Accept-Language} header
-   * in the client's order of preference, then the {@code lang} cookie kept for existing clients,
-   * then German. A caller takes the first language it has a text for, so a header value that cannot
-   * be served falls through to the cookie and then to German.
+   * The languages of the current request, most preferred first: the {@code lang} cookie, then the
+   * {@code Accept-Language} header in the client's order of preference, then German. A caller takes
+   * the first language it has a text for, so a value that cannot be served falls through to the
+   * next one and finally to German.
+   *
+   * <p>The cookie comes first because it holds a language the user picked explicitly in ORISO
+   * Frontend, which does not send that choice as {@code Accept-Language}; the browser's own header
+   * would otherwise override it. Clients that send the UI language as {@code Accept-Language} and
+   * set no {@code lang} cookie, such as ORISO Admin, get the header language.
    */
   public List<String> getLanguagePreferences() {
     final HttpServletRequest currentRequest =
         ((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes()).getRequest();
 
     final Set<String> languages = new LinkedHashSet<>();
-    headerLanguages(currentRequest).forEach(languages::add);
     cookieLanguage(currentRequest).forEach(languages::add);
+    headerLanguages(currentRequest).forEach(languages::add);
     languages.add(DEFAULT_LANGUAGE);
     return List.copyOf(languages);
   }
