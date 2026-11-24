@@ -1,0 +1,900 @@
+{
+  "version": 1,
+  "source": "Deutscher Caritasverband e.V. (ORISO-Frontend#973), ORISO-Helm topic-bootstrap.sql",
+  "topics": [
+    {
+      "slug": "general-social-counselling",
+      "internalIdentifier": "general-social",
+      "icon": "t-05-allgemeine-sozialberatung.png",
+      "name": {
+        "de": "Allgemeine Sozialberatung",
+        "en": "Social Support",
+        "fr": "Conseil social général",
+        "ru": "Общая социальная консультация",
+        "ti": "ሓፈሻዊ ማሕበራዊ ምኽሪ",
+        "tr": "Genel sosyal danışmanlık"
+      },
+      "description": {
+        "de": "Hilfe bei sozialen, finanziellen und persönlichen Fragen.",
+        "en": "Help with social, financial, and personal questions.",
+        "fr": "Aide pour les questions sociales, financières et personnelles.",
+        "ru": "Помощь по социальным, финансовым и личным вопросам.",
+        "ti": "ኣብ ማሕበራዊ፣ ገንዘባውን ውልቃውን ሕቶታት ዝወሃብ ሓገዝ።",
+        "tr": "Sosyal, maddi ve kişisel sorularda yardım."
+      },
+      "titles": {
+        "short": {
+          "de": "Sozialberatung",
+          "en": "Social Support"
+        },
+        "long": {
+          "de": "Allgemeine Sozialberatung",
+          "en": "Social Support"
+        },
+        "welcome": "Willkommen zur Allgemeinen Sozialberatung",
+        "registrationDropdown": "Allgemeine Sozialberatung"
+      }
+    },
+    {
+      "slug": "children-youth-counselling",
+      "internalIdentifier": "children-youth",
+      "icon": "t-01-kinder-und-jugendliche.png",
+      "name": {
+        "de": "Kinder und Jugendliche",
+        "en": "Children and Young People",
+        "fr": "Enfants et adolescents",
+        "ru": "Дети и подростки",
+        "ti": "ቈልዑን መንእሰያትን",
+        "tr": "Çocuklar ve gençler"
+      },
+      "description": {
+        "de": "Wenn der Alltag zu viel wird - hier gibt es Hilfe und ein offenes Ohr.",
+        "en": "Support and a listening ear when everyday life becomes too much.",
+        "fr": "Une écoute et un soutien quand le quotidien devient trop lourd.",
+        "ru": "Поддержка и внимательное отношение, когда повседневность становится непосильной.",
+        "ti": "መዓልታዊ ናብራ ኣዝዩ ከቢድ ምስ ዝኸውን ደገፍን ሰማዒ እዝንን።",
+        "tr": "Günlük yaşam fazla geldiğinde burada yardım ve sizi dinleyen biri var."
+      },
+      "titles": {
+        "short": {
+          "de": "Kinder & Jugend",
+          "en": "Children & Youth"
+        },
+        "long": {
+          "de": "Kinder und Jugendliche",
+          "en": "Children and Young People"
+        },
+        "welcome": "Willkommen zur Kinder- und Jugendberatung",
+        "registrationDropdown": "Kinder und Jugendliche"
+      }
+    },
+    {
+      "slug": "u25-suicide-prevention",
+      "internalIdentifier": "u25-suicide-prevention",
+      "icon": "t-01-u25-suizidpra-vention.png",
+      "name": {
+        "de": "[U25] Suizidprävention",
+        "en": "[U25] Suicide Prevention",
+        "fr": "[U25] Prévention du suicide",
+        "ru": "[U25] Профилактика суицида",
+        "ti": "[U25] ካብ ነብሰ-ቕትለት ምክልኻል",
+        "tr": "U25 intiharı önleme"
+      },
+      "description": {
+        "de": "Anonyme Begleitung für junge Menschen in Krisen und Suizidgedanken.",
+        "en": "Anonymous support for young people in crisis or with suicidal thoughts.",
+        "fr": "Accompagnement anonyme pour les jeunes en crise ou ayant des pensées suicidaires.",
+        "ru": "Анонимная поддержка молодых людей в кризисе или с суицидальными мыслями.",
+        "ti": "ኣብ ቅልውላው ንዘለዉ ወይ ናይ ነብሰ-ቕትለት ሓሳብ ንዘለዎም መንእሰያት ስውር ደገፍ።",
+        "tr": "Kriz yaşayan veya intihar düşünceleri olan gençler için anonim destek."
+      },
+      "titles": {
+        "short": {
+          "de": "U25",
+          "en": "U25"
+        },
+        "long": {
+          "de": "[U25] Suizidprävention",
+          "en": "[U25] Suicide Prevention"
+        },
+        "welcome": "Willkommen zur U25 Suizidprävention",
+        "registrationDropdown": "[U25] Suizidprävention"
+      }
+    },
+    {
+      "slug": "legal-guardianship-advance-care",
+      "internalIdentifier": "legal-guardianship",
+      "icon": "t-02-rechtliche-betreuung-und-vorsorge.png",
+      "name": {
+        "de": "Rechtliche Betreuung und Vorsorge",
+        "en": "Supported Decision-Making and Advance Planning",
+        "fr": "Protection juridique et directives anticipées",
+        "ru": "Правовая опека и предварительные распоряжения",
+        "ti": "ሕጋዊ ሞግዚትነትን ኣቐዲምካ ምድላውን",
+        "tr": "Yasal temsil ve önlem danışmanlığı"
+      },
+      "description": {
+        "de": "Orientierung zu Betreuung, Vollmacht und persönlicher Vorsorge.",
+        "en": "Guidance on guardianship, powers of attorney, and advance care.",
+        "fr": "Orientation sur la curatelle, la procuration et les directives anticipées.",
+        "ru": "Ориентация по вопросам опеки, доверенности и личных распоряжений.",
+        "ti": "ብዛዕባ ሞግዚትነት፣ ውክልናን ውልቃዊ ምድላውን ዝወሃብ መምርሒ።",
+        "tr": "Vesayet, vekaletname ve kişisel önlemler konusunda yönlendirme."
+      },
+      "titles": {
+        "short": {
+          "de": "Betreuung & Vorsorge",
+          "en": "Decision-Making & Planning"
+        },
+        "long": {
+          "de": "Rechtliche Betreuung und Vorsorge",
+          "en": "Supported Decision-Making and Advance Planning"
+        },
+        "welcome": "Willkommen zur Beratung zu Betreuung und Vorsorge",
+        "registrationDropdown": "Rechtliche Betreuung und Vorsorge"
+      }
+    },
+    {
+      "slug": "counselling-men-boys",
+      "internalIdentifier": "men-boys",
+      "icon": "t-01-jungen-und-ma-nnerberatung.png",
+      "name": {
+        "de": "Jungen- und Männerberatung",
+        "en": "Boys and Men's Support",
+        "fr": "Conseil pour les garçons et les hommes",
+        "ru": "Консультации для мальчиков и мужчин",
+        "ti": "ንኣወዳትን ደቂ ተባዕትዮን ዝኸውን ምኽሪ",
+        "tr": "Erkek çocuklar ve erkekler için danışmanlık"
+      },
+      "description": {
+        "de": "Ein sicherer Raum für Männer und Jungen, um offen über Sorgen zu sprechen.",
+        "en": "A safe space for men and boys to talk openly about worries.",
+        "fr": "Un espace sûr où les hommes et les garçons peuvent parler ouvertement de leurs soucis.",
+        "ru": "Безопасное пространство, где мужчины и мальчики могут открыто говорить о своих тревогах.",
+        "ti": "ደቂ ተባዕትዮን ኣወዳትን ብዛዕባ ጭንቀቶም ብግልጺ ክዛረቡሉ ዝኽእሉ ውሑስ ቦታ።",
+        "tr": "Erkeklerin ve erkek çocukların endişelerini açıkça konuşabileceği güvenli bir alan."
+      },
+      "titles": {
+        "short": {
+          "de": "Jungen & Männer",
+          "en": "Boys & Men"
+        },
+        "long": {
+          "de": "Jungen- und Männerberatung",
+          "en": "Boys and Men's Support"
+        },
+        "welcome": "Willkommen zur Jungen- und Männerberatung",
+        "registrationDropdown": "Jungen- und Männerberatung"
+      }
+    },
+    {
+      "slug": "hospice-palliative-care-counselling",
+      "internalIdentifier": "hospice-palliative",
+      "icon": "t-02-hospiz-und-palliativberatung.png",
+      "name": {
+        "de": "Hospiz- und Palliativberatung",
+        "en": "Hospice and Palliative Care Support",
+        "fr": "Conseil en soins palliatifs et hospice",
+        "ru": "Хоспис и паллиативная помощь",
+        "ti": "ሆስፒስን ፓልያቲቭ ክንክንን ምኽሪ",
+        "tr": "Hospis ve palyatif danışmanlık"
+      },
+      "description": {
+        "de": "Beratung bei schwerer Krankheit, Sterben, Abschied und Begleitung.",
+        "en": "Counselling around serious illness, dying, farewell, and care.",
+        "fr": "Conseil en cas de maladie grave, de fin de vie, d'adieu et d'accompagnement.",
+        "ru": "Консультации при тяжёлой болезни, умирании, прощании и сопровождении.",
+        "ti": "ኣብ ከቢድ ሕማም፣ ሞት፣ ስንብታን ሓገዝን ዝወሃብ ምኽሪ።",
+        "tr": "Ağır hastalık, ölüm, veda ve bakım süreçlerinde danışmanlık."
+      },
+      "titles": {
+        "short": {
+          "de": "Hospiz & Palliativ",
+          "en": "Hospice & Palliative"
+        },
+        "long": {
+          "de": "Hospiz- und Palliativberatung",
+          "en": "Hospice and Palliative Care Support"
+        },
+        "welcome": "Willkommen zur Hospiz- und Palliativberatung",
+        "registrationDropdown": "Hospiz- und Palliativberatung"
+      }
+    },
+    {
+      "slug": "hiv-aids",
+      "internalIdentifier": "hiv-aids",
+      "icon": "t-04-hiv-und-aids.png",
+      "name": {
+        "de": "HIV und Aids",
+        "en": "HIV and AIDS",
+        "fr": "VIH et sida",
+        "ru": "ВИЧ и СПИД",
+        "ti": "ኤችኣይቪን ኤድስን",
+        "tr": "HIV ve AIDS"
+      },
+      "description": {
+        "de": "Vertrauliche Beratung zu HIV, Aids, Gesundheit und Alltag.",
+        "en": "Confidential counselling about HIV, AIDS, health, and everyday life.",
+        "fr": "Conseil confidentiel sur le VIH, le sida, la santé et le quotidien.",
+        "ru": "Конфиденциальные консультации по вопросам ВИЧ, СПИДа, здоровья и повседневной жизни.",
+        "ti": "ብዛዕባ ኤችኣይቪ፣ ኤድስ፣ ጥዕናን መዓልታዊ ናብራን ዝወሃብ ምስጢራዊ ምኽሪ።",
+        "tr": "HIV, AIDS, sağlık ve günlük yaşam hakkında gizli danışmanlık."
+      },
+      "titles": {
+        "short": {
+          "de": "HIV & Aids",
+          "en": "HIV & AIDS"
+        },
+        "long": {
+          "de": "HIV und Aids",
+          "en": "HIV and AIDS"
+        },
+        "welcome": "Willkommen zur HIV- und Aids-Beratung",
+        "registrationDropdown": "HIV und Aids"
+      }
+    },
+    {
+      "slug": "child-youth-rehabilitation",
+      "internalIdentifier": "child-youth-rehab",
+      "icon": "t-01-kinder-und-jugend-reha.png",
+      "name": {
+        "de": "Kinder- und Jugend-Reha",
+        "en": "Pediatric Rehabilitation",
+        "fr": "Rééducation pour enfants et adolescents",
+        "ru": "Реабилитация детей и подростков",
+        "ti": "ናይ ቈልዑን መንእሰያትን ተሃድሶ",
+        "tr": "Çocuk ve gençlik rehabilitasyonu"
+      },
+      "description": {
+        "de": "Für junge Menschen, die nach Krankheit oder Belastung neue Kraft schöpfen möchten.",
+        "en": "Rehabilitation guidance for children and young people.",
+        "fr": "Pour les jeunes qui souhaitent retrouver des forces après une maladie ou une épreuve.",
+        "ru": "Для молодых людей, желающих восстановить силы после болезни или тяжёлой нагрузки.",
+        "ti": "ድሕሪ ሕማም ወይ ጸቕጢ ሓድሽ ሓይሊ ክረኽቡ ንዝደልዩ መንእሰያት።",
+        "tr": "Hastalık veya zorlanmadan sonra yeniden güç kazanmak isteyen gençler için."
+      },
+      "titles": {
+        "short": {
+          "de": "Kinder- & Jugend-Reha",
+          "en": "Pediatric Rehab"
+        },
+        "long": {
+          "de": "Kinder- und Jugend-Reha",
+          "en": "Pediatric Rehabilitation"
+        },
+        "welcome": "Willkommen zur Kinder- und Jugend-Rehabilitation",
+        "registrationDropdown": "Kinder- und Jugend-Reha"
+      }
+    },
+    {
+      "slug": "initial-return-further-migration",
+      "internalIdentifier": "migration",
+      "icon": "t-03-aus-ru-ck-und-weiterwanderung.png",
+      "name": {
+        "de": "Aus-/Rück- und Weiterwanderung",
+        "en": "Relocation and Return Support",
+        "fr": "Émigration, retour et migration ultérieure",
+        "ru": "Выезд, возвращение и дальнейшая миграция",
+        "ti": "ምውጻእ፣ ምምላስን ተወሳኺ ስደትን",
+        "tr": "Göç ve geri dönüş"
+      },
+      "description": {
+        "de": "Beratung zu Migration, Rückkehr und nächsten Schritten.",
+        "en": "Counselling on migration, return, and onward movement.",
+        "fr": "Conseil sur la migration, le retour et les étapes suivantes.",
+        "ru": "Консультации по вопросам миграции, возвращения и дальнейших шагов.",
+        "ti": "ብዛዕባ ስደት፣ ምምላስን ዝቕጽሉ ስጉምትታትን ዝወሃብ ምኽሪ።",
+        "tr": "Göç, geri dönüş ve sonraki adımlar hakkında danışmanlık."
+      },
+      "titles": {
+        "short": {
+          "de": "Aus-/Rückwanderung",
+          "en": "Relocation & Return"
+        },
+        "long": {
+          "de": "Aus-/Rück- und Weiterwanderung",
+          "en": "Relocation and Return Support"
+        },
+        "welcome": "Willkommen zur Beratung zu Aus-, Rück- und Weiterwanderung",
+        "registrationDropdown": "Aus-/Rück- und Weiterwanderung"
+      }
+    },
+    {
+      "slug": "parents-and-family",
+      "internalIdentifier": "parents-family",
+      "icon": "t-01-eltern-und-familie.png",
+      "name": {
+        "de": "Eltern und Familie",
+        "en": "Parent and Family Support",
+        "fr": "Parents et famille",
+        "ru": "Родители и семья",
+        "ti": "ወለድን ስድራቤትን",
+        "tr": "Ebeveynler ve aile"
+      },
+      "description": {
+        "de": "Ob Erziehungsfragen, Konflikte oder familiäre Krisen - hier finden Sie verständnisvolle Begleitung.",
+        "en": "Support for parenting questions, conflict, and family pressure.",
+        "fr": "Questions d'éducation, conflits ou crises familiales : vous trouverez ici un accompagnement bienveillant.",
+        "ru": "Вопросы воспитания, конфликты или семейные кризисы — здесь вы найдёте понимающую поддержку.",
+        "ti": "ብዛዕባ ኣተዓባብያ፣ ግርጭት ወይ ስድራቤታዊ ቅልውላው ዝምልከት ሓጋዚ ደገፍ ኣብዚ ክትረኽቡ ኢኹም።",
+        "tr": "Ebeveynlik soruları, çatışmalar veya aile içi krizlerde anlayışlı destek bulabilirsiniz."
+      },
+      "titles": {
+        "short": {
+          "de": "Eltern & Familie",
+          "en": "Parents & Family"
+        },
+        "long": {
+          "de": "Eltern und Familie",
+          "en": "Parent and Family Support"
+        },
+        "welcome": "Willkommen zur Eltern- und Familienberatung",
+        "registrationDropdown": "Eltern und Familie"
+      }
+    },
+    {
+      "slug": "disability-psychological-impairment",
+      "internalIdentifier": "disability-psych",
+      "icon": "t-04-behinderung-und-psychische-beeintra-chtigung.png",
+      "name": {
+        "de": "Behinderung und psychische Beeinträchtigung",
+        "en": "Disability and Mental Health Support",
+        "fr": "Handicap et troubles psychiques",
+        "ru": "Инвалидность и психические нарушения",
+        "ti": "ስንክልናን ኣእምሮኣዊ ጸገምን",
+        "tr": "Engellilik ve psikolojik zorlanma"
+      },
+      "description": {
+        "de": "Unterstuetzung bei Fragen zu Teilhabe, Alltag und Belastungen.",
+        "en": "Support for participation, everyday life, and psychological strain.",
+        "fr": "Soutien pour les questions de participation, de quotidien et de charges psychiques.",
+        "ru": "Поддержка по вопросам участия, повседневной жизни и психологических нагрузок.",
+        "ti": "ብዛዕባ ተሳትፎ፣ መዓልታዊ ናብራን ጸቕጥን ዝወሃብ ደገፍ።",
+        "tr": "Katılım, günlük yaşam ve psikolojik yüklerle ilgili sorularda destek."
+      },
+      "titles": {
+        "short": {
+          "de": "Behinderung & Psyche",
+          "en": "Disability & Mental Health"
+        },
+        "long": {
+          "de": "Behinderung und psychische Beeinträchtigung",
+          "en": "Disability and Mental Health Support"
+        },
+        "welcome": "Willkommen zur Beratung bei Behinderung und psychischer Beeinträchtigung",
+        "registrationDropdown": "Behinderung und psychische Beeinträchtigung"
+      }
+    },
+    {
+      "slug": "pregnancy",
+      "internalIdentifier": "pregnancy",
+      "icon": "t-01-schwangerschaft.png",
+      "name": {
+        "de": "Schwangerschaft",
+        "en": "Pregnancy",
+        "fr": "Grossesse",
+        "ru": "Беременность",
+        "ti": "ጥንሲ",
+        "tr": "Hamilelik"
+      },
+      "description": {
+        "de": "Bei Fragen, Unsicherheit oder schwierigen Umständen sind wir da.",
+        "en": "Support for pregnancy-related questions and difficult circumstances.",
+        "fr": "En cas de questions, d'incertitude ou de circonstances difficiles, nous sommes là.",
+        "ru": "Мы рядом, если у вас есть вопросы, сомнения или трудные обстоятельства.",
+        "ti": "ሕቶታት፣ ዘይንጹር ኩነታት ወይ ጽንኩር ኩነታት ምስ ዝህልወኩም ኣብ ጐንኹም ኣለና።",
+        "tr": "Sorularınız, belirsizlikleriniz veya zor durumlarınız olduğunda yanınızdayız."
+      },
+      "titles": {
+        "short": {
+          "de": "Schwangerschaft",
+          "en": "Pregnancy"
+        },
+        "long": {
+          "de": "Schwangerschaft",
+          "en": "Pregnancy"
+        },
+        "welcome": "Willkommen zur Schwangerschaftsberatung",
+        "registrationDropdown": "Schwangerschaft"
+      }
+    },
+    {
+      "slug": "offending",
+      "internalIdentifier": "offending",
+      "icon": "t-05-straffa-lligkeit.png",
+      "name": {
+        "de": "Straffälligkeit",
+        "en": "Offender Support",
+        "fr": "Délinquance et réinsertion",
+        "ru": "Судимость",
+        "ti": "ገበንን ዳግመ ጅማሮን",
+        "tr": "Suç ve yeniden başlangıç"
+      },
+      "description": {
+        "de": "Begleitung bei Fragen zu Straffälligkeit, Neustart und Alltag.",
+        "en": "Support for questions around offending, restart, and daily life.",
+        "fr": "Accompagnement pour les questions de délinquance, de nouveau départ et de quotidien.",
+        "ru": "Поддержка по вопросам правонарушений, нового начала и повседневной жизни.",
+        "ti": "ብዛዕባ ገበን፣ ሓድሽ ጅማሮን መዓልታዊ ናብራን ዝወሃብ ደገፍ።",
+        "tr": "Suç, yeniden başlangıç ve günlük yaşamla ilgili sorularda destek."
+      },
+      "titles": {
+        "short": {
+          "de": "Straffälligkeit",
+          "en": "Offender Support"
+        },
+        "long": {
+          "de": "Straffälligkeit",
+          "en": "Offender Support"
+        },
+        "welcome": "Willkommen zur Beratung bei Straffälligkeit",
+        "registrationDropdown": "Straffälligkeit"
+      }
+    },
+    {
+      "slug": "debt",
+      "internalIdentifier": "debt",
+      "icon": "t-05-schulden.png",
+      "name": {
+        "de": "Schulden",
+        "en": "Debt",
+        "fr": "Endettement",
+        "ru": "Долги",
+        "ti": "ዕዳ",
+        "tr": "Borç"
+      },
+      "description": {
+        "de": "Beratung bei finanziellen Sorgen, Mahnungen und Überschuldung.",
+        "en": "Counselling for financial worries, reminders, and over-indebtedness.",
+        "fr": "Conseil en cas de soucis financiers, de rappels de paiement et de surendettement.",
+        "ru": "Консультации при финансовых трудностях, напоминаниях о долге и чрезмерной задолженности.",
+        "ti": "ኣብ ገንዘባዊ ጭንቀት፣ ናይ ክፍሊት መዘኻኸርን ልዑል ዕዳን ዝወሃብ ምኽሪ።",
+        "tr": "Maddi kaygılar, ihtarlar ve aşırı borçlanma konusunda danışmanlık."
+      },
+      "titles": {
+        "short": {
+          "de": "Schulden",
+          "en": "Debt"
+        },
+        "long": {
+          "de": "Schulden",
+          "en": "Debt"
+        },
+        "welcome": "Willkommen zur Schuldnerberatung",
+        "registrationDropdown": "Schulden"
+      }
+    },
+    {
+      "slug": "life-in-old-age",
+      "internalIdentifier": "life-in-old-age",
+      "icon": "t-02-leben-im-alter.png",
+      "name": {
+        "de": "Leben im Alter",
+        "en": "Later Life Support",
+        "fr": "La vie à un âge avancé",
+        "ru": "Жизнь в пожилом возрасте",
+        "ti": "ናብራ ኣብ ግዜ እርጋን",
+        "tr": "Yaşlılıkta yaşam"
+      },
+      "description": {
+        "de": "Unterstuetzung bei Fragen rund um Alter, Pflege und Alltag.",
+        "en": "Support for questions around ageing, care, and everyday life.",
+        "fr": "Soutien pour les questions liées à l'âge, aux soins et au quotidien.",
+        "ru": "Поддержка по вопросам старения, ухода и повседневной жизни.",
+        "ti": "ብዛዕባ እርጋን፣ ክንክንን መዓልታዊ ናብራን ዝምልከት ደገፍ።",
+        "tr": "Yaşlanma, bakım ve günlük yaşamla ilgili sorularda destek."
+      },
+      "titles": {
+        "short": {
+          "de": "Leben im Alter",
+          "en": "Later Life"
+        },
+        "long": {
+          "de": "Leben im Alter",
+          "en": "Later Life Support"
+        },
+        "welcome": "Willkommen zur Beratung zum Leben im Alter",
+        "registrationDropdown": "Leben im Alter"
+      }
+    },
+    {
+      "slug": "cures-mothers-fathers",
+      "internalIdentifier": "cures-parents",
+      "icon": "t-01-kuren-fu-r-mu-tter-und-va-ter.png",
+      "name": {
+        "de": "Kuren für Mütter und Väter",
+        "en": "Parent Health Rehabilitation",
+        "fr": "Cures pour mères et pères",
+        "ru": "Оздоровительные программы для матерей и отцов",
+        "ti": "ንኣዴታትን ኣቦታትን ዝኸውን ሕክምናዊ ዕረፍቲ",
+        "tr": "Anneler ve babalar için kürler"
+      },
+      "description": {
+        "de": "Kurmaßnahmen helfen erschöpften Eltern, wieder zu sich zu finden.",
+        "en": "Guidance on recovery programs for exhausted parents.",
+        "fr": "Les cures aident les parents épuisés à se retrouver.",
+        "ru": "Программы помогают истощённым родителям восстановить силы.",
+        "ti": "እዞም መደባት ንዝደኸሙ ወለዲ ሓይሎም ንኽመልሱ ይሕግዙ።",
+        "tr": "Yorgun ebeveynlerin yeniden güç toplamasına yardımcı olan kür programları hakkında danışmanlık."
+      },
+      "titles": {
+        "short": {
+          "de": "Kuren Mütter & Väter",
+          "en": "Parent Health Rehab"
+        },
+        "long": {
+          "de": "Kuren für Mütter und Väter",
+          "en": "Parent Health Rehabilitation"
+        },
+        "welcome": "Willkommen zur Beratung zu Kuren für Mütter und Väter",
+        "registrationDropdown": "Kuren für Mütter und Väter"
+      }
+    },
+    {
+      "slug": "trauerberatung",
+      "internalIdentifier": "bereavement",
+      "icon": "t-02-trauerberatung.png",
+      "name": {
+        "de": "Trauerberatung",
+        "en": "Bereavement Support",
+        "fr": "Accompagnement du deuil",
+        "ru": "Консультация в связи с утратой",
+        "ti": "ናይ ሓዘን ምኽሪ",
+        "tr": "Yas danışmanlığı"
+      },
+      "description": {
+        "de": "Begleitung bei Verlust, Abschied und schwerer Trauer.",
+        "en": "Support with loss, farewell, and grief.",
+        "fr": "Accompagnement en cas de perte, d'adieu et de deuil difficile.",
+        "ru": "Поддержка при утрате, прощании и тяжёлом горе.",
+        "ti": "ኣብ ክሳራ፣ ስንብታን ከቢድ ሓዘንን ዝወሃብ ሓገዝ።",
+        "tr": "Kayıp, veda ve derin yas dönemlerinde destek."
+      },
+      "titles": {
+        "short": {
+          "de": "Trauerberatung",
+          "en": "Bereavement"
+        },
+        "long": {
+          "de": "Trauerberatung",
+          "en": "Bereavement Support"
+        },
+        "welcome": "Willkommen zur Trauerberatung",
+        "registrationDropdown": "Trauerberatung"
+      }
+    },
+    {
+      "slug": "sucht",
+      "internalIdentifier": "addiction",
+      "icon": "t-04-sucht.png",
+      "name": {
+        "de": "Sucht",
+        "en": "Addiction",
+        "fr": "Dépendances",
+        "ru": "Зависимость",
+        "ti": "ወልፊ",
+        "tr": "Bağımlılık"
+      },
+      "description": {
+        "de": "Beratung bei Suchtfragen, Abhängigkeit und belastenden Gewohnheiten.",
+        "en": "Counselling for addiction questions, dependency, and harmful habits.",
+        "fr": "Conseil sur les questions d'addiction, de dépendance et d'habitudes pesantes.",
+        "ru": "Консультации по вопросам зависимости и обременительных привычек.",
+        "ti": "ብዛዕባ ወልፊ፣ ጽግዕተኛነትን ከበድቲ ልምድታትን ዝወሃብ ምኽሪ።",
+        "tr": "Bağımlılık soruları, bağımlılık durumu ve zorlayıcı alışkanlıklar için danışmanlık."
+      },
+      "titles": {
+        "short": {
+          "de": "Sucht",
+          "en": "Addiction"
+        },
+        "long": {
+          "de": "Sucht",
+          "en": "Addiction"
+        },
+        "welcome": "Willkommen zur Suchtberatung",
+        "registrationDropdown": "Sucht"
+      }
+    },
+    {
+      "slug": "school-to-work-transition",
+      "internalIdentifier": "school-to-work",
+      "icon": "t-01-u-bergang-von-schule-zu-beruf.png",
+      "name": {
+        "de": "Übergang von Schule zu Beruf",
+        "en": "School-to-Work Transition",
+        "fr": "Transition de l'école à la vie professionnelle",
+        "ru": "От школы к профессии",
+        "ti": "ካብ ትምህርቲ ናብ ሞያ ምስግጋር",
+        "tr": "Okuldan mesleğe geçiş"
+      },
+      "description": {
+        "de": "Begleitung beim Schritt von der Schule in Ausbildung, Studium und Beruf.",
+        "en": "Support for the step from school into training, study, and work.",
+        "fr": "Accompagnement lors du passage de l'école à la formation, aux études et à l'emploi.",
+        "ru": "Поддержка при переходе от школы к профессиональному обучению, учёбе и работе.",
+        "ti": "ካብ ቤት ትምህርቲ ናብ ሞያዊ ስልጠና፣ ላዕለዋይ ትምህርትን ስራሕን ኣብ ዝግበር ስግግር ደገፍ።",
+        "tr": "Okuldan mesleki eğitime, üniversiteye ve iş hayatına geçişte destek."
+      },
+      "titles": {
+        "short": {
+          "de": "Schule & Beruf",
+          "en": "School to Work"
+        },
+        "long": {
+          "de": "Übergang von Schule zu Beruf",
+          "en": "School-to-Work Transition"
+        },
+        "welcome": "Willkommen zur Beratung zum Übergang von Schule zu Beruf",
+        "registrationDropdown": "Übergang von Schule zu Beruf"
+      }
+    },
+    {
+      "slug": "migration",
+      "internalIdentifier": "migration-support",
+      "icon": "t-03-migration.png",
+      "name": {
+        "de": "Migration",
+        "en": "Migration Support",
+        "fr": "Migration",
+        "ru": "Миграция",
+        "ti": "ስደት",
+        "tr": "Göç"
+      },
+      "description": {
+        "de": "Unterstützung bei Ankommen, Integration und Orientierung.",
+        "en": "Support with arrival, integration, and orientation.",
+        "fr": "Soutien à l'arrivée, à l'intégration et à l'orientation.",
+        "ru": "Поддержка при прибытии, интеграции и ориентации.",
+        "ti": "ኣብ ምብጻሕ፣ ውህደትን ኣንፈት ምሃብን ዝወሃብ ደገፍ።",
+        "tr": "Varış, entegrasyon ve yön bulma konusunda destek."
+      },
+      "titles": {
+        "short": {
+          "de": "Migration",
+          "en": "Migration"
+        },
+        "long": {
+          "de": "Migration",
+          "en": "Migration Support"
+        },
+        "welcome": "Willkommen zur Migrationsberatung",
+        "registrationDropdown": "Migration"
+      }
+    }
+  ],
+  "groups": [
+    {
+      "key": "alter",
+      "name": {
+        "de": "Alter",
+        "en": "Ageing, Older Adults",
+        "fr": "Vieillissement et personnes âgées",
+        "ru": "Пожилой возраст",
+        "ti": "ዕድመን ኣረጋውያንን",
+        "tr": "Yaşlılık ve yaşlı yetişkinler"
+      },
+      "icon": "cat-02.png",
+      "topics": [
+        {
+          "slug": "general-social-counselling",
+          "icon": "t-05-allgemeine-sozialberatung.png"
+        },
+        {
+          "slug": "hospice-palliative-care-counselling",
+          "icon": "t-02-hospiz-und-palliativberatung.png"
+        },
+        {
+          "slug": "life-in-old-age",
+          "icon": "t-02-leben-im-alter.png"
+        },
+        {
+          "slug": "trauerberatung",
+          "icon": "t-02-trauerberatung.png"
+        }
+      ]
+    },
+    {
+      "key": "krisen",
+      "name": {
+        "de": "Besondere Lebenssituationen & Krisen",
+        "en": "Challenging Life Situations & Crises",
+        "fr": "Situations de vie difficiles et crises",
+        "ru": "Трудные жизненные ситуации и кризисы",
+        "ti": "ኣጸጋሚ ናብራን ቅልውላውን",
+        "tr": "Zorlu yaşam durumları ve krizler"
+      },
+      "icon": "cat-05.png",
+      "topics": [
+        {
+          "slug": "general-social-counselling",
+          "icon": "t-05-allgemeine-sozialberatung.png"
+        },
+        {
+          "slug": "hospice-palliative-care-counselling",
+          "icon": "t-02-hospiz-und-palliativberatung.png"
+        },
+        {
+          "slug": "debt",
+          "icon": "t-05-schulden.png"
+        },
+        {
+          "slug": "pregnancy",
+          "icon": "t-01-schwangerschaft.png"
+        },
+        {
+          "slug": "offending",
+          "icon": "t-05-straffa-lligkeit.png"
+        },
+        {
+          "slug": "sucht",
+          "icon": "t-04-sucht.png"
+        },
+        {
+          "slug": "trauerberatung",
+          "icon": "t-02-trauerberatung.png"
+        },
+        {
+          "slug": "u25-suicide-prevention",
+          "icon": "t-05-u25-suizidpra-vention.png"
+        }
+      ]
+    },
+    {
+      "key": "gesundheit",
+      "name": {
+        "de": "Gesundheit & Sucht",
+        "en": "Health and Addiction",
+        "fr": "Santé et addiction",
+        "ru": "Здоровье и зависимость",
+        "ti": "ጥዕናን ወልፍን",
+        "tr": "Sağlık ve bağımlılık"
+      },
+      "icon": "cat-04.png",
+      "topics": [
+        {
+          "slug": "disability-psychological-impairment",
+          "icon": "t-04-behinderung-und-psychische-beeintra-chtigung.png"
+        },
+        {
+          "slug": "hiv-aids",
+          "icon": "t-04-hiv-und-aids.png"
+        },
+        {
+          "slug": "hospice-palliative-care-counselling",
+          "icon": "t-02-hospiz-und-palliativberatung.png"
+        },
+        {
+          "slug": "child-youth-rehabilitation",
+          "icon": "t-04-kinder-und-jugend-reha.png"
+        },
+        {
+          "slug": "cures-mothers-fathers",
+          "icon": "t-04-kuren-fu-r-mu-tter-und-va-ter.png"
+        },
+        {
+          "slug": "life-in-old-age",
+          "icon": "t-02-leben-im-alter.png"
+        },
+        {
+          "slug": "sucht",
+          "icon": "t-04-sucht.png"
+        },
+        {
+          "slug": "u25-suicide-prevention",
+          "icon": "t-05-u25-suizidpra-vention.png"
+        }
+      ]
+    },
+    {
+      "key": "familie",
+      "name": {
+        "de": "Kinder, Jugend, Erwachsene, Schwangerschaft und Familie",
+        "en": "Children, Young People and Families",
+        "fr": "Enfants, jeunes et familles",
+        "ru": "Дети, подростки и семьи",
+        "ti": "ቈልዑ፣ መንእሰያትን ስድራቤትን",
+        "tr": "Çocuklar, gençler ve aileler"
+      },
+      "icon": "cat-01.png",
+      "topics": [
+        {
+          "slug": "general-social-counselling",
+          "icon": "t-05-allgemeine-sozialberatung.png"
+        },
+        {
+          "slug": "parents-and-family",
+          "icon": "t-01-eltern-und-familie.png"
+        },
+        {
+          "slug": "hospice-palliative-care-counselling",
+          "icon": "t-02-hospiz-und-palliativberatung.png"
+        },
+        {
+          "slug": "counselling-men-boys",
+          "icon": "t-01-jungen-und-ma-nnerberatung.png"
+        },
+        {
+          "slug": "children-youth-counselling",
+          "icon": "t-01-kinder-und-jugendliche.png"
+        },
+        {
+          "slug": "child-youth-rehabilitation",
+          "icon": "t-01-kinder-und-jugend-reha.png"
+        },
+        {
+          "slug": "cures-mothers-fathers",
+          "icon": "t-01-kuren-fu-r-mu-tter-und-va-ter.png"
+        },
+        {
+          "slug": "pregnancy",
+          "icon": "t-01-schwangerschaft.png"
+        },
+        {
+          "slug": "sucht",
+          "icon": "t-04-sucht.png"
+        },
+        {
+          "slug": "school-to-work-transition",
+          "icon": "t-01-u-bergang-von-schule-zu-beruf.png"
+        },
+        {
+          "slug": "trauerberatung",
+          "icon": "t-02-trauerberatung.png"
+        },
+        {
+          "slug": "u25-suicide-prevention",
+          "icon": "t-01-u25-suizidpra-vention.png"
+        }
+      ]
+    },
+    {
+      "key": "migration",
+      "name": {
+        "de": "Migration",
+        "en": "Migration & Integration",
+        "fr": "Migration et intégration",
+        "ru": "Миграция и интеграция",
+        "ti": "ስደትን ውህደትን",
+        "tr": "Göç ve entegrasyon"
+      },
+      "icon": "cat-03.png",
+      "topics": [
+        {
+          "slug": "initial-return-further-migration",
+          "icon": "t-03-aus-ru-ck-und-weiterwanderung.png"
+        },
+        {
+          "slug": "migration",
+          "icon": "t-03-migration.png"
+        }
+      ]
+    },
+    {
+      "key": "teilhabe",
+      "name": {
+        "de": "Teilhabe für Menschen mit Beeinträchtigungen",
+        "en": "Disability Inclusion",
+        "fr": "Inclusion des personnes en situation de handicap",
+        "ru": "Инклюзия людей с инвалидностью",
+        "ti": "ስንክልና ንዘለዎም ሰባት ተሳትፎ",
+        "tr": "Engelli bireylerin katılımı"
+      },
+      "icon": "cat-04.png",
+      "topics": [
+        {
+          "slug": "disability-psychological-impairment",
+          "icon": "t-04-behinderung-und-psychische-beeintra-chtigung.png"
+        },
+        {
+          "slug": "child-youth-rehabilitation",
+          "icon": "t-04-kinder-und-jugend-reha.png"
+        },
+        {
+          "slug": "legal-guardianship-advance-care",
+          "icon": "t-02-rechtliche-betreuung-und-vorsorge.png"
+        }
+      ]
+    }
+  ]
+}

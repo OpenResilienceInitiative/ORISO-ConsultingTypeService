@@ -196,6 +196,15 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getOneTopicPerAgencyEnabled().setValue(settingsPatchDTO.getOneTopicPerAgencyEnabled());
     }
+    if (settingsPatchDTO.getLiveChatFreeChoiceEnabled() != null) {
+      if (entity.getLiveChatFreeChoiceEnabled() == null) {
+        entity.setLiveChatFreeChoiceEnabled(
+            ApplicationSettingsConverter.defaultLiveChatFreeChoiceEnabled());
+      }
+      entity
+          .getLiveChatFreeChoiceEnabled()
+          .setValue(settingsPatchDTO.getLiveChatFreeChoiceEnabled());
+    }
     if (settingsPatchDTO.getFurtherCounsellingPostcodeMode() != null) {
       if (entity.getFurtherCounsellingPostcodeMode() == null) {
         entity.setFurtherCounsellingPostcodeMode(
@@ -227,6 +236,7 @@ public class ApplicationSettingsServiceFacade {
       }
       entity.getSupportEmail().setValue(supportEmail);
     }
+    convertPatchedChatMessageSettings(settingsPatchDTO, entity);
     if (settingsPatchDTO.getGlobalSmtpEnabled() != null) {
       if (entity.getGlobalSmtpEnabled() == null) {
         entity.setGlobalSmtpEnabled(new GlobalSmtpEnabled().withValue(false).withReadOnly(false));
@@ -280,6 +290,39 @@ public class ApplicationSettingsServiceFacade {
       entity
           .getGlobalSmtpEmailThemeColor()
           .setValue(settingsPatchDTO.getGlobalSmtpEmailThemeColor());
+    }
+  }
+
+  private void convertPatchedChatMessageSettings(
+      ApplicationSettingsPatchDTO settingsPatchDTO, ApplicationSettingsEntity entity) {
+    if (settingsPatchDTO.getChatComposerDisabledFormats() != null) {
+      var disabledFormats =
+          ChatMessageSettings.toStoredDisabledFormats(
+              settingsPatchDTO.getChatComposerDisabledFormats());
+      if (entity.getChatComposerDisabledFormats() == null) {
+        entity.setChatComposerDisabledFormats(
+            ApplicationSettingsConverter.defaultChatComposerDisabledFormats());
+      }
+      entity.getChatComposerDisabledFormats().setValue(disabledFormats);
+    }
+    if (settingsPatchDTO.getChatMessageMaxWidthDesktop() != null) {
+      var maxWidth =
+          ChatMessageSettings.toStoredMaxWidth(settingsPatchDTO.getChatMessageMaxWidthDesktop());
+      if (entity.getChatMessageMaxWidthDesktop() == null) {
+        entity.setChatMessageMaxWidthDesktop(
+            ApplicationSettingsConverter.defaultChatMessageMaxWidthDesktop());
+      }
+      entity.getChatMessageMaxWidthDesktop().setValue(maxWidth);
+    }
+    if (settingsPatchDTO.getChatMessageCollapseThreshold() != null) {
+      var threshold =
+          ChatMessageSettings.toStoredCollapseThreshold(
+              settingsPatchDTO.getChatMessageCollapseThreshold());
+      if (entity.getChatMessageCollapseThreshold() == null) {
+        entity.setChatMessageCollapseThreshold(
+            ApplicationSettingsConverter.defaultChatMessageCollapseThreshold());
+      }
+      entity.getChatMessageCollapseThreshold().setValue(threshold);
     }
   }
 

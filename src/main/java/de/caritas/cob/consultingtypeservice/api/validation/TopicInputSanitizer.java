@@ -30,6 +30,8 @@ public class TopicInputSanitizer {
     output.setUpdateDate(input.getUpdateDate());
     output.setTitles(input.getTitles());
     output.setSlug(input.getSlug());
+    // Checked against an allowlist of image addresses in TopicServiceFacade, not HTML-sanitized.
+    output.setIcon(input.getIcon());
     return output;
   }
 }

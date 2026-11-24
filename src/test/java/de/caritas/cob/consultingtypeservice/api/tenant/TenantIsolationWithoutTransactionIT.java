@@ -100,9 +100,8 @@ class TenantIsolationWithoutTransactionIT {
             .perform(asTopicAdminOf(OWN_TENANT, get("/topicadmin/" + FOREIGN_TOPIC)))
             .andReturn();
 
-    // TopicNotFoundException is declared as 404, but the generic exception handler answers 500 for
-    // any unknown id (own Träger too). What matters here: refused, and none of the foreign data.
-    assertThat(result.getResponse().getStatus()).as("HTTP status").isGreaterThanOrEqualTo(400);
+    // A foreign topic is indistinguishable from an unknown one: 404, and none of the foreign data.
+    assertStatus(result, 404);
     assertThat(result.getResponse().getContentAsString()).doesNotContain("isolation-");
   }
 

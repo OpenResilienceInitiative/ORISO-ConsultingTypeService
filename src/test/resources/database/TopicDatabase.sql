@@ -11,8 +11,8 @@ CREATE TABLE IF NOT EXISTS `topic`
 (
     `id`                     bigint   NOT NULL,
     `tenant_id`              bigint   NULL,
-    `name`                   varchar(100) NOT NULL,
-    `description`            varchar(100) NULL,
+    `name`                   varchar(4092) NOT NULL,
+    `description`            varchar(4092) NULL,
     `status`                 varchar(20),
     `create_date`            timestamp    NOT NULL,
     `update_date`            timestamp    NULL,
@@ -20,13 +20,17 @@ CREATE TABLE IF NOT EXISTS `topic`
     `fallback_agency_id`     bigint   NULL,
     `fallback_url`           varchar(200) NULL,
     `welcome_message`        varchar(200) NULL,
-    `send_next_step_message` boolean DEFAULT FALSE,
-    `titles_short`           varchar(255) NOT NULL,
-    `titles_long`            varchar(255) NOT NULL,
+    `send_next_step_message` boolean DEFAULT FALSE NOT NULL,
+    `titles_short`           varchar(4092) NOT NULL,
+    `titles_long`            varchar(4092) NOT NULL,
     `titles_welcome`         varchar(255) NOT NULL,
     `titles_dropdown`        varchar(255) NOT NULL,
     `slug`                   varchar(255) NULL,
-    PRIMARY KEY (`id`)
+    `icon`                   clob NULL,
+    `customized`             boolean DEFAULT FALSE NOT NULL,
+    PRIMARY KEY (`id`),
+    -- As migration 0001_initsql/initTables.sql.
+    CONSTRAINT unique_name UNIQUE (`name`, `tenant_id`)
 );
 
 ALTER TABLE `topic`
@@ -60,10 +64,13 @@ VALUES (3, '2', '{"de" : "de another topic"}', '{"de" : "de description"}', 'ACT
 CREATE TABLE IF NOT EXISTS topic_group
 (
     `id`          bigint   NOT NULL,
-    `name`        varchar(100) NOT NULL,
+    `name`        varchar(4092) NOT NULL,
     `create_date` timestamp     NOT NULL,
     `tenant_id`   bigint   NULL,
     `update_date` timestamp     NOT NULL,
+    `sort_order`  int DEFAULT 0 NOT NULL,
+    `icon`        clob NULL,
+    `customized`  boolean DEFAULT FALSE NOT NULL,
     PRIMARY KEY (`id`)
 );
 
@@ -75,6 +82,7 @@ CREATE TABLE IF NOT EXISTS topic_group_x_topic
 (
     group_id bigint NOT NULL,
     topic_id bigint NOT NULL,
+    sort_order int DEFAULT 0 NOT NULL,
     foreign key (group_id) references topic_group (id) ON UPDATE CASCADE ON DELETE CASCADE,
     foreign key (topic_id) references topic (id) ON UPDATE CASCADE ON DELETE CASCADE
 );

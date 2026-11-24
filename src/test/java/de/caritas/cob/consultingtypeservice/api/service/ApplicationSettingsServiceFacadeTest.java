@@ -174,6 +174,22 @@ class ApplicationSettingsServiceFacadeTest {
   }
 
   @Test
+  void patchApplicationSettings_Should_StoreLiveChatFreeChoice_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setLiveChatFreeChoiceEnabled(true);
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    ArgumentCaptor<ApplicationSettingsEntity> captor =
+        ArgumentCaptor.forClass(ApplicationSettingsEntity.class);
+    verify(applicationSettingsService).compareAndSave(captor.capture(), isNull());
+    assertThat(captor.getValue().getLiveChatFreeChoiceEnabled().getValue()).isTrue();
+    assertThat(captor.getValue().getLiveChatFreeChoiceEnabled().getReadOnly()).isFalse();
+  }
+
+  @Test
   void patchApplicationSettings_Should_RejectAndNotSave_When_TopicDuplicateModeIsReserved() {
     var entity = new ApplicationSettingsEntity();
     when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
@@ -184,6 +200,36 @@ class ApplicationSettingsServiceFacadeTest {
         .isInstanceOf(BadRequestException.class);
     verify(applicationSettingsService, never()).compareAndSave(any(), any());
     assertThat(entity.getTopicDuplicateMode()).isNull();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_StoreDisabledFormatsInEnumOrder_When_EntityHasNone() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatComposerDisabledFormats(
+        java.util.List.of(
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.HEADING,
+            ApplicationSettingsPatchDTO.ChatComposerDisabledFormatsEnum.UNDERLINE));
+
+    applicationSettingsServiceFacade.patchApplicationSettings(patchDTO);
+
+    assertThat(entity.getChatComposerDisabledFormats().getValue()).isEqualTo("heading,underline");
+    assertThat(entity.getChatMessageMaxWidthDesktop()).isNull();
+    assertThat(entity.getChatMessageCollapseThreshold()).isNull();
+  }
+
+  @Test
+  void patchApplicationSettings_Should_RejectAndNotSave_When_CollapseThresholdIsOutOfRange() {
+    var entity = new ApplicationSettingsEntity();
+    when(applicationSettingsService.getApplicationSettings()).thenReturn(Optional.of(entity));
+    var patchDTO = new ApplicationSettingsPatchDTO();
+    patchDTO.setChatMessageCollapseThreshold(10);
+
+    assertThatThrownBy(() -> applicationSettingsServiceFacade.patchApplicationSettings(patchDTO))
+        .isInstanceOf(BadRequestException.class);
+    verify(applicationSettingsService, never()).compareAndSave(any(), any());
   }
 
   @Test
