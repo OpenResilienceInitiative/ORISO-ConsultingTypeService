@@ -24,7 +24,7 @@ public class TopicConverter {
 
   private final @NonNull TranslationService translationService;
 
-  public TopicDTO toDTO(final TopicEntity topic, final String lang) {
+  public TopicDTO toDTO(final TopicEntity topic, final List<String> lang) {
     final var topicDTO =
         new TopicDTO()
             .id(topic.getId())
@@ -47,7 +47,7 @@ public class TopicConverter {
     return topicDTO;
   }
 
-  private static TitlesDTO toTitlesDTO(TopicEntity topic, String lang) {
+  private static TitlesDTO toTitlesDTO(TopicEntity topic, List<String> lang) {
     return new TitlesDTO()
         ._short(getTranslatedStringFromMap(topic.getTitlesShort(), lang))
         ._long(getTranslatedStringFromMap(topic.getTitlesLong(), lang))
@@ -56,7 +56,7 @@ public class TopicConverter {
   }
 
   public TopicDTO toDTO(final TopicEntity topic) {
-    final String lang = translationService.getCurrentLanguageContext();
+    final List<String> lang = translationService.getLanguagePreferences();
     return toDTO(topic, lang);
   }
 
@@ -97,7 +97,7 @@ public class TopicConverter {
   }
 
   public List<TopicDTO> toDTOList(final Collection<TopicEntity> topicEntities) {
-    final String lang = translationService.getCurrentLanguageContext();
+    final List<String> lang = translationService.getLanguagePreferences();
     return topicEntities.stream().map(topic -> toDTO(topic, lang)).collect(Collectors.toList());
   }
 

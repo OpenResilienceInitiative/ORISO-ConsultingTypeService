@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import com.google.common.collect.Lists;
 import de.caritas.cob.consultingtypeservice.api.model.TopicGroupEntity;
 import de.caritas.cob.consultingtypeservice.api.service.TranslationService;
+import java.util.List;
 import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,7 +38,7 @@ class TopicGroupConverterTest {
                 .name("{\"de\":\"second_name_de\",\"en\":\"second_name_en\"}")
                 .topicEntities(Sets.newHashSet())
                 .build());
-    when(translationService.getCurrentLanguageContext()).thenReturn("en");
+    when(translationService.getLanguagePreferences()).thenReturn(List.of("en", "de"));
 
     // when
     var result = topicGroupConverter.toTopicGroupsDTO(topicGroups);
