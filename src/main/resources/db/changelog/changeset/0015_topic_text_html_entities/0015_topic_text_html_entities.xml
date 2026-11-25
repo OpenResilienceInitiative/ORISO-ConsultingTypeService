@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.6.xsd">
+    <!-- Topic and category texts are plain text now; decode the HTML entities older Admin saves
+         stored (ORISO-ConsultingTypeService#207). Data fix only: the old encoding is not restored. -->
+    <changeSet author="oriso" id="0015_topic_text_html_entities">
+        <sqlFile path="db/changelog/changeset/0015_topic_text_html_entities/0015_topic_text_html_entities.sql" stripComments="true"/>
+        <rollback/>
+    </changeSet>
+</databaseChangeLog>

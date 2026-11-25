@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import com.fasterxml.jackson.databind.RuntimeJsonMappingException;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class TranslationUtilsTest {
@@ -13,7 +14,8 @@ class TranslationUtilsTest {
     // given
     // when
     String translation =
-        TranslationUtils.getTranslatedStringFromMap("{\"de\":\"German\",\"en\":\"English\"}", "en");
+        TranslationUtils.getTranslatedStringFromMap(
+            "{\"de\":\"German\",\"en\":\"English\"}", List.of("en"));
     // then
     assertThat(translation).isEqualTo("English");
   }
@@ -23,7 +25,8 @@ class TranslationUtilsTest {
     // given
     // when
     String translation =
-        TranslationUtils.getTranslatedStringFromMap("{\"de\":\"German\",\"en\":\"English\"}", "fr");
+        TranslationUtils.getTranslatedStringFromMap(
+            "{\"de\":\"German\",\"en\":\"English\"}", List.of("fr"));
     // then
     assertThat(translation).isEqualTo("German");
   }
@@ -34,7 +37,7 @@ class TranslationUtilsTest {
     // when
     String translation =
         TranslationUtils.getTranslatedStringFromMap(
-            "{\"es\":\"Spanish\",\"en\":\"English\"}", "fr");
+            "{\"es\":\"Spanish\",\"en\":\"English\"}", List.of("fr"));
     // then
     assertThat(translation).isEmpty();
   }
@@ -46,6 +49,15 @@ class TranslationUtilsTest {
     // then
     assertThrows(
         RuntimeJsonMappingException.class,
-        () -> TranslationUtils.getTranslatedStringFromMap("aSimpleString", "fr"));
+        () -> TranslationUtils.getTranslatedStringFromMap("aSimpleString", List.of("fr")));
+  }
+
+  @Test
+  void shouldResolveFirstLanguageThatHasAText_When_PreferredLanguageIsNotFound() {
+    String translation =
+        TranslationUtils.getTranslatedStringFromMap(
+            "{\"de\":\"German\",\"en\":\"English\"}", List.of("fr", "en", "de"));
+
+    assertThat(translation).isEqualTo("English");
   }
 }

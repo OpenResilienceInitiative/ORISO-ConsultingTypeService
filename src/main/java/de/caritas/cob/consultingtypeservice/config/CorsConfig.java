@@ -7,6 +7,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.Ordered;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
@@ -37,7 +38,7 @@ public class CorsConfig {
         .forEach(path -> source.registerCorsConfiguration(path, configuration));
 
     var registrationBean = new FilterRegistrationBean<>(new CorsFilter(source));
-    registrationBean.setOrder(Integer.MIN_VALUE);
+    registrationBean.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
     return registrationBean;
   }
 

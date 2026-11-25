@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.topicdefaults;
 
+import static de.caritas.cob.consultingtypeservice.testHelper.TopicCsrfTestSupport.topicCsrf;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -97,6 +98,7 @@ class PlatformAdminTopicOverrideIT {
     mockMvc
         .perform(
             put("/topicadmin/" + id)
+                .with(topicCsrf())
                 .with(authentication(who))
                 .contentType(APPLICATION_JSON)
                 .content(topic.toString()))
@@ -185,6 +187,7 @@ class PlatformAdminTopicOverrideIT {
     mockMvc
         .perform(
             org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/topicadmin")
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(topic.toString()))

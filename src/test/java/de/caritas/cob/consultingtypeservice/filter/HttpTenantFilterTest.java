@@ -10,6 +10,7 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,6 +30,47 @@ class HttpTenantFilterTest {
   @Mock HttpServletResponse response;
 
   @Mock FilterChain filterChain;
+
+  @AfterEach
+  void clearTenant() {
+    TenantContext.clear();
+  }
+
+  @Test
+  void whitelistedRequestStartsEmptyAndClearsContextCreatedByTheHandler() throws Exception {
+    TenantContext.setCurrentTenant(17L);
+    Mockito.when(request.getRequestURI()).thenReturn("/actuator/health");
+    Mockito.doAnswer(
+            invocation -> {
+              assertThat(TenantContext.getCurrentTenant()).isNull();
+              TenantContext.setCurrentTenant(42L);
+              return null;
+            })
+        .when(filterChain)
+        .doFilter(request, response);
+
+    httpTenantFilter.doFilterInternal(request, response, filterChain);
+
+    assertThat(TenantContext.getCurrentTenant()).isNull();
+    Mockito.verifyNoInteractions(tenantResolver);
+  }
+
+  @Test
+  void failedResolutionClearsContextBeforeAnyDownstreamHandler() {
+    Mockito.when(request.getRequestURI()).thenReturn("/topic-groups");
+    var failure = new IllegalStateException("synthetic resolver failure");
+    Mockito.when(tenantResolver.resolve())
+        .thenAnswer(
+            invocation -> {
+              TenantContext.setCurrentTenant(42L);
+              throw failure;
+            });
+
+    assertThatThrownBy(() -> httpTenantFilter.doFilterInternal(request, response, filterChain))
+        .isSameAs(failure);
+    assertThat(TenantContext.getCurrentTenant()).isNull();
+    Mockito.verifyNoInteractions(filterChain);
+  }
 
   @Test
   void doFilterInternal_Should_NotApply_When_RequestBelongsToTenancyWhiteList()

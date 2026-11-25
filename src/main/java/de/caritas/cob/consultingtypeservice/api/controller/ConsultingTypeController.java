@@ -17,8 +17,11 @@ import de.caritas.cob.consultingtypeservice.generated.api.controller.Consultingt
 import io.swagger.annotations.Api;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import lombok.NonNull;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,8 +34,10 @@ import org.springframework.web.bind.annotation.RestController;
 /** Controller for consulting type API requests. */
 @RestController
 @RequiredArgsConstructor
+@Slf4j
 @Api(tags = "consulting-type-controller")
 public class ConsultingTypeController implements ConsultingtypesApi {
+  private static final String SETTINGS_REQUEST_ID = "X-Consulting-Settings-Request-ID";
   @Autowired private TaskServiceIdentity taskIdentity;
 
   @Autowired private TenantBootstrapService bootstrap;
@@ -174,7 +179,38 @@ public class ConsultingTypeController implements ConsultingtypesApi {
           + "'AUTHORIZATION_LIMITED_PATCH_CONSULTING_TYPE')")
   public ResponseEntity<FullConsultingTypeResponseDTO> patchConsultingType(
       Integer consultingTypeId, final ConsultingTypePatchDTO consultingTypeDTO) {
-    return ResponseEntity.ok(
-        consultingTypeService.updateConsultingType(consultingTypeId, consultingTypeDTO));
+    UUID requestId = settingsRequestId();
+    long started = System.nanoTime();
+    if (requestId != null) {
+      log.info("Consulting settings PATCH received requestId={}", requestId);
+    }
+    String outcome = "service_failed";
+    try {
+      var settings =
+          consultingTypeService.updateConsultingType(consultingTypeId, consultingTypeDTO);
+      outcome = "service_returned";
+      return ResponseEntity.ok(settings);
+    } finally {
+      if (requestId != null) {
+        log.info(
+            "Consulting settings PATCH finished requestId={} outcome={} elapsedMs={}",
+            requestId,
+            outcome,
+            TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - started));
+      }
+    }
+  }
+
+  private UUID settingsRequestId() {
+    String header = request.getHeader(SETTINGS_REQUEST_ID);
+    if (header == null || header.length() != 36) {
+      return null;
+    }
+    try {
+      UUID id = UUID.fromString(header);
+      return id.version() == 4 && id.toString().equalsIgnoreCase(header) ? id : null;
+    } catch (IllegalArgumentException ignored) {
+      return null;
+    }
   }
 }

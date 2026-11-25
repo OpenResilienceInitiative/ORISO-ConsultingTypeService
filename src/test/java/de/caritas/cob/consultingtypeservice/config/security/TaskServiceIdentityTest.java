@@ -260,10 +260,13 @@ class TaskServiceIdentityTest {
             "matrix-agency-provision",
             "appointment-sync",
             "appointment-participant-cleanup",
-            "deletion-audit-read");
+            "deletion-audit-read",
+            "tenant-deletion");
 
     assertThat(identity.allows(runtimeToken(current), "RUNTIME_POLICY")).isTrue();
     assertThat(identity.allows(runtimeToken(current.subList(0, 5)), "RUNTIME_POLICY")).isFalse();
+    // tenant-deletion: UserService finishes Träger deletions as RUNTIME (ORISO-Admin#1525).
+    assertThat(identity.allows(runtimeToken(current.subList(0, 6)), "RUNTIME_POLICY")).isFalse();
   }
 
   private static JwtAuthenticationToken runtimeToken(List<String> roles) {

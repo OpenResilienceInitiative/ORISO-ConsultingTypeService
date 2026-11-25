@@ -43,22 +43,22 @@ public class HttpTenantFilter extends OncePerRequestFilter {
       HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
       throws ServletException, IOException {
 
-    if (requiresTenantFilterMatcher.matches(request)) {
-      log.debug("Trying to resolve tenant for request coming from URI {}", request.getRequestURI());
-      Long tenantId = tenantResolver.resolve();
-      log.debug("Setting current tenant context to: " + tenantId);
-      TenantContext.setCurrentTenant(tenantId);
-      try {
-        filterChain.doFilter(request, response);
-      } finally {
-        // Pooled threads must not carry this tenant into the next request.
-        TenantContext.clear();
+    TenantContext.clear();
+    try {
+      if (requiresTenantFilterMatcher.matches(request)) {
+        log.debug(
+            "Trying to resolve tenant for request coming from URI {}", request.getRequestURI());
+        Long tenantId = tenantResolver.resolve();
+        log.debug("Setting current tenant context to: {}", tenantId);
+        TenantContext.setCurrentTenant(tenantId);
+      } else {
+        log.info(
+            "Skipping tenant filter for request: {} as it belongs to a tenancy whitelist.",
+            request.getRequestURI());
       }
-    } else {
-      log.info(
-          "Skipping tenant filter for request: {} as it belongs to a tenancy whitelist.",
-          request.getRequestURI());
       filterChain.doFilter(request, response);
+    } finally {
+      TenantContext.clear();
     }
   }
 

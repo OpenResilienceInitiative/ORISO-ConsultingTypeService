@@ -1,5 +1,7 @@
 package de.caritas.cob.consultingtypeservice.api.consultingtypes;
 
+import static de.caritas.cob.consultingtypeservice.api.tenant.TenantResolver.TECHNICAL_TENANT_ID;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.caritas.cob.consultingtypeservice.api.exception.UnexpectedErrorException;
 import de.caritas.cob.consultingtypeservice.api.service.LogService;
@@ -52,12 +54,9 @@ public class ConsultingTypeLoader {
   }
 
   private void addConsultingTypeToRepositories(ConsultingType consultingType) {
-    setTechnicalTenantContext();
-    consultingTypeRepositoryService.addConsultingType(consultingType);
-  }
-
-  private void setTechnicalTenantContext() {
-    TenantContext.setCurrentTenant(0L);
+    TenantContext.callWithTenant(
+        TECHNICAL_TENANT_ID,
+        () -> consultingTypeRepositoryService.addConsultingType(consultingType));
   }
 
   private File[] determineConsultingTypeConfigurationFiles() {

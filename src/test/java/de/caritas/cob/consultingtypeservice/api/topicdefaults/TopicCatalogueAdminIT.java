@@ -1,5 +1,6 @@
 package de.caritas.cob.consultingtypeservice.api.topicdefaults;
 
+import static de.caritas.cob.consultingtypeservice.testHelper.TopicCsrfTestSupport.topicCsrf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -153,6 +154,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -183,6 +185,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -211,6 +214,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -231,6 +235,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(
                     authentication(
                         new AuthenticationMockBuilder()
@@ -255,6 +260,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(platformAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -262,6 +268,35 @@ class TopicCatalogueAdminIT {
 
     assertThat(catalogue().get("groups").get(0).get("name").get("en").asText())
         .doesNotContain("<script>");
+  }
+
+  /** ORISO-ConsultingTypeService#207: names are plain text, the registration must show "&". */
+  @Test
+  void savingTheCatalogueTwice_keepsAmpersandsAndApostrophesAsTyped() throws Exception {
+    var catalogue = catalogue();
+    var debt = topicBySlug(catalogue, "debt");
+    ((ObjectNode) debt.get("name")).put("en", "Debt & Money's Worth");
+    var change = objectMapper.createObjectNode();
+    change.set("groups", catalogue.get("groups"));
+    change.set("topics", objectMapper.createArrayNode().add(debt));
+    save(change).andExpect(status().isOk());
+
+    var reloaded = catalogue();
+    var unchanged = objectMapper.createObjectNode();
+    unchanged.set("groups", reloaded.get("groups"));
+    unchanged.set("topics", objectMapper.createArrayNode().add(topicBySlug(reloaded, "debt")));
+    save(unchanged).andExpect(status().isOk());
+
+    var saved = catalogue();
+    group(saved, "Gesundheit & Sucht");
+    group(saved, "Besondere Lebenssituationen & Krisen");
+    assertThat(topicBySlug(saved, "debt").get("name").get("en").asText())
+        .isEqualTo("Debt & Money's Worth");
+    assertThat(topicGroupRepository.findAll())
+        .allSatisfy(stored -> assertThat(stored.getName()).doesNotContain("&amp;", "&#"));
+    mockMvc
+        .perform(get("/topic-groups").accept(APPLICATION_JSON))
+        .andExpect(jsonPath("$.data.items[2].name").value("Gesundheit & Sucht"));
   }
 
   @Test
@@ -273,6 +308,7 @@ class TopicCatalogueAdminIT {
     mockMvc
         .perform(
             put(CATALOGUE)
+                .with(topicCsrf())
                 .with(authentication(traegerAdmin()))
                 .contentType(APPLICATION_JSON)
                 .content(change.toString()))
@@ -290,6 +326,7 @@ class TopicCatalogueAdminIT {
   private ResultActions save(ObjectNode change) throws Exception {
     return mockMvc.perform(
         put(CATALOGUE)
+            .with(topicCsrf())
             .with(authentication(platformAdmin()))
             .contentType(APPLICATION_JSON)
             .content(change.toString()));
